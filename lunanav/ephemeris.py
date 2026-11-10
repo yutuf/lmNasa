@@ -1,12 +1,14 @@
 """Sun and Earth topocentric alt/az for a point on the Moon (Skyfield + NAIF).
 
 Kernels (put them in data/kernels/, they are downloaded by scripts/fetch_kernels.py):
-  de421.bsp                       planetary ephemeris
-  moon_080317.tf                  Moon frames (MOON_ME_DE421)
-  pck00008.tpc                    planetary constants
-  moon_pa_de421_1900-2050.bpc     Moon orientation (libration) for de421
+  de440.bsp                       planetary ephemeris (covers 1550-2650)
+  moon_de440_250416.tf            Moon frames (MOON_ME_DE440_ME421)
+  pck00011.tpc                    planetary constants
+  moon_pa_de440_200625.bpc        Moon orientation (libration) for de440
 
-Moon has no atmosphere: we use astrometric positions (no refraction).
+The path can be overridden with the LUNANAV_KERNELS environment variable.
+
+Moon has no atmosphere: apparent positions (light-time, aberration), no refraction.
 Altitude is relative to the local *geometric* horizon (sphere tangent plane).
 """
 from __future__ import annotations
@@ -16,7 +18,15 @@ from pathlib import Path
 
 import numpy as np
 
-KERNEL_DIR = Path(__file__).resolve().parent.parent / "data" / "kernels"
+import os
+
+KERNEL_DIR = Path(os.environ.get("LUNANAV_KERNELS",
+                  Path(__file__).resolve().parent.parent / "data" / "kernels"))
+SPK = "de440.bsp"
+FRAMES_TF = "moon_de440_250416.tf"
+PCK_TEXT = "pck00011.tpc"
+PCK_BIN = "moon_pa_de440_200625.bpc"
+ME_FRAME = "MOON_ME_DE440_ME421"
 SUN_RADIUS_KM = 695_700.0
 EARTH_RADIUS_KM = 6_371.0
 
@@ -39,16 +49,30 @@ class MoonSky:
 
         load = Loader(str(kernel_dir))
         self.ts = load.timescale()
-        self.eph = load("de421.bsp")
+        self.eph = load(SPK)
         pc = PlanetaryConstants()
-        pc.read_text(load("moon_080317.tf"))
-        pc.read_text(load("pck00008.tpc"))
-        pc.read_binary(load("moon_pa_de421_1900-2050.bpc"))
+        pc.read_text(load(FRAMES_TF))
+        pc.read_text(load(PCK_TEXT))
+        pc.read_binary(load(PCK_BIN))
         self.pc = pc
-        self.frame = pc.build_frame_named("MOON_ME_DE421")
+        # moon_pa_de440_200625.bpc holds two segments (1550-2426, 2426-2650) for the same
+        # frame; Skyfield keeps only the *last* one per body, which breaks present-day dates.
+        # Build the frame from the segment that covers the present era instead.
+        self.frame = self._build_frame(ME_FRAME, j2000_seconds=0.0)
         self.moon = self.eph["moon"]
         self.sun = self.eph["sun"]
         self.earth = self.eph["earth"]
+
+    def _build_frame(self, name: str, j2000_seconds: float):
+        pc = self.pc
+        integer = pc.variables[f"FRAME_{name}"]
+        relative = pc.variables.get(f"TKFRAME_{integer}_RELATIVE")
+        base = pc.variables[f"FRAME_{relative}"] if relative else integer
+        segs = [g for g in pc._segment_list
+                if g.body == base and g.initial_second <= j2000_seconds <= g.final_second]
+        if not segs:
+            raise LookupError(f"no PCK segment for frame {base} at {j2000_seconds} s past J2000")
+        return pc.build_frame(integer, _segment=segs[0])
 
     def times(self, start_utc: str, end_utc: str, step_hours: float = 1.0):
         start = np.datetime64(start_utc, "s")
@@ -64,7 +88,7 @@ class MoonSky:
         obs = place.at(t)
         out = {}
         for name, body, radius in (("sun", self.sun, SUN_RADIUS_KM), ("earth", self.earth, EARTH_RADIUS_KM)):
-            alt, az, dist = obs.observe(body).altaz()
+            alt, az, dist = obs.observe(body).apparent().altaz()
             out[name] = (alt.degrees, az.degrees, np.degrees(np.arcsin(radius / dist.km)))
         return SkyTrack(dts, *out["sun"], *out["earth"])
 
