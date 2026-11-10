@@ -18,6 +18,7 @@ class Site:
     note: str = ""
     source: str = ""
     verified: bool = False
+    reference: bool = False   # shown for comparison, never ranked
 
 
 def load_sites(path: str | Path = SITES_FILE) -> list[Site]:
