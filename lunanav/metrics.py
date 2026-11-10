@@ -97,3 +97,16 @@ def scan_start_dates(vis, step_hours: float, c: MissionConstraints, start_stride
         results.append(evaluate_window(vis.sun_fraction[sl], vis.sun_alt[sl],
                                        vis.earth_visible[sl], step_hours, c))
     return np.array(starts), results
+
+
+def delay_tolerance(feasible, stride_hours: float) -> np.ndarray:
+    """For each start option: how long (hours) the start can slip and every
+    later start up to that point is still feasible. 0 if this start is feasible
+    but the next one is not; -1 if this start itself is infeasible."""
+    feasible = np.asarray(feasible, dtype=bool)
+    run = np.zeros(len(feasible), dtype=int)
+    count = 0
+    for i in range(len(feasible) - 1, -1, -1):
+        count = count + 1 if feasible[i] else 0
+        run[i] = count
+    return np.where(feasible, (run - 1) * stride_hours, -1.0)

@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from lunanav.metrics import MissionConstraints, evaluate_window, scan_start_dates, windows
+from lunanav.metrics import MissionConstraints, delay_tolerance, evaluate_window, scan_start_dates, windows
 from lunanav.power import PowerConfig, simulate_battery
 from lunanav.series import load_series
 from lunanav.sites import load_sites
@@ -82,15 +82,19 @@ for s in sites:
     if s.reference:
         continue
     st_, res = scans[s.id]
-    for t0, r in zip(st_, res):
+    slack = delay_tolerance([r.meets_constraints for r in res], stride)
+    for t0, r, sl_h in zip(st_, res, slack):
         rows.append(dict(site=s.name, start=pd.Timestamp(t0), score=r.score, feasible=r.meets_constraints,
+                         delay_ok_days=sl_h / 24 if sl_h >= 0 else np.nan,
                          sun=r.sun_frac, earth=r.comm_frac, longest_shadow_h=r.longest_dark_h,
                          min_battery=r.min_soc))
-df = pd.DataFrame(rows).sort_values("score", ascending=False)
+df = pd.DataFrame(rows).sort_values(["feasible", "score", "delay_ok_days"], ascending=False)
 st.subheader("Best options")
-st.caption("Reference sites (e.g. Apollo 11) are shown on the heatmap for contrast but not ranked.")
+st.caption("**delay_ok_days** = how many days the launch can slip and every later start is still feasible. "
+           "Ties in score are broken by this. Reference sites (e.g. Apollo 11) are shown on the heatmap "
+           "but not ranked.")
 st.dataframe(df.head(10).style.format({"score": "{:.1f}", "sun": "{:.0%}", "earth": "{:.0%}",
-                                       "min_battery": "{:.0%}", "longest_shadow_h": "{:.0f}",
+                                       "min_battery": "{:.0%}", "longest_shadow_h": "{:.0f}", "delay_ok_days": "{:.0f}",
                                        "start": lambda t: t.strftime("%Y-%m-%d %H:%M")}),
              width="stretch", hide_index=True)
 

@@ -2,7 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 data/kernels
-data/dem/
+data/dem
 *.tif
 .pytest_cache/
 *.TIF
@@ -10,5 +10,5 @@ data/dem/
 *.bsp
 *.bpc
 *.egg-info/
-data/illumination/
+data/illumination
 build/
