@@ -1,0 +1,48 @@
+# Curated candidate sites. Coordinates are planetocentric (lat, lon east) in degrees.
+# verified: false = approximate value from memory; MUST be checked against the cited
+# source before any public claim. Only verified sites should be shown without a warning.
+sites:
+  - id: shackleton_ridge
+    name: Shackleton – de Gerlache connecting ridge
+    lat: -89.45
+    lon: -137.3
+    category: candidate
+    note: Long-studied high-illumination ridge near the south pole.
+    source: "LROC / Artemis candidate-region literature (verify)"
+    verified: false
+
+  - id: de_gerlache_rim
+    name: de Gerlache crater rim
+    lat: -88.7
+    lon: -68.0
+    category: artemis_region
+    note: Artemis III candidate region 'de Gerlache Rim' (verify exact point).
+    source: "NASA Artemis III candidate regions map (verify)"
+    verified: false
+
+  - id: malapert_massif
+    name: Malapert Massif
+    lat: -86.0
+    lon: 2.9
+    category: artemis_region
+    note: Artemis III candidate region; massif with good Earth visibility (verify).
+    source: "NASA Artemis III candidate regions map (verify)"
+    verified: false
+
+  - id: mons_mouton
+    name: Mons Mouton (IM-2 'Athena' landing area)
+    lat: -84.8
+    lon: 29.2
+    category: clps
+    note: CLPS IM-2 landing region, March 2025 (verify exact landed coordinates).
+    source: "Intuitive Machines / LROC IM-2 landing site release (verify)"
+    verified: false
+
+  - id: apollo_11
+    name: Apollo 11 (Tranquility Base)
+    lat: 0.67408
+    lon: 23.47297
+    category: apollo
+    note: Equatorial reference; shows how different the polar Sun/Earth geometry is.
+    source: "NASA / LROC Apollo 11 landing site"
+    verified: true

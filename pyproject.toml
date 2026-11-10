@@ -1,0 +1,20 @@
+[project]
+name = "lunanav"
+version = "0.1.0"
+description = "Rapid lunar landing-site and date comparison: sunlight, Earth visibility and battery survival."
+requires-python = ">=3.10"
+dependencies = ["numpy", "pyyaml", "plotly", "streamlit", "pandas"]
+
+[project.optional-dependencies]
+offline = ["skyfield", "rasterio", "pyproj"]  # kernels + DEM, only for scripts/
+dev = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["lunanav"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
