@@ -138,4 +138,4 @@ with st.expander("Earth communication windows"):
                            for a, b in w], columns=["from (UTC)", "to (UTC)", "hours"]))
 
 st.caption(f"Site: {site.name} ({site.lat:.3f}°, {site.lon:.3f}°E) · source: {site.source} · "
-           f"terrain: {terrain} · ephemeris: JPL DE421 via Skyfield · no atmosphere, no refraction.")
+           f"terrain: {terrain} · ephemeris: JPL DE440 via Skyfield · no atmosphere, no refraction.")

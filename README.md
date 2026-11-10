@@ -19,7 +19,7 @@ offline (needs kernels + DEM)                           runtime (Streamlit, ligh
 ──────────────────────────────                          ──────────────────────────
 LOLA south-pole DEM ──► build_horizons.py ──► data/horizons.json ─┐
                                                                   ├─► precompute.py ──► data/series/<site>.npz ──► app.py
-NAIF kernels (DE421 + Moon frames) ──► lunanav.ephemeris ─────────┘                         (scoring, battery, plots)
+NAIF kernels (DE440 + Moon frames) ──► lunanav.ephemeris ─────────┘                         (scoring, battery, plots)
 ```
 
 The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit Community Cloud).
@@ -42,7 +42,7 @@ pip install -e ".[offline,dev]"
 pytest -q
 
 # real data
-python scripts/fetch_kernels.py                          # ~17 MB
+python scripts/fetch_kernels.py                          # ~130 MB (DE440)
 python scripts/build_horizons.py data/dem/<lola_south_pole>.tif
 python scripts/precompute.py --start 2027-01-01 --end 2028-01-01
 

@@ -1,42 +1,58 @@
-# Curated candidate sites. Coordinates are planetocentric (lat, lon east) in degrees.
-# verified: false = approximate value from memory; MUST be checked against the cited
-# source before any public claim. Only verified sites should be shown without a warning.
+# Curated candidate sites. Coordinates are planetocentric (lat, lon east, -180..180) in degrees,
+# Moon mean-Earth (ME) frame. verified: true = value copied from the cited source.
+# NASA's Artemis III candidate *regions* (Oct 2024: Peak near Cabeus B, Haworth, Malapert Massif,
+# Mons Mouton Plateau, Mons Mouton, Nobile Rim 1, Nobile Rim 2, de Gerlache Rim 2, Slater Plain;
+# https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/)
+# are ~15 km areas without an official single point, so each site below is a published point.
 sites:
   - id: shackleton_ridge
     name: Shackleton – de Gerlache connecting ridge
-    lat: -89.45
-    lon: -137.3
+    lat: -89.4395
+    lon: -137.1934   # 222.8066 E
     category: candidate
-    note: Long-studied high-illumination ridge near the south pole.
-    source: "LROC / Artemis candidate-region literature (verify)"
-    verified: false
+    note: >-
+      Connecting Ridge CR1, spot 1 (88.1% average illumination at 2 m above ground over 20 yr).
+      Was a 2022 Artemis III region; not in the Oct 2024 list of nine.
+    source: "Gläser et al., EPSC 2014-136, Table (spot 1): https://elib.dlr.de/94242/1/EPSC2014-136-1.pdf"
+    verified: true
 
   - id: de_gerlache_rim
-    name: de Gerlache crater rim
-    lat: -88.7
-    lon: -68.0
-    category: artemis_region
-    note: Artemis III candidate region 'de Gerlache Rim' (verify exact point).
-    source: "NASA Artemis III candidate regions map (verify)"
-    verified: false
+    name: de Gerlache crater rim (site 011)
+    lat: -88.67
+    lon: -68.10   # 291.90 E
+    category: candidate
+    note: >-
+      Mazarico et al. (2011) site SP-11 / Artemis potential site 011. Lies on the rim
+      ('de Gerlache Rim 1', 2022 region); the 2024 region 'de Gerlache Rim 2' is mostly north of the rim.
+      Corroborated by Bussey et al. 2010 Point C (88.71 S, 68.7 W) and GR1 (88.6952 S, 68.2846 W,
+      https://www.hou.usra.edu/meetings/newviews2018/pdf/6002.pdf).
+    source: "Patterson et al. 2024 (ESSOAr), citing Mazarico et al. 2011 Icarus 211: https://essopenarchive.org/doi/full/10.22541/essoar.170542057.79789532/v1"
+    verified: true
 
   - id: malapert_massif
-    name: Malapert Massif
+    name: Malapert Massif (Artemis III region core)
     lat: -86.0
-    lon: 2.9
+    lon: 0.0
     category: artemis_region
-    note: Artemis III candidate region; massif with good Earth visibility (verify).
-    source: "NASA Artemis III candidate regions map (verify)"
-    verified: false
+    note: >-
+      Artemis III candidate region (Oct 2024). LROC: "The relatively flat area (86°S, 0°E) ... is the
+      heart of the Artemis 3 landing region". Point is given only to 1 degree (~±1.5 km in latitude).
+      The older LCDP-SAT point (85.8 S, 356.4 E,
+      https://www.lpi.usra.edu/mapsit/standup-committees/LCDP-SAT-REPORT-20211110.pdf) sits ~1.6 km
+      lower on the flank in the LOLA DEM (horizon up to 28.6 deg), so it is not used.
+    source: "LROC post 1294: https://lroc.im-ldi.com/images/1294"
+    verified: true
 
   - id: mons_mouton
-    name: Mons Mouton (IM-2 'Athena' landing area)
-    lat: -84.8
-    lon: 29.2
+    name: Mons Mouton (IM-2 'Athena' landing site)
+    lat: -84.7906
+    lon: 29.1957
     category: clps
-    note: CLPS IM-2 landing region, March 2025 (verify exact landed coordinates).
-    source: "Intuitive Machines / LROC IM-2 landing site release (verify)"
-    verified: false
+    note: >-
+      Where IM-2 Athena came to rest on 6 March 2025 (on its side in a 20 m crater, 5321 m elevation).
+      Mons Mouton is also an Artemis III candidate region (Oct 2024).
+    source: "LROC post 1408: https://lroc.im-ldi.com/images/1408"
+    verified: true
 
   - id: apollo_11
     name: Apollo 11 (Tranquility Base)
