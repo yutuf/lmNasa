@@ -3,7 +3,7 @@ import pytest
 
 from lunanav.geometry import MOON_RADIUS_M, destination, disk_visible_fraction, elevation_angle_deg
 from lunanav.horizon import HorizonProfile, compute_horizon
-from lunanav.metrics import MissionConstraints, evaluate_window, longest_run, scan_start_dates
+from lunanav.metrics import MissionConstraints, delay_tolerance, evaluate_window, longest_run, scan_start_dates
 from lunanav.power import PowerConfig, simulate_battery
 from lunanav.visibility import Visibility
 
@@ -92,3 +92,8 @@ def test_scan_start_dates_shapes():
 def test_flat_profile():
     hz = HorizonProfile.flat("x", 0, 0)
     assert hz.at(123.4) == 0.0
+
+
+def test_delay_tolerance():
+    f = [True, True, True, False, True]
+    assert delay_tolerance(f, 24).tolist() == [48, 24, 0, -1, 0]
