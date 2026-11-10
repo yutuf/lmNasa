@@ -61,7 +61,7 @@ key = (duration, min_sun, min_comm, max_dark, peak, load, batt, min_soc, stride)
 scans = scan(key, tuple(s.id for s in sites))
 
 # ---------------- heatmap: site × start date ----------------
-labels = [s.name + ("" if s.verified else " †") for s in sites]
+labels = [s.name + (" (reference)" if s.reference else "") + ("" if s.verified else " †") for s in sites]
 starts = scans[sites[0].id][0]
 Z = np.array([[r.score for r in scans[s.id][1]] for s in sites])
 hover = np.array([[("✅ feasible" if r.meets_constraints else "❌ " + "; ".join(r.fail_reasons))
@@ -79,6 +79,8 @@ st.plotly_chart(fig, width="stretch")
 # best options table
 rows = []
 for s in sites:
+    if s.reference:
+        continue
     st_, res = scans[s.id]
     for t0, r in zip(st_, res):
         rows.append(dict(site=s.name, start=pd.Timestamp(t0), score=r.score, feasible=r.meets_constraints,
@@ -86,6 +88,7 @@ for s in sites:
                          min_battery=r.min_soc))
 df = pd.DataFrame(rows).sort_values("score", ascending=False)
 st.subheader("Best options")
+st.caption("Reference sites (e.g. Apollo 11) are shown on the heatmap for contrast but not ranked.")
 st.dataframe(df.head(10).style.format({"score": "{:.1f}", "sun": "{:.0%}", "earth": "{:.0%}",
                                        "min_battery": "{:.0%}", "longest_shadow_h": "{:.0f}",
                                        "start": lambda t: t.strftime("%Y-%m-%d %H:%M")}),

@@ -59,6 +59,7 @@ sites:
     lat: 0.67408
     lon: 23.47297
     category: apollo
+    reference: true   # equatorial contrast; excluded from ranking
     note: Equatorial reference; shows how different the polar Sun/Earth geometry is.
     source: "NASA / LROC Apollo 11 landing site"
     verified: true
