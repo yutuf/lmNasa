@@ -61,6 +61,7 @@ The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit 
 | `lunanav/metrics.py` | window metrics, constraints, score, vectorised start-date scan, delay tolerance, set/rise timers |
 | `lunanav/panorama.py` | azimuth helpers for the 360° view (circular mean, unwrap, compass ticks) |
 | `lunanav/derive.py` | candidate grid, slope, alt-az reprojection, ranking for derived points |
+| `lunanav/outlines.py` | region outlines at runtime (pure numpy): which Artemis III region(s) contain a point |
 | `lunanav/regions.py` | USGS region grids: exact inside/outside test, grid points, projection |
 | `lunanav/sites.py` | cited sites (`data/sites.yaml`) + generated derived points (`data/derived_sites.yaml`) |
 | `app.py` | Streamlit UI |
@@ -200,6 +201,11 @@ for the large Mons Mouton Plateau; Earth parallax ≤ 0.006°).
 
 ## Validation
 
+- Region membership in the app (outline test in the map plane) agrees with the exact USGS grid-cell
+  lookup on all of 36,000 random points around the nine regions.
+- NASA's regions overlap (measured on the USGS cells): Mons Mouton shares 136 km² with Mons Mouton
+  Plateau and 88 km² with Nobile Rim 1; Plateau and Nobile Rim 1 share 42 km². The app lists every
+  region that contains a point.
 - Artemis region centres: grid centres lie 0.09–0.47 km from the centres of USGS's own simplified
   region outlines (same release), for all seven regions.
 - New sites' Sun/Earth series checked against the existing sites' independent DE440 runs (rotated to
