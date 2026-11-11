@@ -56,7 +56,8 @@ in every direction, and JPL's planetary ephemeris (DE440) to know where the Sun 
 4. **Inspect one option** shows the 360° view from the lander, a time slider ("what does the lander see on day 5?"),
    when the Sun and Earth will next set, and whether the battery survives.
 
-**Cited vs derived points:** *cited* sites are coordinates copied from publications (source shown at the bottom).
+**Cited vs derived points:** *cited* sites come from publications: a published point, or the centre of an
+official Artemis III region (USGS grid). The source is shown at the bottom.
 A *derived* point is LunaNav's own pick: the best spot within 1 km of a cited site with a gentle slope. It is
 always labelled and never replaces the cited one.
 """)
@@ -106,6 +107,7 @@ if not show_derived:
     sites = [s for s in sites if not s.derived]
 by_id = {s.id: s for s in load_sites()}
 data = {s.id: load_series(s.id) for s in sites}
+pending = [s.name for s in sites if data[s.id][0] is None]
 sites = [s for s in sites if data[s.id][0] is not None]
 if not sites:
     st.error("No precomputed data. Run `python scripts/precompute.py` "
@@ -115,6 +117,8 @@ if not sites:
 terrain_labels = {data[s.id][2] for s in sites}
 if any("SYNTHETIC" in t for t in terrain_labels):
     st.warning("⚠️ SYNTHETIC demo data — not real lunar geometry. Run scripts/precompute.py.")
+if pending:
+    st.caption(f"⏳ Defined but not computed yet (run the offline scripts): {', '.join(pending)}.")
 if any(not s.verified and not s.derived for s in sites):
     st.info("Some site coordinates are approximate and still being verified (marked †).")
 

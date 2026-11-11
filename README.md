@@ -21,7 +21,8 @@ and expert knowledge. LunaNav answers it in one screen:
 - **360° view from the lander:** the terrain silhouette with the Sun's and Earth's paths over the
   mission, plus a time slider — *"on day 5, is the Sun up, and when does it set?"*
 - **Communication windows:** when Earth is above the terrain, and when it next sets or rises.
-- **Cited vs derived points:** every site is a coordinate copied from a publication (source shown).
+- **Cited vs derived points:** every site comes from a publication: a published point, or the centre of an official
+  Artemis III region computed from the USGS grid (source shown).
   Next to it LunaNav can show a **derived** point: the best spot within 1 km on a gentle slope.
   Always labelled, never a replacement for the cited one.
 - **South-pole map** of the sites, true to scale, with the Earth-facing side marked.
