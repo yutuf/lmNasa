@@ -25,8 +25,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from lunanav.regions import (HAS_PUBLISHED_POINT, REGIONS, SOURCE, find_regions,  # noqa: E402,F401
-                             is_1km, region_of)
+from lunanav.regions import (HAS_PUBLISHED_POINT, REGIONS, SOURCE, RegionGrid, find_regions,  # noqa: E402,F401
+                             is_1km, parent_site_id, region_of)
 
 
 def ring_area_centroid(xy):
@@ -81,11 +81,32 @@ def yaml_entry(reg, lat, lon, area_km2, files, indent="  "):
             f"{i}  verified: true\n")
 
 
+def write_outlines(found, out_path: Path, max_piece_m=2000.0):
+    """data/artemis_regions.json: each region's exact outline (from its 1 km grid) in lat/lon, for the app map.
+    Long edges are split into <= max_piece_m pieces so they stay straight-enough on any polar map."""
+    import json
+    out = {"source": SOURCE, "note": "Outline = boundary of the region's USGS 1 km grid cells "
+                                     "(scripts/artemis_regions.py --outlines).", "regions": {}}
+    for reg, files in sorted(found.items()):
+        g = RegionGrid.from_shapefiles(reg, files)
+        pieces = []
+        for (x0, y0), (x1, y1) in g.boundary_segments():
+            n = max(1, int(np.ceil(np.hypot(x1 - x0, y1 - y0) / max_piece_m)))
+            t = np.linspace(0, 1, n + 1)
+            la, lo = g.to_latlon(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)
+            pieces.append([[round(float(a), 5), round(float(b), 5)] for a, b in zip(la, lo)])
+        out["regions"][reg] = {"name": REGIONS[reg][1], "site": parent_site_id(reg),
+                               "area_km2": round(g.area_km2), "lines": pieces}
+    out_path.write_text(json.dumps(out, separators=(",", ":")))
+    print(f"wrote outlines of {len(found)} region(s) to {out_path}")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("folder", help="unzipped USGS release (searched recursively for .shp)")
     ap.add_argument("--all", action="store_true", help="also add regions that already have a published point")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--outlines", action="store_true", help="also write data/artemis_regions.json (map outlines)")
     ap.add_argument("--sites", default=str(ROOT / "data" / "sites.yaml"))
     a = ap.parse_args(argv)
 
@@ -94,6 +115,8 @@ def main(argv=None):
     m = re.search(r"^([ \t]*)- id:", text, re.M)
     indent = m.group(1) if m else "  "
     found = find_regions(Path(a.folder))
+    if a.outlines and not a.dry_run:
+        write_outlines(found, sites_path.with_name("artemis_regions.json"))
     missing = sorted(set(REGIONS) - set(found))
     if missing:
         print("not found in folder:", ", ".join(missing))

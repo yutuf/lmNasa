@@ -128,3 +128,19 @@ def test_region_search_leaves_the_bowl_and_keeps_1km_entry(tmp_path):
     assert drb.main(args) == ["artemis_haworth_region_best"]                 # rerun replaces, never duplicates
     ids = [e["id"] for e in yaml.safe_load((data / "derived_sites.yaml").read_text())["sites"]]
     assert sorted(ids) == ["artemis_haworth_derived", "artemis_haworth_region_best"]
+
+
+def test_boundary_of_an_l_shaped_region(tmp_path):
+    """Three cells in an L: perimeter 8 cell edges, merged into 6 straight runs."""
+    from lunanav.regions import RegionGrid
+    p = tmp_path / "Haworth_1km.shp"
+    with shapefile.Writer(str(p), shapeType=shapefile.POLYGON) as w:
+        w.field("id", "N")
+        for k, (x, y) in enumerate([(0, 0), (1000, 0), (0, 1000)]):
+            w.poly([[(x, y), (x, y + 1000), (x + 1000, y + 1000), (x + 1000, y), (x, y)]])
+            w.record(k)
+    p.with_suffix(".prj").write_text(LPS.to_wkt())
+    segs = RegionGrid.from_shapefiles("Haworth", [p]).boundary_segments()
+    lengths = np.hypot(*(segs[:, 1] - segs[:, 0]).T)
+    assert len(segs) == 6 and lengths.sum() == pytest.approx(8000.0)
+    assert sorted(lengths.tolist()) == [1000.0, 1000.0, 1000.0, 1000.0, 2000.0, 2000.0]

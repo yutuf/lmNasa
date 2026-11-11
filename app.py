@@ -16,6 +16,13 @@ from lunanav.series import load_series
 from lunanav.sites import load_sites
 
 HORIZONS = Path(__file__).resolve().parent / "data" / "horizons.json"
+REGION_OUTLINES = HORIZONS.with_name("artemis_regions.json")   # scripts/artemis_regions.py --outlines
+
+
+@st.cache_resource
+def region_outlines():
+    import json
+    return json.loads(REGION_OUTLINES.read_text()) if REGION_OUTLINES.exists() else None
 
 
 @st.cache_resource
@@ -212,6 +219,18 @@ with st.expander("Map: where are these sites around the south pole?"):
                            marker=dict(size=11 if kind == "cited" else 8, color=color, symbol=sym),
                            hovertext=[f"{labels[sites.index(s)]}<br>{s.lat:.4f}°, {s.lon:.4f}°E" for s in pts],
                            hoverinfo="text")
+    ro = region_outlines()
+    if ro:
+        xs, ys, tx = [], [], []
+        for r in ro["regions"].values():
+            for line in r["lines"]:
+                la = np.array([p[0] for p in line]); lo = np.array([p[1] for p in line])  # noqa: E702
+                rr = np.radians(90 + la) * 1737.4
+                xs += list(rr * np.sin(np.radians(lo))) + [None]
+                ys += list(rr * np.cos(np.radians(lo))) + [None]
+                tx += [f"{r['name']} — Artemis III region, {r['area_km2']} km²"] * len(line) + [None]
+        mp.add_scatter(x=xs, y=ys, mode="lines", name="Artemis III regions (USGS)", text=tx, hoverinfo="text",
+                       line=dict(color="#6b8f71", width=1.5))
     mp.add_scatter(x=[0], y=[0], mode="markers+text", text=["South Pole"], textposition="middle right",
                    marker=dict(symbol="x", size=9, color="white"), textfont=dict(color="white"), showlegend=False)
     mp.add_annotation(x=0, y=212, text="↑ 0° E — toward Earth (near side)", showarrow=False,
@@ -221,7 +240,8 @@ with st.expander("Map: where are these sites around the south pole?"):
                      yaxis=dict(visible=False, range=[-222, 222], scaleanchor="x"),
                      legend=dict(orientation="h", y=-0.02))
     st.plotly_chart(mp, width="stretch")
-    st.caption("Distances from the pole, true to scale. Derived points sit within 1 km of their cited site, "
+    st.caption("Distances from the pole, true to scale. Green outlines: NASA's Artemis III candidate regions "
+               "(USGS navigation grids, McClernan 2024). Derived points sit within 1 km of their cited site, "
                "so they overlap it at this scale. Longitude 0° faces Earth, which is why sites on that side "
                "see Earth more often." + ("" if len(polar) == len(sites) else
                                             " Apollo 11 (equator) is off this map."))

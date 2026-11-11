@@ -120,6 +120,35 @@ class RegionGrid:
         keep = self.contains(X, Y)
         return X[keep], Y[keep]
 
+    def boundary_segments(self):
+        """Outline of the region: every cell edge that belongs to exactly one cell, merged into
+        straight runs. Returns an (n, 2, 2) array of projected ((x0, y0), (x1, y1)) segments."""
+        h, v = set(), set()          # horizontal edge (i, j) = from (i, j) to (i+1, j); vertical (i, j) to (i, j+1)
+        for i, j in self.keys:
+            for e, bucket in (((i, j), h), ((i, j + 1), h), ((i, j), v), ((i + 1, j), v)):
+                bucket.symmetric_difference_update({e})
+        segs = []
+        for edges, horiz in ((h, True), (v, False)):
+            # merge consecutive unit edges on the same line
+            lines = {}
+            for i, j in edges:
+                lines.setdefault(j if horiz else i, []).append(i if horiz else j)
+            for fixed, run in lines.items():
+                run = sorted(run)
+                start = prev = run[0]
+                for k in run[1:] + [None]:
+                    if k is not None and k == prev + 1:
+                        prev = k
+                        continue
+                    a, b = (start, prev + 1)
+                    p0 = (a, fixed) if horiz else (fixed, a)
+                    p1 = (b, fixed) if horiz else (fixed, b)
+                    segs.append([[self.x0 + p0[0] * self.cell_m, self.y0 + p0[1] * self.cell_m],
+                                 [self.x0 + p1[0] * self.cell_m, self.y0 + p1[1] * self.cell_m]])
+                    if k is not None:
+                        start = prev = k
+        return np.asarray(segs, float)
+
     def _tf(self, inverse: bool):
         from pyproj import CRS, Transformer
         a, b = CRS.from_wkt(self.wkt), CRS.from_proj4(GEO)
