@@ -4,6 +4,8 @@
 # Mons Mouton Plateau, Mons Mouton, Nobile Rim 1, Nobile Rim 2, de Gerlache Rim 2, Slater Plain;
 # https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/)
 # are ~15 km areas without an official single point, so each site below is a published point.
+# slope_deg: computed by LunaNav from LOLA LDEM_80S_40MPP_ADJ (40 m baseline, central differences;
+# scripts/derive_best_points.py run of 2026-11-11). Not part of the cited source.
 sites:
   - id: shackleton_ridge
     name: Shackleton – de Gerlache connecting ridge
@@ -15,6 +17,7 @@ sites:
       Was a 2022 Artemis III region; not in the Oct 2024 list of nine.
     source: "Gläser et al., EPSC 2014-136, Table (spot 1): https://elib.dlr.de/94242/1/EPSC2014-136-1.pdf"
     verified: true
+    slope_deg: 0.7
 
   - id: de_gerlache_rim
     name: de Gerlache crater rim (site 011)
@@ -28,6 +31,7 @@ sites:
       https://www.hou.usra.edu/meetings/newviews2018/pdf/6002.pdf).
     source: "Patterson et al. 2024 (ESSOAr), citing Mazarico et al. 2011 Icarus 211: https://essopenarchive.org/doi/full/10.22541/essoar.170542057.79789532/v1"
     verified: true
+    slope_deg: 3.4
 
   - id: malapert_massif
     name: Malapert Massif (Artemis III region core)
@@ -42,6 +46,7 @@ sites:
       lower on the flank in the LOLA DEM (horizon up to 28.6 deg), so it is not used.
     source: "LROC post 1294: https://lroc.im-ldi.com/images/1294"
     verified: true
+    slope_deg: 10.5
 
   - id: mons_mouton
     name: Mons Mouton (IM-2 'Athena' landing site)
@@ -53,6 +58,7 @@ sites:
       Mons Mouton is also an Artemis III candidate region (Oct 2024).
     source: "LROC post 1408: https://lroc.im-ldi.com/images/1408"
     verified: true
+    slope_deg: 2.5
 
   - id: apollo_11
     name: Apollo 11 (Tranquility Base)

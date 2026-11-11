@@ -94,6 +94,18 @@ hours with the Sun (≥ 50 % of the disk) **and** Earth in view; tie-break on su
 is recomputed with the same DEM and settings so the comparison is fair. If no candidate beats the
 cited point, no derived point is written. All three numbers are command-line options.
 
+Result with LOLA `LDEM_80S_40MPP_ADJ`, 2026-11-01 → 2028-12-31 (share of hours):
+
+| cited site | cited: Sun+Earth / Sun / Earth / slope | derived point | derived: Sun+Earth / Sun / Earth / slope |
+|---|---|---|---|
+| Shackleton connecting ridge | 51.8 % / 91.1 % / 53.9 % / 0.7° | — (cited point is already the best) | — |
+| de Gerlache rim (site 011) | 41.3 % / 77.3 % / 57.3 % / 3.4° | 200 m W | 48.8 % / 85.2 % / 57.3 % / 1.6° |
+| Malapert Massif | 15.8 % / 42.3 % / 44.1 % / **10.5°** | 447 m NE | 66.8 % / 66.8 % / 100 % / 3.9° |
+| Mons Mouton (IM-2) | 38.6 % / 45.5 % / 82.1 % / 2.5° | 825 m S | 43.9 % / 51.5 % / 83.7 % / 1.6° |
+
+The Malapert point is published only to 1° (≈ ±1.5 km), so a 447 m move is well inside its own
+uncertainty; its cited coordinate is also steeper than our 10° limit, which the app flags.
+
 ## Validation
 
 - Sun/Earth directions cross-checked against JPL Horizons: differences ~0.0001°.
