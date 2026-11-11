@@ -14,7 +14,8 @@ USGS 1 km navigation grid, McClernan 2024, doi:10.5066/P1MEQ6UK):
   3. 360 deg horizon + Sun/Earth series for each (the region's site series is
      rotated into each candidate's frame, as in derive_best_points.py),
   4. the --top best are refined on a --refine-spacing grid within --refine-radius,
-     still clipped to the region,
+     still clipped to the region; so are the region's own site and its 1 km derived
+     point when they lie inside the region (the result is never worse than those),
   5. objective: share of hours with Sun (>= 50 % of the disk) AND Earth in view,
      tie-break sunlight, then closeness to the region's site.
 
@@ -51,8 +52,13 @@ def coarse_spacing(area_km2, max_candidates, floor_m=250.0):
     return max(floor_m, float(np.ceil(np.sqrt(area_km2 * 1e6 / max_candidates) / 50.0) * 50.0))
 
 
-def search_region(grid, vis, lat0, lon0, horizon_fn, sample, a, log=print):
-    """Coarse-to-fine search inside `grid`. Returns (best CandidateScore, n_evaluated, spacing)."""
+def search_region(grid, vis, lat0, lon0, horizon_fn, sample, a, log=print, seeds=()):
+    """Coarse-to-fine search inside `grid`. Returns (best CandidateScore, n_evaluated, spacing).
+
+    The refinement runs around the --top coarse winners AND around `seeds` (lat, lon) inside the region:
+    the region's own site and points already known to be good (e.g. the 1 km derived point). So the
+    result can never be worse than a known point that lies in the region, even when the coarse grid
+    steps over a narrow peak."""
     spacing = coarse_spacing(grid.area_km2, a.max_candidates)
     x, y = grid.grid_points(spacing)
     la, lo = grid.to_latlon(x, y)
@@ -62,8 +68,12 @@ def search_region(grid, vis, lat0, lon0, horizon_fn, sample, a, log=print):
     if not coarse:
         return None, len(la), spacing
     pool, n_eval = list(coarse), len(la)
-    for c in coarse[:a.top]:
-        rla, rlo, _, _ = candidate_grid(c.lat, c.lon, a.refine_radius, a.refine_spacing)
+    centres = [(c.lat, c.lon) for c in coarse[:a.top]]
+    for slat, slon in seeds:
+        if grid.contains(*grid.to_xy(slat, slon)):
+            centres.append((slat, slon))
+    for clat, clon in centres:
+        rla, rlo, _, _ = candidate_grid(clat, clon, a.refine_radius, a.refine_spacing)
         inside = grid.contains(*grid.to_xy(rla, rlo))
         rla, rlo = rla[inside], rlo[inside]
         rd, rb = distance_bearing(lat0, lon0, rla, rlo)
@@ -113,7 +123,10 @@ def main(argv=None):
         t0 = time.time()
         grid = RegionGrid.from_shapefiles(reg, files)
         print(f"{reg:22s} {grid.area_km2:.0f} km2, site {pid}")
-        best, n_eval, spacing = search_region(grid, vis, parent.lat, parent.lon, horizon_at, sample, a)
+        known = [(e["lat"], e["lon"]) for e in entries
+                 if e.get("derived_from") == pid and e["id"] != f"{pid}_region_best"]
+        best, n_eval, spacing = search_region(grid, vis, parent.lat, parent.lon, horizon_at, sample, a,
+                                              seeds=[(parent.lat, parent.lon)] + known)
         if best is None:
             print(f"{'':22s} no point under {a.max_slope:.0f} deg in the region; nothing written")
             continue

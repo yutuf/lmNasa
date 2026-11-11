@@ -174,3 +174,4 @@ sites:
       scripts/artemis_regions.py. A region centre, not a landing point: see the derived point.
     source: "McClernan 2024, USGS data release 'Down-selected Artemis III candidate landing site navigational grids': https://doi.org/10.5066/P1MEQ6UK"
     verified: true
+    slope_deg: 7.1
