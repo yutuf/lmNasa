@@ -25,7 +25,8 @@ and expert knowledge. LunaNav answers it in one screen:
   Artemis III region computed from the USGS grid (source shown).
   Next to it LunaNav can show a **derived** point: the best spot within 1 km on a gentle slope.
   Always labelled, never a replacement for the cited one.
-- **South-pole map** of the sites, true to scale, with the Earth-facing side marked.
+- **South-pole map** of the sites and NASA's nine Artemis III candidate regions (exact USGS grid
+  outlines), true to scale, with the Earth-facing side marked.
 - **Shareable links:** the page address always encodes the scenario (settings, site, start date).
 - **CSV export** of any mission: hourly Sun/Earth position, terrain, visibility and battery.
 - **Plain-language help** in the app for students, educators and the public.
@@ -101,7 +102,8 @@ Every site needs a source. Two ways in:
    numbers are copied from that source.
 2. **NASA's Artemis III candidate regions** (published as ~15 km areas, not points):
    download the USGS navigation grids ([McClernan 2024, doi:10.5066/P1MEQ6UK](https://doi.org/10.5066/P1MEQ6UK)),
-   unzip, then `python scripts/artemis_regions.py <folder>`. It adds the area-weighted centre of each
+   unzip, then `python scripts/artemis_regions.py <folder> --outlines` (`--outlines` also writes the
+   region outlines the map draws, `data/artemis_regions.json`). It adds the area-weighted centre of each
    region's 1 km grid as a site, labelled *region centre* (Malapert Massif keeps its published point,
    which lies inside its region; the IM-2 point is inside the Mons Mouton *Plateau* region, so it does
    not stand in for the Mons Mouton region).
@@ -179,6 +181,8 @@ How to read it:
   it as "the centre's neighbourhood is already about as good as it gets within 1 km".
 
 ## Best point in each Artemis III region
+
+![Sites and Artemis III regions around the south pole](docs/map.png)
 
 The 1 km search often stops at its own edge. `scripts/derive_region_best.py` searches each whole
 region as USGS defines it (the 1 km navigation grid): about 1,500 grid points clipped to the region,
