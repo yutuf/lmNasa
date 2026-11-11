@@ -70,3 +70,94 @@ sites:
     note: Equatorial reference; shows how different the polar Sun/Earth geometry is.
     source: "NASA / LROC Apollo 11 landing site"
     verified: true
+
+  - id: artemis_mons_mouton_plateau
+    name: Mons Mouton Plateau (Artemis III region centre)
+    lat: -84.3375
+    lon: 30.6186
+    category: artemis_region
+    note: >-
+      Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
+      navigation grid (4524 km2; Mons_Mouton_Plateau_PolarLGRS_ACC_1km_S_Grid.shp), computed by
+      scripts/artemis_regions.py. A region centre, not a landing point: see the derived point.
+    source: "McClernan 2024, USGS data release 'Down-selected Artemis III candidate landing site navigational grids': https://doi.org/10.5066/P1MEQ6UK"
+    verified: true
+    slope_deg: 2.1
+
+  - id: artemis_haworth
+    name: Haworth (Artemis III region centre)
+    lat: -86.7661
+    lon: -22.6199
+    category: artemis_region
+    note: >-
+      Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
+      navigation grid (930 km2; Haworth_PolarLGRS_ACC_1km_S_Grid.shp), computed by
+      scripts/artemis_regions.py. A region centre, not a landing point: see the derived point.
+    source: "McClernan 2024, USGS data release 'Down-selected Artemis III candidate landing site navigational grids': https://doi.org/10.5066/P1MEQ6UK"
+    verified: true
+    slope_deg: 2.9
+
+  - id: artemis_nobile_rim_1
+    name: Nobile Rim 1 (Artemis III region centre)
+    lat: -85.4338
+    lon: 37.3276
+    category: artemis_region
+    note: >-
+      Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
+      navigation grid (441 km2; Nobile_Rim_1_PolarLGRS_ACC_1km_S_Grid.shp), computed by
+      scripts/artemis_regions.py. A region centre, not a landing point: see the derived point.
+    source: "McClernan 2024, USGS data release 'Down-selected Artemis III candidate landing site navigational grids': https://doi.org/10.5066/P1MEQ6UK"
+    verified: true
+    slope_deg: 16.9
+
+  - id: artemis_nobile_rim_2
+    name: Nobile Rim 2 (Artemis III region centre)
+    lat: -83.9545
+    lon: 58.7938
+    category: artemis_region
+    note: >-
+      Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
+      navigation grid (420 km2; Nobile_Rim_2_PolarLGRS_ACC_1km_S_Grid.shp), computed by
+      scripts/artemis_regions.py. A region centre, not a landing point: see the derived point.
+    source: "McClernan 2024, USGS data release 'Down-selected Artemis III candidate landing site navigational grids': https://doi.org/10.5066/P1MEQ6UK"
+    verified: true
+    slope_deg: 4.7
+
+  - id: artemis_peak_near_cabeus_b
+    name: Peak near Cabeus B (Artemis III region centre)
+    lat: -83.6514
+    lon: -68.7263
+    category: artemis_region
+    note: >-
+      Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
+      navigation grid (441 km2; Peak_Near_Cabeus_B_PolarLGRS_ACC_1km_S_Grid.shp), computed by
+      scripts/artemis_regions.py. A region centre, not a landing point: see the derived point.
+    source: "McClernan 2024, USGS data release 'Down-selected Artemis III candidate landing site navigational grids': https://doi.org/10.5066/P1MEQ6UK"
+    verified: true
+    slope_deg: 12.0
+
+  - id: artemis_slater_plain
+    name: Slater Plain (Artemis III region centre)
+    lat: -87.1697
+    lon: 125.4596
+    category: artemis_region
+    note: >-
+      Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
+      navigation grid (441 km2; Slater_Plain_PolarLGRS_ACC_1km_S_Grid.shp), computed by
+      scripts/artemis_regions.py. A region centre, not a landing point: see the derived point.
+    source: "McClernan 2024, USGS data release 'Down-selected Artemis III candidate landing site navigational grids': https://doi.org/10.5066/P1MEQ6UK"
+    verified: true
+    slope_deg: 3.4
+
+  - id: artemis_de_gerlache_rim_2
+    name: de Gerlache Rim 2 (Artemis III region centre)
+    lat: -88.2263
+    lon: -65.1126
+    category: artemis_region
+    note: >-
+      Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
+      navigation grid (441 km2; de_Gerlache_Rim_2_PolarLGRS_ACC_1km_S_Grid.shp), computed by
+      scripts/artemis_regions.py. A region centre, not a landing point: see the derived point.
+    source: "McClernan 2024, USGS data release 'Down-selected Artemis III candidate landing site navigational grids': https://doi.org/10.5066/P1MEQ6UK"
+    verified: true
+    slope_deg: 11.3

@@ -48,3 +48,115 @@ sites:
     to 2028-12-31).'
   source: derived from mons_mouton with LDEM_80S_40MPP_ADJ.TIF
   verified: false
+- id: artemis_mons_mouton_plateau_derived
+  name: Mons Mouton Plateau (Artemis III region centre) — derived best point
+  lat: -84.35723
+  lon: 30.35028
+  category: derived
+  derived_from: artemis_mons_mouton_plateau
+  distance_m: 1000
+  bearing_deg: 233.1
+  slope_deg: 8.4
+  cited_slope_deg: 2.1
+  note: 'Computed by LunaNav, not from a publication: best of 233 grid points (100
+    m spacing, slope <= 10 deg) within 1000 m of the cited point; 1000 m SW of it.
+    Objective: hours with Sun and Earth both in view, 40.3% vs 20.2% at the cited
+    point (2026-11-01 to 2028-12-31).'
+  source: derived from artemis_mons_mouton_plateau with LDEM_80S_40MPP_ADJ.TIF
+  verified: false
+- id: artemis_haworth_derived
+  name: Haworth (Artemis III region centre) — derived best point
+  lat: -86.79242
+  lon: -22.26627
+  category: derived
+  derived_from: artemis_haworth
+  distance_m: 1000
+  bearing_deg: 143.1
+  slope_deg: 7.2
+  cited_slope_deg: 2.9
+  note: 'Computed by LunaNav, not from a publication: best of 263 grid points (100
+    m spacing, slope <= 10 deg) within 1000 m of the cited point; 1000 m SE of it.
+    Objective: hours with Sun and Earth both in view, 20.7% vs 6.1% at the cited point
+    (2026-11-01 to 2028-12-31).'
+  source: derived from artemis_haworth with LDEM_80S_40MPP_ADJ.TIF
+  verified: false
+- id: artemis_nobile_rim_1_derived
+  name: Nobile Rim 1 (Artemis III region centre) — derived best point
+  lat: -85.46346
+  lon: 37.49438
+  category: derived
+  derived_from: artemis_nobile_rim_1
+  distance_m: 985
+  bearing_deg: 156.0
+  slope_deg: 5.7
+  cited_slope_deg: 16.9
+  note: 'Computed by LunaNav, not from a publication: best of 97 grid points (100
+    m spacing, slope <= 10 deg) within 1000 m of the cited point; 985 m SE of it.
+    Objective: hours with Sun and Earth both in view, 26.5% vs 9.4% at the cited point
+    (2026-11-01 to 2028-12-31).'
+  source: derived from artemis_nobile_rim_1 with LDEM_80S_40MPP_ADJ.TIF
+  verified: false
+- id: artemis_nobile_rim_2_derived
+  name: Nobile Rim 2 (Artemis III region centre) — derived best point
+  lat: -83.92809
+  lon: 58.98086
+  category: derived
+  derived_from: artemis_nobile_rim_2
+  distance_m: 1000
+  bearing_deg: 36.9
+  slope_deg: 7.0
+  cited_slope_deg: 4.7
+  note: 'Computed by LunaNav, not from a publication: best of 304 grid points (100
+    m spacing, slope <= 10 deg) within 1000 m of the cited point; 1000 m NE of it.
+    Objective: hours with Sun and Earth both in view, 31.7% vs 28.1% at the cited
+    point (2026-11-01 to 2028-12-31).'
+  source: derived from artemis_nobile_rim_2 with LDEM_80S_40MPP_ADJ.TIF
+  verified: false
+- id: artemis_peak_near_cabeus_b_derived
+  name: Peak near Cabeus B (Artemis III region centre) — derived best point
+  lat: -83.625
+  lon: -68.5778
+  category: derived
+  derived_from: artemis_peak_near_cabeus_b
+  distance_m: 943
+  bearing_deg: 32.0
+  slope_deg: 6.8
+  cited_slope_deg: 12.0
+  note: 'Computed by LunaNav, not from a publication: best of 98 grid points (100
+    m spacing, slope <= 10 deg) within 1000 m of the cited point; 943 m NE of it.
+    Objective: hours with Sun and Earth both in view, 48.3% vs 9.1% at the cited point
+    (2026-11-01 to 2028-12-31).'
+  source: derived from artemis_peak_near_cabeus_b with LDEM_80S_40MPP_ADJ.TIF
+  verified: false
+- id: artemis_slater_plain_derived
+  name: Slater Plain (Artemis III region centre) — derived best point
+  lat: -87.19601
+  lon: 125.86408
+  category: derived
+  derived_from: artemis_slater_plain
+  distance_m: 1000
+  bearing_deg: 143.1
+  slope_deg: 9.8
+  cited_slope_deg: 3.4
+  note: 'Computed by LunaNav, not from a publication: best of 313 grid points (100
+    m spacing, slope <= 10 deg) within 1000 m of the cited point; 1000 m SE of it.
+    Objective: hours with Sun and Earth both in view, 9.6% vs 2.0% at the cited point
+    (2026-11-01 to 2028-12-31).'
+  source: derived from artemis_slater_plain with LDEM_80S_40MPP_ADJ.TIF
+  verified: false
+- id: artemis_de_gerlache_rim_2_derived
+  name: de Gerlache Rim 2 (Artemis III region centre) — derived best point
+  lat: -88.21636
+  lon: -65.53641
+  category: derived
+  derived_from: artemis_de_gerlache_rim_2
+  distance_m: 500
+  bearing_deg: 306.9
+  slope_deg: 10.0
+  cited_slope_deg: 11.3
+  note: 'Computed by LunaNav, not from a publication: best of 89 grid points (100
+    m spacing, slope <= 10 deg) within 1000 m of the cited point; 500 m NW of it.
+    Objective: hours with Sun and Earth both in view, 22.0% vs 21.7% at the cited
+    point (2026-11-01 to 2028-12-31).'
+  source: derived from artemis_de_gerlache_rim_2 with LDEM_80S_40MPP_ADJ.TIF
+  verified: false
