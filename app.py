@@ -197,20 +197,34 @@ def site_label(s):
     return s.name + (" (reference)" if s.reference else "") + ("" if s.verified else " †") + steep
 
 
+def short_label(s, width=30):
+    """Compact heatmap tick: derived rows sit right under their parent, so direction + distance is enough."""
+    if s.derived:
+        d = COMPASS8[int(((s.bearing_deg or 0) + 22.5) // 45) % 8]
+        return (f"↳ region best {s.distance_m / 1000:.1f} km {d}" if s.search == "region"
+                else f"↳ {s.distance_m:.0f} m {d}")
+    name = s.name.split(" (")[0]
+    name = name if len(name) <= width else name[:width - 1] + "…"
+    steep = " ⚠" if s.slope_deg is not None and s.slope_deg > MAX_SLOPE else ""
+    return name + ("" if s.verified else " †") + steep
+
+
 labels = [site_label(s) for s in sites]
 starts = scans[sites[0].id][0]
 Z = np.array([[r.score for r in scans[s.id][1]] for s in sites])
-hover = np.array([[("✅ feasible" if r.meets_constraints else "❌ " + "; ".join(r.fail_reasons))
+hover = np.array([[labels[k] + "<br>" + ("✅ feasible" if r.meets_constraints else "❌ " + "; ".join(r.fail_reasons))
                    + f"<br>sun {r.sun_frac:.0%} · Earth {r.comm_frac:.0%} · min battery {r.min_soc:.0%}"
-                   for r in scans[s.id][1]] for s in sites])
+                   for r in scans[s.id][1]] for k, s in enumerate(sites)])
 fig = go.Figure(go.Heatmap(
-    z=Z, x=pd.to_datetime(starts), y=labels, customdata=hover, zmin=0, zmax=100,
+    z=Z, x=pd.to_datetime(starts), y=list(range(len(sites))), customdata=hover, zmin=0, zmax=100,
     colorscale="Cividis",  # colour-blind-safe
-    hovertemplate="%{y}<br>start %{x|%Y-%m-%d %H:%M}<br>score %{z}<br>%{customdata}<extra></extra>",
-    colorbar=dict(title="score")))
-fig.update_layout(height=140 + 32 * len(sites), margin=dict(l=10, r=10, t=30, b=10),
-                  yaxis=dict(autorange="reversed"),   # same top-to-bottom order as the site list
-                  title="Mission score by landing site and start date (bright = go)")
+    hovertemplate="start %{x|%Y-%m-%d %H:%M} · score %{z}<br>%{customdata}<extra></extra>",
+    colorbar=dict(title="score", thickness=12)))
+fig.update_layout(height=110 + 28 * len(sites), margin=dict(l=10, r=10, t=10, b=10),
+                  # numeric rows keep duplicate short labels distinct; same top-to-bottom order as the site list
+                  yaxis=dict(autorange="reversed", tickmode="array", tickvals=list(range(len(sites))),
+                             ticktext=[short_label(s) for s in sites], tickfont=dict(size=11)))
+st.markdown("**Mission score by landing site and start date** (bright = go; hover for details)")
 st.plotly_chart(fig, width="stretch")
 
 with st.expander("Map: where are these sites around the south pole?"):
