@@ -38,7 +38,7 @@ sites:
     name: Malapert Massif (Artemis III region core)
     lat: -86.0
     lon: 0.0
-    category: artemis_region
+    category: candidate
     note: >-
       Artemis III candidate region (Oct 2024). LROC: "The relatively flat area (86°S, 0°E) ... is the
       heart of the Artemis 3 landing region". Point is given only to whole degrees (±0.5° ≈ ±15 km in latitude, ≈ ±1 km in longitude at 86°S).
@@ -76,7 +76,7 @@ sites:
     name: Mons Mouton Plateau (Artemis III region centre)
     lat: -84.3375
     lon: 30.6186
-    category: artemis_region
+    category: region_centre
     note: >-
       Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
       navigation grid (4524 km2; Mons_Mouton_Plateau_PolarLGRS_ACC_1km_S_Grid.shp), computed by
@@ -89,7 +89,7 @@ sites:
     name: Haworth (Artemis III region centre)
     lat: -86.7661
     lon: -22.6199
-    category: artemis_region
+    category: region_centre
     note: >-
       Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
       navigation grid (930 km2; Haworth_PolarLGRS_ACC_1km_S_Grid.shp), computed by
@@ -102,7 +102,7 @@ sites:
     name: Nobile Rim 1 (Artemis III region centre)
     lat: -85.4338
     lon: 37.3276
-    category: artemis_region
+    category: region_centre
     note: >-
       Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
       navigation grid (441 km2; Nobile_Rim_1_PolarLGRS_ACC_1km_S_Grid.shp), computed by
@@ -115,7 +115,7 @@ sites:
     name: Nobile Rim 2 (Artemis III region centre)
     lat: -83.9545
     lon: 58.7938
-    category: artemis_region
+    category: region_centre
     note: >-
       Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
       navigation grid (420 km2; Nobile_Rim_2_PolarLGRS_ACC_1km_S_Grid.shp), computed by
@@ -128,7 +128,7 @@ sites:
     name: Peak near Cabeus B (Artemis III region centre)
     lat: -83.6514
     lon: -68.7263
-    category: artemis_region
+    category: region_centre
     note: >-
       Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
       navigation grid (441 km2; Peak_Near_Cabeus_B_PolarLGRS_ACC_1km_S_Grid.shp), computed by
@@ -141,7 +141,7 @@ sites:
     name: Slater Plain (Artemis III region centre)
     lat: -87.1697
     lon: 125.4596
-    category: artemis_region
+    category: region_centre
     note: >-
       Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
       navigation grid (441 km2; Slater_Plain_PolarLGRS_ACC_1km_S_Grid.shp), computed by
@@ -154,7 +154,7 @@ sites:
     name: de Gerlache Rim 2 (Artemis III region centre)
     lat: -88.2263
     lon: -65.1126
-    category: artemis_region
+    category: region_centre
     note: >-
       Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
       navigation grid (441 km2; de_Gerlache_Rim_2_PolarLGRS_ACC_1km_S_Grid.shp), computed by
@@ -167,7 +167,7 @@ sites:
     name: Mons Mouton (Artemis III region centre)
     lat: -85.4218
     lon: 31.6755
-    category: artemis_region
+    category: region_centre
     note: >-
       Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
       navigation grid (289 km2; Mons_Mouton_PolarLGRS_ACC_1km_S_Grid.shp), computed by

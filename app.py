@@ -84,7 +84,21 @@ Both are always labelled and never replace the cited site.
 # key: (default, min, max). Seeded from the URL once per session; widgets then own the value.
 SETTINGS = {"days": (14, 1, 30), "sun": (70, 0, 100), "earth": (50, 0, 100), "shadow": (48, 0, 200),
             "peak": (400, 50, 5000), "load": (150, 10, 3000), "batt": (2000, 100, 50_000), "fail": (20, 0, 90),
-            "step": (24, 6, 24), "derived": (1, 0, 1)}
+            "step": (24, 6, 24)}
+GROUPS = {"pub": "Published points", "centre": "Region centres", "derived": "Derived (≤ 1 km)",
+          "best": "Best in region", "ref": "Reference (Apollo 11)"}
+
+
+def group_of(s) -> str:
+    if s.reference:
+        return "ref"
+    if s.derived:
+        return "best" if s.search == "region" else "derived"
+    return "centre" if s.category == "region_centre" else "pub"
+
+
+ALL_SITES = load_sites()
+PRESENT = [g for g in GROUPS if any(group_of(s) == g for s in ALL_SITES)]
 for k, (dflt, lo_, hi_) in SETTINGS.items():
     if k not in st.session_state:
         try:
@@ -93,7 +107,16 @@ for k, (dflt, lo_, hi_) in SETTINGS.items():
             val = dflt
         if k == "step" and val not in (6, 12, 24):
             val = dflt
-        st.session_state[k] = bool(val) if k == "derived" else val
+        st.session_state[k] = val
+if "show" not in st.session_state:
+    url_show = st.query_params.get("show")
+    if url_show is not None:
+        picked = [g for g in url_show.split(",") if g in PRESENT]
+    elif st.query_params.get("derived") == "0":          # links made before the group filter existed
+        picked = [g for g in PRESENT if g not in ("derived", "best")]
+    else:
+        picked = list(PRESENT)
+    st.session_state["show"] = picked or list(PRESENT)
 
 # ---------------- sidebar: mission constraints ----------------
 with st.sidebar:
@@ -109,22 +132,22 @@ with st.sidebar:
     min_soc = st.slider("Failure below state of charge", 0, 90, format="%d%%", key="fail") / 100
     stride = st.selectbox("Start-date step", [6, 12, 24], format_func=lambda h: f"{h} h", key="step",
                           help="How finely landing dates are sampled. 6 h is finer but slower.")
-    show_derived = any(s.derived for s in load_sites()) and st.toggle(
-        "Show derived best points", key="derived",
-        help="LunaNav's own picks: the best spot within 1 km of each cited site and, for Artemis III regions, "
-             "the best spot inside the whole region. Most hours with Sun and Earth both in view, slope ≤ 10°. "
-             "Computed, not published.")
-    st.caption("🔗 The page address always holds the current scenario (settings, site, start date): "
+    show = st.multiselect(
+        "Sites to show", PRESENT, format_func=GROUPS.get, key="show",
+        help="Published points and Artemis III region centres come from sources. Derived (≤ 1 km) and best in "
+             "region are LunaNav's own picks: most hours with Sun and Earth both in view, slope ≤ 10°.")
+    st.caption("🔗 The page address always holds the current scenario (settings, site groups, site, start date): "
                "copy it from the browser to share exactly this view.")
 
 c = MissionConstraints(duration_days=duration, min_sun_frac=min_sun, min_comm_frac=min_comm,
                        max_dark_hours=max_dark,
                        power=PowerConfig(array_peak_w=peak, load_w=load, battery_wh=batt, min_soc=min_soc))
 
-sites = load_sites()
-if not show_derived:
-    sites = [s for s in sites if not s.derived]
-by_id = {s.id: s for s in load_sites()}
+by_id = {s.id: s for s in ALL_SITES}
+sites = [s for s in ALL_SITES if group_of(s) in show]
+if not sites:
+    st.warning("Pick at least one group of sites in the sidebar.")
+    st.stop()
 data = {s.id: load_series(s.id) for s in sites}
 pending = [s.name for s in sites if data[s.id][0] is None]
 sites = [s for s in sites if data[s.id][0] is not None]
@@ -302,7 +325,7 @@ except ValueError:
 start_choice = col2.select_slider("Start", options=start_opts, value=start_default,
                                   format_func=lambda t: t.strftime("%Y-%m-%d %H:%M"))
 st.query_params.from_dict({**{k: str(int(st.session_state[k])) for k in SETTINGS},
-                           "site": site.id, "start": start_choice.strftime("%Y-%m-%dT%H:%M")})
+                           "show": ",".join(show), "site": site.id, "start": start_choice.strftime("%Y-%m-%dT%H:%M")})
 i0 = int(np.searchsorted(v.times_utc, np.datetime64(start_choice.to_datetime64(), "s")))
 sl = slice(i0, i0 + int(duration * 24 / step))
 r = evaluate_window(v.sun_fraction[sl], v.sun_alt[sl], v.earth_visible[sl], step, c)

@@ -72,7 +72,7 @@ def yaml_entry(reg, lat, lon, area_km2, files, indent="  "):
             f"{i}  name: {name} (Artemis III region centre)\n"
             f"{i}  lat: {lat:.4f}\n"
             f"{i}  lon: {lon:.4f}\n"
-            f"{i}  category: artemis_region\n"
+            f"{i}  category: region_centre\n"
             f"{i}  note: >-\n"
             f"{i}    Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km\n"
             f"{i}    navigation grid ({area_km2:.0f} km2; {', '.join(p.name for p in files)}), computed by\n"

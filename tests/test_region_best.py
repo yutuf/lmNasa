@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 LPS = pyproj.CRS.from_proj4("+proj=stere +lat_0=-90 +lon_0=0 +k=1 +x_0=0 +y_0=0 +R=1737400 +units=m +no_defs")
 GEO = pyproj.CRS.from_proj4("+proj=longlat +R=1737400 +no_defs +type=crs")
 SITE = dict(id="artemis_haworth", name="Haworth (Artemis III region centre)", lat=-89.4395, lon=-137.1934,
-            category="artemis_region", source="test", verified=True)
+            category="region_centre", source="test", verified=True)
 
 
 def _xy(lat, lon):
