@@ -115,13 +115,15 @@ scans = scan(key, tuple(s.id for s in sites))
 
 # ---------------- heatmap: site × start date ----------------
 COMPASS8 = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+MAX_SLOPE = 10.0   # landing-slope limit used for derived points (scripts/derive_best_points.py --max-slope)
 
 
 def site_label(s):
     if s.derived:
         d = COMPASS8[int(((s.bearing_deg or 0) + 22.5) // 45) % 8]
         return f"↳ derived: {s.distance_m:.0f} m {d} of {by_id[s.derived_from].name.split(' (')[0]}"
-    return s.name + (" (reference)" if s.reference else "") + ("" if s.verified else " †")
+    steep = f" ⚠ {s.slope_deg:.1f}° slope" if s.slope_deg is not None and s.slope_deg > MAX_SLOPE else ""
+    return s.name + (" (reference)" if s.reference else "") + ("" if s.verified else " †") + steep
 
 
 labels = [site_label(s) for s in sites]
@@ -148,19 +150,21 @@ for s in sites:
     slack = delay_tolerance([r.meets_constraints for r in res], stride)
     for t0, r, sl_h in zip(st_, res, slack):
         rows.append(dict(site=labels[sites.index(s)], point="derived" if s.derived else "cited",
-                         start=pd.Timestamp(t0), score=r.score, feasible=r.meets_constraints,
+                         start=pd.Timestamp(t0), slope_deg=s.slope_deg, score=r.score, feasible=r.meets_constraints,
                          delay_ok_days=sl_h / 24 if sl_h >= 0 else np.nan,
                          sun=r.sun_frac, earth=r.comm_frac, longest_shadow_h=r.longest_dark_h,
                          min_battery=r.min_soc))
 df = pd.DataFrame(rows).sort_values(["feasible", "score", "delay_ok_days"], ascending=False)
 st.subheader("Best options")
-st.caption("**delay_ok_days** = how many days the launch can slip and every later start is still feasible. "
-           "Ties in score are broken by this. Reference sites (e.g. Apollo 11) are shown on the heatmap "
-           "but not ranked.")
-st.dataframe(df.head(10).style.format({"score": "{:.1f}", "sun": "{:.0%}", "earth": "{:.0%}",
-                                       "min_battery": "{:.0%}", "longest_shadow_h": "{:.0f}", "delay_ok_days": "{:.0f}",
-                                       "start": lambda t: t.strftime("%Y-%m-%d %H:%M")}),
-             width="stretch", hide_index=True)
+st.caption("Best landing date for each site. **delay_ok_days** = how many days the launch can slip and every "
+           "later start is still feasible (breaks ties in score). Reference sites (e.g. Apollo 11) are shown on "
+           "the heatmap but not ranked.")
+FMT = {"score": "{:.1f}", "sun": "{:.0%}", "earth": "{:.0%}", "min_battery": "{:.0%}", "longest_shadow_h": "{:.0f}",
+       "delay_ok_days": "{:.0f}", "slope_deg": lambda x: "–" if pd.isna(x) else f"{x:.1f}°",
+       "start": lambda t: t.strftime("%Y-%m-%d %H:%M")}
+st.dataframe(df.groupby("site", sort=False).head(1).style.format(FMT), width="stretch", hide_index=True)
+with st.expander("Top 20 site × date options overall"):
+    st.dataframe(df.head(20).style.format(FMT), width="stretch", hide_index=True)
 
 # ---------------- detail view ----------------
 st.subheader("Inspect one option")
@@ -179,6 +183,11 @@ p = simulate_battery(v.sun_fraction[sl], v.sun_alt[sl], step, c.power)
 tt = pd.to_datetime(v.times_utc[sl])
 n_steps = len(tt)
 
+if site.slope_deg is not None and site.slope_deg > MAX_SLOPE:
+    st.warning(f"⚠ **Steep at the cited point:** the LOLA 40 m terrain gives a {site.slope_deg:.1f}° slope here, "
+               f"above the {MAX_SLOPE:.0f}° limit LunaNav uses for landing. The coordinate is kept exactly as published "
+               f"(it marks a region, not a surveyed landing spot); the sunlight and Earth numbers are still valid "
+               f"for this point, but a lander would need a flatter spot nearby.")
 if site.derived:
     st.info(f"**Derived point.** {site.note} "
             f"Slope here {site.slope_deg:.1f}° (cited point {site.cited_slope_deg:.1f}°).")
