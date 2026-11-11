@@ -11,7 +11,7 @@ from lunanav.horizon import HorizonProfile, load_profiles
 from lunanav.metrics import (MissionConstraints, delay_tolerance, evaluate_window, hours_until_change,
                              scan_start_dates, windows)
 from lunanav.panorama import break_at_wraps, circular_mean_deg, compass_ticks, unwrap_about
-from lunanav.power import PowerConfig, simulate_battery
+from lunanav.power import PowerConfig, required_battery_wh, simulate_battery
 from lunanav.series import load_series
 from lunanav.sites import load_sites
 
@@ -50,7 +50,7 @@ in every direction, and JPL's planetary ephemeris (DE440) to know where the Sun 
 
 **How to use it**
 1. Set the mission in the sidebar (how long on the surface, how much sun and Earth contact you need, battery size).
-2. The **heatmap** colours every site × landing date: green = all requirements met, dark = not.
+2. The **heatmap** colours every site × landing date: bright yellow = all requirements met, dark blue = not (colour-blind-safe scale).
 3. **Best options** lists the top choices. *delay_ok_days* = how many days the launch could slip and still be fine.
 4. **Inspect one option** shows the 360° view from the lander, a time slider ("what does the lander see on day 5?"),
    when the Sun and Earth will next set, and whether the battery survives.
@@ -134,11 +134,11 @@ hover = np.array([[("✅ feasible" if r.meets_constraints else "❌ " + "; ".joi
                    for r in scans[s.id][1]] for s in sites])
 fig = go.Figure(go.Heatmap(
     z=Z, x=pd.to_datetime(starts), y=labels, customdata=hover, zmin=0, zmax=100,
-    colorscale=[[0, "#3b0d0d"], [0.25, "#7a2d16"], [0.5, "#c9a227"], [1, "#2e8b57"]],
+    colorscale="Cividis",  # colour-blind-safe
     hovertemplate="%{y}<br>start %{x|%Y-%m-%d %H:%M}<br>score %{z}<br>%{customdata}<extra></extra>",
     colorbar=dict(title="score")))
 fig.update_layout(height=120 + 60 * len(sites), margin=dict(l=10, r=10, t=30, b=10),
-                  title="Mission score by landing site and start date (green = go)")
+                  title="Mission score by landing site and start date (bright = go)")
 st.plotly_chart(fig, width="stretch")
 
 with st.expander("Map: where are these sites around the south pole?"):
@@ -243,8 +243,25 @@ m[2].metric("Earth in view", f"{r.comm_frac:.0%}", help="Share of mission hours 
 m[3].metric("Longest shadow", f"{r.longest_dark_h:.0f} h", help="Longest continuous stretch without usable sunlight.")
 m[4].metric("Min battery", f"{r.min_soc:.0%}", "survives" if p.survived else "FAILS",
             delta_color="normal" if p.survived else "inverse")
-if r.fail_reasons:
-    st.error(" · ".join(r.fail_reasons))
+need_wh = required_battery_wh(v.sun_fraction[sl], step, c.power)
+w_sun, w_comm, w_batt = c.weights
+margin = max(0.0, (r.min_soc - c.power.min_soc) / (1 - c.power.min_soc)) if c.power.min_soc < 1 else 0.0
+st.caption(
+    ("🔋 **Battery needed for this mission:** none — the array covers the load the whole time. "
+     if need_wh == 0 else
+     f"🔋 **Battery needed for this mission:** {need_wh:,.0f} Wh to stay above the {c.power.min_soc:.0%} failure line "
+     f"(you set {batt:,} Wh{' — enough' if need_wh <= batt else ' — too small'}; array {peak} W, load {load} W). ")
+    f"· **Score** = 100 × ({w_sun}×sunlit {r.sun_frac:.2f} + {w_comm}×Earth {r.comm_frac:.2f} + "
+    f"{w_batt}×battery margin {margin:.2f})" + ("" if r.meets_constraints else " × 0.25 (a requirement failed)")
+    + f" = {r.score:.1f}")
+end_t = tt[-1] + pd.Timedelta(hours=step)
+if r.meets_constraints:
+    st.success(f"✅ **GO** — landing {start_choice:%d %b %Y %H:%M} UTC and staying {duration} days (until "
+               f"{end_t:%d %b %Y}), the lander has usable sunlight {r.sun_frac:.0%} of the time, can talk to Earth "
+               f"{r.comm_frac:.0%} of the time, and its battery never drops below {r.min_soc:.0%}.")
+else:
+    st.error(f"❌ **NO-GO** for {duration} days from {start_choice:%d %b %Y %H:%M} UTC — "
+             + " · ".join(r.fail_reasons))
 
 # ---- time cursor: "what does the lander see at this moment?" ----
 cur = st.slider("Moment in the mission (hours after landing)", 0, n_steps - 1, 0,

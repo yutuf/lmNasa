@@ -75,3 +75,21 @@ def simulate_battery_batch(sun_fraction_2d, step_hours: float, cfg: PowerConfig)
         out.append(PowerResult(soc[k], array_w[k], float(soc[k].min()) if soc.shape[1] else cfg.initial_soc,
                                first is None, first))
     return out
+
+
+def required_battery_wh(sun_fraction, step_hours: float, cfg: PowerConfig) -> float:
+    """Smallest usable capacity (Wh) that keeps state of charge >= cfg.min_soc for this
+    sun-fraction series, starting full, with the same array/load/efficiency model.
+
+    The energy missing below "full" evolves independently of capacity (it can only
+    refill up to full), so capacity = worst deficit / (1 - min_soc). Exact for this model.
+    Returns 0 if the array always covers the load, inf if min_soc >= 1.
+    """
+    net = (cfg.array_peak_w * np.asarray(sun_fraction, dtype=float) - cfg.load_w) * step_hours
+    deficit, worst = 0.0, 0.0
+    for e in net:
+        deficit = max(0.0, deficit - e * cfg.charge_eff) if e > 0 else deficit - e / cfg.discharge_eff
+        worst = max(worst, deficit)
+    if worst == 0.0:
+        return 0.0
+    return float("inf") if cfg.min_soc >= 1 else worst / (1.0 - cfg.min_soc)
