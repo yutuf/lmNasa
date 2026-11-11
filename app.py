@@ -251,7 +251,7 @@ st.caption(
      if need_wh == 0 else
      f"🔋 **Battery needed for this mission:** {need_wh:,.0f} Wh to stay above the {c.power.min_soc:.0%} failure line "
      f"(you set {batt:,} Wh{' — enough' if need_wh <= batt else ' — too small'}; array {peak} W, load {load} W). ")
-    f"· **Score** = 100 × ({w_sun}×sunlit {r.sun_frac:.2f} + {w_comm}×Earth {r.comm_frac:.2f} + "
+    + f"· **Score** = 100 × ({w_sun}×sunlit {r.sun_frac:.2f} + {w_comm}×Earth {r.comm_frac:.2f} + "
     f"{w_batt}×battery margin {margin:.2f})" + ("" if r.meets_constraints else " × 0.25 (a requirement failed)")
     + f" = {r.score:.1f}")
 end_t = tt[-1] + pd.Timedelta(hours=step)
