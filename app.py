@@ -58,8 +58,9 @@ in every direction, and JPL's planetary ephemeris (DE440) to know where the Sun 
 
 **Cited vs derived points:** *cited* sites come from publications: a published point, or the centre of an
 official Artemis III region (USGS grid). The source is shown at the bottom.
-A *derived* point is LunaNav's own pick: the best spot within 1 km of a cited site with a gentle slope. It is
-always labelled and never replaces the cited one.
+A *derived* point is LunaNav's own pick: the best spot within 1 km of a cited site with a gentle slope. For the
+Artemis III regions there can also be a *best in region* point: the best spot anywhere inside the official region.
+Both are always labelled and never replace the cited site.
 """)
 
 # ---------------- shareable state: the URL encodes the whole scenario ----------------
@@ -92,9 +93,10 @@ with st.sidebar:
     stride = st.selectbox("Start-date step", [6, 12, 24], format_func=lambda h: f"{h} h", key="step",
                           help="How finely landing dates are sampled. 6 h is finer but slower.")
     show_derived = any(s.derived for s in load_sites()) and st.toggle(
-        "Show derived best points (≤ 1 km)", key="derived",
-        help="LunaNav's own pick near each cited site: most hours with Sun and Earth "
-             "both in view, on a gentle slope. Computed, not published.")
+        "Show derived best points", key="derived",
+        help="LunaNav's own picks: the best spot within 1 km of each cited site and, for Artemis III regions, "
+             "the best spot inside the whole region. Most hours with Sun and Earth both in view, slope ≤ 10°. "
+             "Computed, not published.")
     st.caption("🔗 The page address always holds the current scenario (settings, site, start date): "
                "copy it from the browser to share exactly this view.")
 
@@ -147,7 +149,10 @@ MAX_SLOPE = 10.0   # landing-slope limit used for derived points (scripts/derive
 def site_label(s):
     if s.derived:
         d = COMPASS8[int(((s.bearing_deg or 0) + 22.5) // 45) % 8]
-        return f"↳ derived: {s.distance_m:.0f} m {d} of {by_id[s.derived_from].name.split(' (')[0]}"
+        parent = by_id[s.derived_from].name.split(' (')[0]
+        if s.search == "region":
+            return f"↳ best in region: {s.distance_m / 1000:.1f} km {d} of {parent}"
+        return f"↳ derived: {s.distance_m:.0f} m {d} of {parent}"
     steep = f" ⚠ {s.slope_deg:.1f}° slope" if s.slope_deg is not None and s.slope_deg > MAX_SLOPE else ""
     return s.name + (" (reference)" if s.reference else "") + ("" if s.verified else " †") + steep
 
@@ -192,8 +197,11 @@ with st.expander("Map: where are these sites around the south pole?"):
         mp.add_scatter(x=ring * np.sin(th), y=ring * np.cos(th), mode="lines", hoverinfo="skip",
                        line=dict(color="#2a3550", width=1), showlegend=False)
         mp.add_annotation(x=0, y=-ring, text=f"{ring} km", showarrow=False, font=dict(color="#7f8aa3", size=10))
-    for kind, color, sym in (("cited", "#f2b705", "circle"), ("derived", "#4ea8de", "diamond")):
-        pts = [s for s in polar if (s.derived if kind == "derived" else not s.derived)]
+    kinds = {"cited": lambda s: not s.derived, "derived (≤ 1 km)": lambda s: s.derived and s.search != "region",
+             "best in region": lambda s: s.search == "region"}
+    for kind, color, sym in (("cited", "#f2b705", "circle"), ("derived (≤ 1 km)", "#4ea8de", "diamond"),
+                             ("best in region", "#7ee081", "star")):
+        pts = [s for s in polar if kinds[kind](s)]
         if pts:
             mp.add_scatter(x=[rho(s) * np.sin(np.radians(s.lon)) for s in pts],
                            y=[rho(s) * np.cos(np.radians(s.lon)) for s in pts],
@@ -280,11 +288,12 @@ if site.derived:
     st.info(f"**Derived point.** {site.note} "
             f"Slope here {site.slope_deg:.1f}° (cited point {site.cited_slope_deg:.1f}°).")
 else:
-    sib = next((d for d in sites if d.derived_from == site.id), None)
-    if sib is not None:
+    both = lambda vv, k=slice(None): float(((vv.sun_fraction[k] >= .5) & vv.earth_visible[k]).mean())  # noqa: E731
+    for sib in (d for d in sites if d.derived_from == site.id):
         sv = data[sib.id][0]
-        both = lambda vv, k=slice(None): float(((vv.sun_fraction[k] >= .5) & vv.earth_visible[k]).mean())  # noqa: E731
-        st.caption(f"💡 LunaNav found a derived point {sib.distance_m:.0f} m away (slope {sib.slope_deg:.1f}°). "
+        where = (f"the best point inside this Artemis III region, {sib.distance_m / 1000:.1f} km away"
+                 if sib.search == "region" else f"a derived point {sib.distance_m:.0f} m away")
+        st.caption(f"💡 LunaNav found {where} (slope {sib.slope_deg:.1f}°). "
                    f"Hours with Sun **and** Earth in view — this mission: {both(v, sl):.0%} here vs "
                    f"{both(sv, sl):.0%} there; whole 2026–2028 period: {both(v):.0%} vs {both(sv):.0%}. "
                    f"Pick “{labels[sites.index(sib)]}” above to inspect it.")
@@ -408,7 +417,9 @@ with st.expander("Assumptions & limits (read before quoting a number)"):
 - **"Sunlit"** = at least half the solar disk above the terrain; **"Earth in view"** = Earth's centre above the terrain.
   No antenna pattern, no relay satellites, no thermal model.
 - **Slope** comes from the 40 m DEM; boulders and small craters (metre scale) are invisible at that resolution.
-- **Derived points** are LunaNav's computation, not published coordinates.
+- **Derived and best-in-region points** are LunaNav's computation, not published coordinates. "Best in region"
+  searches the USGS region grid on a coarse grid (~1,500 points) refined to 100 m around the top 5, so a
+  better spot between grid points can exist.
 - Data window: Nov 2026 – Dec 2028, hourly.
 """)
 

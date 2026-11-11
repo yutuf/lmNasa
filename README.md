@@ -60,6 +60,7 @@ The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit 
 | `lunanav/metrics.py` | window metrics, constraints, score, vectorised start-date scan, delay tolerance, set/rise timers |
 | `lunanav/panorama.py` | azimuth helpers for the 360° view (circular mean, unwrap, compass ticks) |
 | `lunanav/derive.py` | candidate grid, slope, alt-az reprojection, ranking for derived points |
+| `lunanav/regions.py` | USGS region grids: exact inside/outside test, grid points, projection |
 | `lunanav/sites.py` | cited sites (`data/sites.yaml`) + generated derived points (`data/derived_sites.yaml`) |
 | `app.py` | Streamlit UI |
 
@@ -70,6 +71,7 @@ The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit 
 | `scripts/precompute.py` | kernels + `horizons.json` | `data/series/<site>.npz` |
 | `scripts/derive_best_points.py` | LOLA DEM + series | `data/derived_sites.yaml`, `<site>_derived.npz`, horizons |
 | `scripts/artemis_regions.py` | USGS grid shapefiles | Artemis III region centres in `data/sites.yaml` |
+| `scripts/derive_region_best.py` | LOLA DEM + USGS grids + series | best point inside each region (`<site>_region_best`) |
 | `scripts/make_demo_series.py` | nothing | synthetic series for UI work only (clearly flagged in the app) |
 
 ## Quick start
@@ -100,8 +102,9 @@ Every site needs a source. Two ways in:
 2. **NASA's Artemis III candidate regions** (published as ~15 km areas, not points):
    download the USGS navigation grids ([McClernan 2024, doi:10.5066/P1MEQ6UK](https://doi.org/10.5066/P1MEQ6UK)),
    unzip, then `python scripts/artemis_regions.py <folder>`. It adds the area-weighted centre of each
-   region's 1 km grid as a site, labelled *region centre* (Malapert Massif and Mons Mouton keep their
-   published points).
+   region's 1 km grid as a site, labelled *region centre* (Malapert Massif keeps its published point,
+   which lies inside its region; the IM-2 point is inside the Mons Mouton *Plateau* region, so it does
+   not stand in for the Mons Mouton region).
 
 Then rebuild the data for the new sites (needs the DEM and kernels):
 
@@ -150,8 +153,9 @@ The Malapert point is published only to whole degrees (86°S, 0°E: ±0.5° ≈ 
 ≈ ±1 km in longitude at 86°S), so a 447 m move is well inside its own uncertainty; its cited
 coordinate is also steeper than our 10° limit, which the app flags.
 
-**Artemis III region centres** (centre of each region's USGS 1 km grid; Malapert Massif and Mons
-Mouton use their published points above):
+**Artemis III region centres** (centre of each region's USGS 1 km grid; Malapert Massif uses its
+published point above, which lies inside its region. The Mons Mouton region centre is added but not
+computed yet: the IM-2 point above turned out to lie in the Mons Mouton *Plateau* region instead):
 
 | region centre | centre: Sun+Earth / Sun / Earth / slope | derived point | derived: Sun+Earth / Sun / Earth / slope |
 |---|---|---|---|
@@ -173,6 +177,22 @@ How to read it:
   steeper than its centre (Plateau 2.1° → 8.4°, Slater Plain 3.4° → 9.8°).
 - de Gerlache Rim 2: the derived point gains only 0.3 points and sits exactly at the 10° limit; treat
   it as "the centre's neighbourhood is already about as good as it gets within 1 km".
+
+## Best point in each Artemis III region
+
+The 1 km search often stops at its own edge. `scripts/derive_region_best.py` searches each whole
+region as USGS defines it (the 1 km navigation grid): about 1,500 grid points clipped to the region,
+slope ≤ 10°, a full horizon for each, then a 100 m refinement around the five best. Same objective as the
+1 km search. The result is a separate, labelled *best in region* point; it never replaces the cited
+site or the 1 km derived point. About 2,000 horizons per region.
+
+```bash
+python scripts/derive_region_best.py data/dem/LDEM_80S_40MPP_ADJ.TIF <usgs_grid_folder>
+```
+
+Each region is searched from the site that stands for it: the published Malapert point (inside its
+region) or the region centre. The Sun/Earth series is rotated from that site to each candidate (≤ ~40 km
+for the large Mons Mouton Plateau; Earth parallax ≤ 0.006°).
 
 ## Validation
 

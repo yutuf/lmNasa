@@ -56,7 +56,8 @@ sites:
     category: clps
     note: >-
       Where IM-2 Athena came to rest on 6 March 2025 (on its side in a 20 m crater, 5321 m elevation).
-      Mons Mouton is also an Artemis III candidate region (Oct 2024).
+      It lies inside the Artemis III Mons Mouton PLATEAU region (USGS grid), 20 km from the centre of
+      the Mons Mouton region, which has its own entry (artemis_mons_mouton).
     source: "LROC post 1408: https://lroc.im-ldi.com/images/1408"
     verified: true
     slope_deg: 2.5
@@ -161,3 +162,15 @@ sites:
     source: "McClernan 2024, USGS data release 'Down-selected Artemis III candidate landing site navigational grids': https://doi.org/10.5066/P1MEQ6UK"
     verified: true
     slope_deg: 11.3
+
+  - id: artemis_mons_mouton
+    name: Mons Mouton (Artemis III region centre)
+    lat: -85.4218
+    lon: 31.6755
+    category: artemis_region
+    note: >-
+      Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km
+      navigation grid (289 km2; Mons_Mouton_PolarLGRS_ACC_1km_S_Grid.shp), computed by
+      scripts/artemis_regions.py. A region centre, not a landing point: see the derived point.
+    source: "McClernan 2024, USGS data release 'Down-selected Artemis III candidate landing site navigational grids': https://doi.org/10.5066/P1MEQ6UK"
+    verified: true

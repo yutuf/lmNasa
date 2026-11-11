@@ -10,8 +10,8 @@ NASA publishes the regions as ~15 km areas, not points. This script takes the
 area-weighted centroid of each region's 1 km grid (in the shapefile's own polar
 projection, read from its .prj) and converts it to lat/lon. The result is a
 *region centre*, not a landing point; run scripts/derive_best_points.py afterwards
-to find a landable spot near it. Regions that already have a published point in
-sites.yaml (Malapert Massif, Mons Mouton) are skipped unless --all is given.
+to find a landable spot near it. Regions that already have a published point inside
+them in sites.yaml (Malapert Massif) are skipped unless --all is given.
 
 Needs: pyshp, pyproj.
 """
@@ -25,35 +25,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-REGIONS = {   # USGS file-name token -> (site id, display name)
-    "Peak_Near_Cabeus_B": ("artemis_peak_near_cabeus_b", "Peak near Cabeus B"),
-    "Haworth": ("artemis_haworth", "Haworth"),
-    "Malapert_Massif": ("artemis_malapert_massif", "Malapert Massif"),
-    "Mons_Mouton_Plateau": ("artemis_mons_mouton_plateau", "Mons Mouton Plateau"),
-    "Mons_Mouton": ("artemis_mons_mouton", "Mons Mouton"),
-    "Nobile_Rim_1": ("artemis_nobile_rim_1", "Nobile Rim 1"),
-    "Nobile_Rim_2": ("artemis_nobile_rim_2", "Nobile Rim 2"),
-    "de_Gerlache_Rim_2": ("artemis_de_gerlache_rim_2", "de Gerlache Rim 2"),
-    "Slater_Plain": ("artemis_slater_plain", "Slater Plain"),
-}
-HAS_PUBLISHED_POINT = {"Malapert_Massif", "Mons_Mouton"}
-SOURCE = ("McClernan 2024, USGS data release 'Down-selected Artemis III candidate landing site "
-          "navigational grids': https://doi.org/10.5066/P1MEQ6UK")
-
-
-def _norm(s):
-    return re.sub(r"[^a-z0-9]", "", s.lower())
-
-
-def region_of(path: Path):
-    """Longest matching region token wins (so Mons_Mouton_Plateau is not Mons_Mouton)."""
-    n = _norm(path.stem)
-    hits = [k for k in REGIONS if _norm(k) in n]
-    return max(hits, key=len) if hits else None
-
-
-def is_1km(path: Path):
-    return bool(re.search(r"(?<![0-9])1_?km|1000_?m", path.stem, re.I))
+from lunanav.regions import (HAS_PUBLISHED_POINT, REGIONS, SOURCE, find_regions,  # noqa: E402,F401
+                             is_1km, region_of)
 
 
 def ring_area_centroid(xy):
@@ -89,19 +62,6 @@ def to_lonlat(x, y, prj_path: Path):
     geo = CRS.from_proj4("+proj=longlat +R=1737400 +no_defs +type=crs")
     lon, lat = Transformer.from_crs(crs, geo, always_xy=True).transform(x, y)
     return float(lat), (float(lon) + 180.0) % 360.0 - 180.0
-
-
-def find_regions(folder: Path):
-    groups = {}
-    for p in sorted(folder.rglob("*.shp")):
-        reg = region_of(p)
-        if reg:
-            groups.setdefault(reg, []).append(p)
-    out = {}
-    for reg, files in groups.items():
-        km = [p for p in files if is_1km(p)]
-        out[reg] = km or files
-    return out
 
 
 def yaml_entry(reg, lat, lon, area_km2, files, indent="  "):
