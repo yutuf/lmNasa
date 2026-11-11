@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .geometry import MOON_RADIUS_M, destination, disk_visible_fraction
+from .geometry import destination, disk_visible_fraction
 from .horizon import HorizonProfile
 
 

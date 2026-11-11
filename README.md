@@ -92,7 +92,7 @@ For one site and one start date, over the mission duration (1 h steps):
 
 `score = 100 × (0.4·sunlit + 0.3·Earth + 0.3·battery margin)`.
 If any constraint fails (min sunlit, min Earth, max shadow, battery), the score is ×0.25 and the
-reasons are listed. Weights and constraints are editable.
+reasons are listed. Constraints are editable in the sidebar; the weights live in `MissionConstraints`.
 
 Ties at the top are broken by **delay_ok_days**: how many days the launch can slip with every
 later start still feasible.
@@ -114,8 +114,9 @@ Result with LOLA `LDEM_80S_40MPP_ADJ`, 2026-11-01 → 2028-12-31 (share of hours
 | Malapert Massif | 15.8 % / 42.3 % / 44.1 % / **10.5°** | 447 m NE | 66.8 % / 66.8 % / 100 % / 3.9° |
 | Mons Mouton (IM-2) | 38.6 % / 45.5 % / 82.1 % / 2.5° | 825 m S | 43.9 % / 51.5 % / 83.7 % / 1.6° |
 
-The Malapert point is published only to 1° (≈ ±1.5 km), so a 447 m move is well inside its own
-uncertainty; its cited coordinate is also steeper than our 10° limit, which the app flags.
+The Malapert point is published only to whole degrees (86°S, 0°E: ±0.5° ≈ ±15 km in latitude,
+≈ ±1 km in longitude at 86°S), so a 447 m move is well inside its own uncertainty; its cited
+coordinate is also steeper than our 10° limit, which the app flags.
 
 ## Validation
 
