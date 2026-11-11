@@ -22,6 +22,7 @@ class Site:
     reference: bool = False   # shown for comparison, never ranked
     # derived points (computed by LunaNav near a cited site, NOT published coordinates)
     derived_from: str = ""
+    search: str = ""                  # "1 km" (around the point) or "region" (whole USGS region grid)
     distance_m: float | None = None
     bearing_deg: float | None = None
     slope_deg: float | None = None

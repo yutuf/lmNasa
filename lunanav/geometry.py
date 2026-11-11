@@ -27,6 +27,17 @@ def destination(lat_deg, lon_deg, azimuth_deg, distance_m, radius_m=MOON_RADIUS_
     return np.degrees(lat2), lon2
 
 
+def distance_bearing(lat0, lon0, lat1, lon1, radius_m=MOON_RADIUS_M):
+    """Great-circle distance (m) and initial bearing (deg from north, clockwise) from point 0 to 1.
+    Inverse of destination(); broadcasts over arrays."""
+    p0, p1 = np.radians(lat0), np.radians(lat1)
+    dl = np.radians(np.asarray(lon1, float) - np.asarray(lon0, float))
+    a = np.sin((p1 - p0) / 2) ** 2 + np.cos(p0) * np.cos(p1) * np.sin(dl / 2) ** 2
+    d = 2 * radius_m * np.arcsin(np.sqrt(np.clip(a, 0.0, 1.0)))
+    b = np.degrees(np.arctan2(np.sin(dl) * np.cos(p1), np.cos(p0) * np.sin(p1) - np.sin(p0) * np.cos(p1) * np.cos(dl)))
+    return d, b % 360.0
+
+
 def elevation_angle_deg(h_observer_m, h_target_m, distance_m, radius_m=MOON_RADIUS_M):
     """Elevation angle of a terrain point seen from the observer, with curvature.
 

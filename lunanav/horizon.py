@@ -98,7 +98,9 @@ def dem_sampler(dem_path: str | Path):
 
     def sample(lat_deg, lon_deg):
         x, y = to_xy.transform(np.asarray(lon_deg), np.asarray(lat_deg))
-        col, row = inv * (np.asarray(x), np.asarray(y))
+        x, y = np.asarray(x), np.asarray(y)
+        col = inv.a * x + inv.b * y + inv.c      # explicit affine: works with every `affine` version
+        row = inv.d * x + inv.e * y + inv.f
         col = col - 0.5
         row = row - 0.5
         c0 = np.floor(col).astype(int)
