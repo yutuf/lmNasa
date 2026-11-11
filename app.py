@@ -249,6 +249,13 @@ with st.expander("Map: where are these sites around the south pole?"):
     rho = lambda s: np.radians(90 + s.lat) * 1737.4  # noqa: E731  km from the pole (azimuthal equidistant)
     mp = go.Figure()
 
+    def map_names(pts):
+        """Short names; only where two collide (IM-2 "Mons Mouton" vs the Mons Mouton region centre)
+        does the region centre get " region" (the outlines already show what is a region)."""
+        base = [s.name.split(" (")[0] for s in pts]
+        return [b + (" region" if base.count(b) > 1 and s.category == "region_centre" else "")
+                for b, s in zip(base, pts)]
+
     def label_pos(pts):
         """Above the marker by default (below near the pole). Two sites within 20 km get side labels:
         the one further out sideways is labelled on its outer side, the other on the opposite side."""
@@ -277,7 +284,7 @@ with st.expander("Map: where are these sites around the south pole?"):
             mp.add_scatter(x=[rho(s) * np.sin(np.radians(s.lon)) for s in pts],
                            y=[rho(s) * np.cos(np.radians(s.lon)) for s in pts],
                            mode="markers+text" if kind == "cited" else "markers", name=kind,
-                           text=[s.name.split(" (")[0] for s in pts],
+                           text=map_names(pts),
                            textposition=label_pos(pts),
                            textfont=dict(color="#dfe6f3", size=11),
                            marker=dict(size=11 if kind == "cited" else 8, color=color, symbol=sym),

@@ -144,3 +144,36 @@ def test_boundary_of_an_l_shaped_region(tmp_path):
     lengths = np.hypot(*(segs[:, 1] - segs[:, 0]).T)
     assert len(segs) == 6 and lengths.sum() == pytest.approx(8000.0)
     assert sorted(lengths.tolist()) == [1000.0, 1000.0, 1000.0, 1000.0, 2000.0, 2000.0]
+
+
+def test_seeds_rescue_a_narrow_peak_the_coarse_grid_misses(tmp_path):
+    """Only a ~60 m spot sees the sky; it sits between coarse grid points. Without seeds the search
+    misses it; seeded with a known point there (e.g. the 1 km derived point) it cannot."""
+    from argparse import Namespace
+
+    from lunanav.horizon import HorizonProfile
+    from lunanav.regions import RegionGrid
+    from test_more import _toy_vis
+
+    spec = importlib.util.spec_from_file_location("drb", ROOT / "scripts" / "derive_region_best.py")
+    drb = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(drb)
+    _grid_shp(tmp_path / "Haworth_1km.shp", -87.0, -20.0, half_cells=3)
+    g = RegionGrid.from_shapefiles("Haworth", [tmp_path / "Haworth_1km.shp"])
+    xs, ys = g.grid_points(2000.0)                       # coarse spacing used below
+    plat, plon = g.to_latlon(xs[0] + 1000.0, ys[0] + 1000.0)  # halfway between coarse points
+    plat, plon = float(plat), float(plon)
+
+    def horizon_fn(lat, lon, sid="c"):
+        d, _ = distance_bearing(plat, plon, lat, lon)
+        el = 0.0 if d < 60 else 30.0                     # everywhere else the sky is walled off
+        return HorizonProfile(sid, lat, lon, list(range(360)), [el] * 360, 2.0, 0.0, "toy")
+
+    flat = lambda la, lo: np.zeros(np.shape(la))  # noqa: E731
+    a = Namespace(max_candidates=9, max_slope=10.0, top=2, refine_radius=300.0, refine_spacing=150.0)
+    vis, lat0, lon0 = _toy_vis(), -87.0, -20.0
+    miss, *_ = drb.search_region(g, vis, lat0, lon0, horizon_fn, flat, a, log=lambda *_: None)
+    hit, *_ = drb.search_region(g, vis, lat0, lon0, horizon_fn, flat, a, log=lambda *_: None,
+                                seeds=[(plat, plon), (-80.0, 0.0)])   # second seed is outside: ignored
+    assert miss.both_frac == 0.0
+    assert hit.both_frac == 1.0 and distance_bearing(plat, plon, hit.lat, hit.lon)[0] < 60

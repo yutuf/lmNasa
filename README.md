@@ -166,8 +166,8 @@ The Malapert point is published only to whole degrees (86°S, 0°E: ±0.5° ≈ 
 coordinate is also steeper than our 10° limit, which the app flags.
 
 **Artemis III region centres** (centre of each region's USGS 1 km grid; Malapert Massif uses its
-published point above, which lies inside its region. The Mons Mouton region centre is added but not
-computed yet: the IM-2 point above turned out to lie in the Mons Mouton *Plateau* region instead):
+published point above, which lies inside its region. The IM-2 point above lies in the Mons Mouton
+*Plateau* region, so the Mons Mouton region has its own centre):
 
 | region centre | centre: Sun+Earth / Sun / Earth / slope | derived point | derived: Sun+Earth / Sun / Earth / slope |
 |---|---|---|---|
@@ -178,6 +178,7 @@ computed yet: the IM-2 point above turned out to lie in the Mons Mouton *Plateau
 | de Gerlache Rim 2 | 21.7 % / 37.2 % / 51.3 % / **11.3°** | 500 m NW | 22.0 % / 37.5 % / 51.3 % / 10.0° |
 | Haworth | 6.1 % / 10.0 % / 39.6 % / 2.9° | 1000 m SE | 20.7 % / 36.7 % / 50.9 % / 7.2° |
 | Slater Plain | 2.0 % / 2.3 % / 36.7 % / 3.4° | 1000 m SE | 9.6 % / 21.5 % / 40.6 % / 9.8° |
+| Mons Mouton | 23.8 % / 50.8 % / 55.6 % / 7.1° | 510 m N | 72.5 % / 73.8 % / 98.7 % / 3.2° |
 
 How to read it:
 - A region is ~20 × 20 km; its centre is just a reference point, so low numbers there say little about
@@ -205,8 +206,30 @@ python scripts/derive_region_best.py data/dem/LDEM_80S_40MPP_ADJ.TIF <usgs_grid_
 ```
 
 Each region is searched from the site that stands for it: the published Malapert point (inside its
-region) or the region centre. The Sun/Earth series is rotated from that site to each candidate (≤ ~40 km
-for the large Mons Mouton Plateau; Earth parallax ≤ 0.006°).
+region) or the region centre. The Sun/Earth series is rotated from that site to each candidate (up to
+~43 km for the large Mons Mouton Plateau; Earth parallax ≤ 0.0065°).
+
+Result (LOLA 40 m, 2026-11-01 → 2028-12-31; Sun+Earth = share of hours with both in view):
+
+| region | searched from (Sun+Earth) | best in region | Sun+Earth / Sun / Earth / slope |
+|---|---|---|---|
+| Malapert Massif | published point (15.8 %) | 5.0 km W | **83.6 %** / 83.6 % / 100 % / 2.4° |
+| Nobile Rim 1 | centre (9.4 %) | 10.9 km N | 67.9 % / 67.9 % / 99.5 % / 4.0° |
+| Mons Mouton | centre (23.8 %) | 0.6 km N | 68.6 % / 69.2 % / 99.3 % / 0.9° (see note) |
+| Mons Mouton Plateau | centre (20.2 %) | 42.9 km E | 56.7 % / 56.7 % / 99.8 % / 5.9° |
+| Peak near Cabeus B | centre (9.1 %) | 1.2 km NE | 54.1 % / 70.2 % / 77.6 % / 3.8° |
+| Haworth | centre (6.1 %) | 12.2 km N | 53.4 % / 74.8 % / 74.6 % / 3.0° |
+| de Gerlache Rim 2 | centre (21.7 %) | 11.2 km S | 46.9 % / 81.6 % / 57.1 % / 3.5° |
+| Nobile Rim 2 | centre (28.1 %) | 6.0 km SW | 43.7 % / 51.8 % / 83.0 % / 4.0° |
+| Slater Plain | centre (2.0 %) | 5.0 km SE | 34.6 % / 67.0 % / 46.2 % / 1.1° |
+
+- Every region has ground with Sun and Earth together for a third to over four fifths of the time on
+  slopes ≤ 6°, often far from the centre: the centre says little about a region.
+- **Note, Mons Mouton:** this run's region search (68.6 %) came out *below* the 1 km derived point
+  (72.5 %, 510 m N, also inside the region): the 450 m coarse grid stepped over that narrow peak. The
+  script now also refines around the region's site and its known derived points, so a rerun cannot
+  return less than them; until then, the 1 km derived point is the best known spot there.
+- The Nobile Rim 1 result lies where that region overlaps Mons Mouton Plateau.
 
 ## Independent check and permanent shadow (prepared)
 
