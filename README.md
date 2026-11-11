@@ -9,6 +9,10 @@ Answering a simple planning question — *"at this south-pole site, on which dat
 have Sun and Earth in view, and does the lander survive the night?"* — takes many steps
 and expert knowledge. LunaNav answers it in one screen:
 
+![LunaNav overview: score for every site and landing date](docs/overview.png)
+
+![Inspecting one option: verdict, battery sizing and the 360° view from the lander](docs/inspect.png)
+
 - **Score heatmap:** every candidate site × every start date, bright = go (colour-blind-safe).
 - **Real terrain horizon:** Sun and Earth are compared against the actual LOLA horizon, not a flat one.
 - **Battery survival:** a transparent lander power model shows *when* a mission would die.
@@ -21,6 +25,7 @@ and expert knowledge. LunaNav answers it in one screen:
   Next to it LunaNav can show a **derived** point: the best spot within 1 km on a gentle slope.
   Always labelled, never a replacement for the cited one.
 - **South-pole map** of the sites, true to scale, with the Earth-facing side marked.
+- **Shareable links:** the page address always encodes the scenario (settings, site, start date).
 - **CSV export** of any mission: hourly Sun/Earth position, terrain, visibility and battery.
 - **Plain-language help** in the app for students, educators and the public.
 
