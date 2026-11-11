@@ -82,6 +82,7 @@ The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit 
 | `scripts/derive_best_points.py` | LOLA DEM + series | `data/derived_sites.yaml`, `<site>_derived.npz`, horizons |
 | `scripts/artemis_regions.py` | USGS grid shapefiles | Artemis III region centres in `data/sites.yaml` |
 | `scripts/derive_region_best.py` | LOLA DEM + USGS grids + series | best point inside each region (`<site>_region_best`) |
+| `scripts/mazarico_compare.py` | NASA PGDA illumination + PSR maps | `data/mazarico.json`: independent check + nearest permanent shadow |
 | `scripts/make_demo_series.py` | nothing | synthetic series for UI work only (clearly flagged in the app) |
 
 ## Quick start
@@ -206,6 +207,22 @@ python scripts/derive_region_best.py data/dem/LDEM_80S_40MPP_ADJ.TIF <usgs_grid_
 Each region is searched from the site that stands for it: the published Malapert point (inside its
 region) or the region centre. The Sun/Earth series is rotated from that site to each candidate (≤ ~40 km
 for the large Mons Mouton Plateau; Earth parallax ≤ 0.006°).
+
+## Independent check and permanent shadow (prepared)
+
+`scripts/mazarico_compare.py` reads NASA's polar illumination products (Mazarico et al. 2011, Icarus 211,
+[NASA GSFC PGDA product 69](https://pgda.gsfc.nasa.gov/products/69)): the 18.6-year average solar
+illumination and Earth visibility maps, and the permanent-shadow (PSR) map. For every site it records
+NASA's averages next to LunaNav's own, and the distance to the nearest permanently shadowed region
+(where water ice can survive) plus the PSR area within 5 km. Nothing about the encoding is assumed:
+scale tags are applied, the unit is decided once per map, and the PSR code is the value whose pixels
+have ~0 % average illumination; the script stops rather than guess. Differences to expect: 18.6 years vs
+2026–2028, Earth "any part of the disc" vs Earth's centre, no stated height vs a 2 m mast.
+
+```bash
+python scripts/mazarico_compare.py --sun AVGVISIB_75S_120M_201608.TIF \
+    --earth AVGVISIB_75S_120M_201608_EARTH.TIF --psr LPSR_75S_120M_201608.TIF
+```
 
 ## Validation
 

@@ -18,6 +18,20 @@ from lunanav.sites import load_sites
 
 HORIZONS = Path(__file__).resolve().parent / "data" / "horizons.json"
 REGION_OUTLINES = HORIZONS.with_name("artemis_regions.json")   # scripts/artemis_regions.py --outlines
+MAZARICO = HORIZONS.with_name("mazarico.json")                 # scripts/mazarico_compare.py
+
+
+@st.cache_resource
+def mazarico():
+    import json
+    return json.loads(MAZARICO.read_text()) if MAZARICO.exists() else None
+
+
+def psr_km(s):
+    """Distance to the nearest permanently shadowed region (Mazarico et al. 2011), or None."""
+    m = mazarico()
+    rec = (m or {}).get("sites", {}).get(s.id)
+    return None if rec is None else rec.get("psr_nearest_km")
 
 
 @st.cache_resource
@@ -306,6 +320,7 @@ for s in sites:
     for t0, r, sl_h in zip(st_, res, slack):
         rows.append(dict(site=labels[sites.index(s)], point="derived" if s.derived else "cited",
                          artemis_region=s_region,
+                         **({"nearest_psr_km": psr_km(s)} if mazarico() else {}),
                          start=pd.Timestamp(t0), slope_deg=s.slope_deg, score=r.score, feasible=r.meets_constraints,
                          delay_ok_days=sl_h / 24 if sl_h >= 0 else np.nan,
                          sun=r.sun_frac, earth=r.comm_frac, longest_shadow_h=r.longest_dark_h,
@@ -318,6 +333,8 @@ st.caption("Best landing date for each site. **delay_ok_days** = how many days t
 FMT = {"score": "{:.1f}", "sun": "{:.0%}", "earth": "{:.0%}", "min_battery": "{:.0%}", "longest_shadow_h": "{:.0f}",
        "delay_ok_days": "{:.0f}", "slope_deg": lambda x: "–" if pd.isna(x) else f"{x:.1f}°",
        "start": lambda t: t.strftime("%Y-%m-%d %H:%M")}
+if "nearest_psr_km" in df:
+    FMT["nearest_psr_km"] = lambda x: "–" if pd.isna(x) else f"{x:.1f} km"
 st.dataframe(df.groupby("site", sort=False).head(1).style.format(FMT), width="stretch", hide_index=True)
 with st.expander("Top 20 site × date options overall"):
     st.dataframe(df.head(20).style.format(FMT), width="stretch", hide_index=True)
@@ -495,6 +512,17 @@ with st.expander("Assumptions & limits (read before quoting a number)"):
 """)
 
 in_regions = regions_of(site)
+mz_rec = (mazarico() or {}).get("sites", {}).get(site.id)
+if mz_rec is not None:
+    near = mz_rec.get("psr_nearest_km")
+    st.caption(
+        "🧊 **Permanent shadow (possible ice):** "
+        + (f"nearest {near:.1f} km away, {mz_rec['psr_area_within_5km_km2']:.1f} km² within 5 km. "
+           if near is not None else "none within the search radius. ")
+        + f"Independent check: NASA's 18.6-year average illumination here is {mz_rec['mazarico_sun']:.0%}"
+        + (f" (LunaNav, 2026–2028, 2 m mast: {mz_rec['lunanav_sun_mean']:.0%} of the solar disk on average). "
+           if "lunanav_sun_mean" in mz_rec else ". ")
+        + "Source: Mazarico et al. 2011, Icarus 211 (NASA GSFC PGDA product 69).")
 st.caption(f"Site: {labels[sites.index(site)]} ({site.lat:.4f}°, {site.lon:.4f}°E) · "
            f"Artemis III region: {in_regions or 'none (outside all nine)'} · source: {site.source} · "
            f"terrain: {terrain} · ephemeris: JPL DE440 via Skyfield · no atmosphere, no refraction.")
