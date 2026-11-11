@@ -81,6 +81,26 @@ python scripts/make_demo_series.py
 streamlit run app.py
 ```
 
+## Adding sites
+
+Every site needs a source. Two ways in:
+
+1. **A published point:** add it to `data/sites.yaml` with `source:` (link) and `verified: true` once the
+   numbers are copied from that source.
+2. **NASA's Artemis III candidate regions** (published as ~15 km areas, not points):
+   download the USGS navigation grids ([McClernan 2024, doi:10.5066/P1MEQ6UK](https://doi.org/10.5066/P1MEQ6UK)),
+   unzip, then `python scripts/artemis_regions.py <folder>`. It adds the area-weighted centre of each
+   region's 1 km grid as a site, labelled *region centre* (Malapert Massif and Mons Mouton keep their
+   published points).
+
+Then rebuild the data for the new sites (needs the DEM and kernels):
+
+```bash
+python scripts/build_horizons.py data/dem/LDEM_80S_40MPP_ADJ.TIF
+python scripts/precompute.py --start 2026-11-01 --end 2028-12-31
+python scripts/derive_best_points.py data/dem/LDEM_80S_40MPP_ADJ.TIF
+```
+
 ## Scoring
 
 For one site and one start date, over the mission duration (1 h steps):

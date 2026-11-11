@@ -6,7 +6,7 @@ requires-python = ">=3.10"
 dependencies = ["numpy", "pyyaml", "plotly", "streamlit", "pandas"]
 
 [project.optional-dependencies]
-offline = ["skyfield", "rasterio", "pyproj"]  # kernels + DEM, only for scripts/
+offline = ["skyfield", "rasterio", "pyproj", "pyshp"]  # kernels + DEM + USGS shapefiles, only for scripts/
 dev = ["pytest"]
 
 [build-system]
