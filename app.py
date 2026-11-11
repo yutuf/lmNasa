@@ -141,6 +141,41 @@ fig.update_layout(height=120 + 60 * len(sites), margin=dict(l=10, r=10, t=30, b=
                   title="Mission score by landing site and start date (green = go)")
 st.plotly_chart(fig, width="stretch")
 
+with st.expander("Map: where are these sites around the south pole?"):
+    polar = [s for s in sites if s.lat < -80]
+    rho = lambda s: np.radians(90 + s.lat) * 1737.4  # noqa: E731  km from the pole (azimuthal equidistant)
+    mp = go.Figure()
+    for ring in (50, 100, 150):
+        th = np.linspace(0, 2 * np.pi, 181)
+        mp.add_scatter(x=ring * np.sin(th), y=ring * np.cos(th), mode="lines", hoverinfo="skip",
+                       line=dict(color="#2a3550", width=1), showlegend=False)
+        mp.add_annotation(x=0, y=-ring, text=f"{ring} km", showarrow=False, font=dict(color="#7f8aa3", size=10))
+    for kind, color, sym in (("cited", "#f2b705", "circle"), ("derived", "#4ea8de", "diamond")):
+        pts = [s for s in polar if (s.derived if kind == "derived" else not s.derived)]
+        if pts:
+            mp.add_scatter(x=[rho(s) * np.sin(np.radians(s.lon)) for s in pts],
+                           y=[rho(s) * np.cos(np.radians(s.lon)) for s in pts],
+                           mode="markers+text" if kind == "cited" else "markers", name=kind,
+                           text=[s.name.split(" (")[0] for s in pts],
+                           textposition=["bottom center" if rho(s) < 25 else "top center" for s in pts],
+                           textfont=dict(color="#dfe6f3", size=11),
+                           marker=dict(size=11 if kind == "cited" else 8, color=color, symbol=sym),
+                           hovertext=[f"{labels[sites.index(s)]}<br>{s.lat:.4f}°, {s.lon:.4f}°E" for s in pts],
+                           hoverinfo="text")
+    mp.add_scatter(x=[0], y=[0], mode="markers+text", text=["South Pole"], textposition="middle right",
+                   marker=dict(symbol="x", size=9, color="white"), textfont=dict(color="white"), showlegend=False)
+    mp.add_annotation(x=0, y=175, text="↑ 0° E — toward Earth (near side)", showarrow=False,
+                      font=dict(color="#4ea8de"))
+    mp.update_layout(height=520, plot_bgcolor="#0b1020", margin=dict(t=20, b=10),
+                     xaxis=dict(visible=False, range=[-190, 190]),
+                     yaxis=dict(visible=False, range=[-190, 190], scaleanchor="x"),
+                     legend=dict(orientation="h", y=-0.02))
+    st.plotly_chart(mp, width="stretch")
+    st.caption("Distances from the pole, true to scale. Derived points sit within 1 km of their cited site, "
+               "so they overlap it at this scale. Longitude 0° faces Earth, which is why sites on that side "
+               "see Earth more often." + ("" if len(polar) == len(sites) else
+                                            " Apollo 11 (equator) is off this map."))
+
 # best options table
 rows = []
 for s in sites:
@@ -280,6 +315,17 @@ with st.expander("Earth communication windows"):
     w = windows(v.earth_visible[sl], v.times_utc[sl])
     st.table(pd.DataFrame([(pd.Timestamp(a), pd.Timestamp(b), (b - a) / np.timedelta64(1, "h"))
                            for a, b in w], columns=["from (UTC)", "to (UTC)", "hours"]))
+
+timeline = pd.DataFrame({
+    "sun_alt_deg": v.sun_alt[sl], "sun_az_deg": v.sun_az[sl],
+    "terrain_toward_sun_deg": v.sun_horizon[sl], "sun_disk_visible": v.sun_fraction[sl],
+    "earth_alt_deg": v.earth_alt[sl], "earth_az_deg": v.earth_az[sl],
+    "terrain_toward_earth_deg": v.earth_horizon[sl], "earth_in_view": v.earth_visible[sl],
+    "array_w": p.array_w, "battery_soc": p.soc}).round(4)
+timeline.insert(0, "time_utc", tt)
+st.download_button("⬇ Download this mission timeline (CSV, hourly)", timeline.to_csv(index=False).encode(),
+                   file_name=f"lunanav_{site.id}_{start_choice:%Y%m%d_%H%M}.csv", mime="text/csv",
+                   help="Every hour of the selected mission: Sun/Earth position, terrain, visibility, battery.")
 
 st.caption(f"Site: {labels[sites.index(site)]} ({site.lat:.4f}°, {site.lon:.4f}°E) · source: {site.source} · "
            f"terrain: {terrain} · ephemeris: JPL DE440 via Skyfield · no atmosphere, no refraction.")

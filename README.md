@@ -2,6 +2,8 @@
 
 NASA Space Apps Challenge 2026 · *Lunar Landing Site Navigator*
 
+[![tests](https://github.com/yutuf/lmNasa/actions/workflows/ci.yml/badge.svg)](https://github.com/yutuf/lmNasa/actions/workflows/ci.yml)
+
 Existing tools (QuickMap, Moon Trek, JPL Horizons) are built for detailed analysis.
 Answering a simple planning question — *"at this south-pole site, on which dates do we
 have Sun and Earth in view, and does the lander survive the night?"* — takes many steps
@@ -16,6 +18,8 @@ and expert knowledge. LunaNav answers it in one screen:
 - **Cited vs derived points:** every site is a coordinate copied from a publication (source shown).
   Next to it LunaNav can show a **derived** point: the best spot within 1 km on a gentle slope.
   Always labelled, never a replacement for the cited one.
+- **South-pole map** of the sites, true to scale, with the Earth-facing side marked.
+- **CSV export** of any mission: hourly Sun/Earth position, terrain, visibility and battery.
 - **Plain-language help** in the app for students, educators and the public.
 
 ## How it works
@@ -56,7 +60,7 @@ The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[offline,dev]"
-pytest -q
+pytest -q          # unit tests + a smoke test that runs the app on the committed data
 
 # real data
 python scripts/fetch_kernels.py                          # ~130 MB (DE440)
