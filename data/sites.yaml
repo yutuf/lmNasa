@@ -1,5 +1,6 @@
 # Curated candidate sites. Coordinates are planetocentric (lat, lon east, -180..180) in degrees,
-# Moon mean-Earth (ME) frame. verified: true = value copied from the cited source.
+# Moon mean-Earth (ME) frame. verified: true = value copied from the cited source,
+# or computed directly from its published geometry (method stated in the note, e.g. Artemis region centres).
 # NASA's Artemis III candidate *regions* (Oct 2024: Peak near Cabeus B, Haworth, Malapert Massif,
 # Mons Mouton Plateau, Mons Mouton, Nobile Rim 1, Nobile Rim 2, de Gerlache Rim 2, Slater Plain;
 # https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/)
