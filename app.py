@@ -5,15 +5,60 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from lunanav.metrics import MissionConstraints, delay_tolerance, evaluate_window, scan_start_dates, windows
+from pathlib import Path
+
+from lunanav.horizon import HorizonProfile, load_profiles
+from lunanav.metrics import (MissionConstraints, delay_tolerance, evaluate_window, hours_until_change,
+                             scan_start_dates, windows)
+from lunanav.panorama import break_at_wraps, circular_mean_deg, compass_ticks, unwrap_about
 from lunanav.power import PowerConfig, simulate_battery
 from lunanav.series import load_series
 from lunanav.sites import load_sites
+
+HORIZONS = Path(__file__).resolve().parent / "data" / "horizons.json"
+
+
+@st.cache_resource
+def horizons():
+    return load_profiles(HORIZONS) if HORIZONS.exists() else {}
+
+
+def fmt_hours(h):
+    return f"{h:.0f} h" if h < 48 else f"{h / 24:.1f} days"
+
+
+def until(mask, i, step, verb_on, verb_off):
+    """'sets in 3.2 days' / 'rises in 5 h' / 'does not set before the data ends'."""
+    h = hours_until_change(mask, i, step)
+    verb = verb_on if mask[i] else verb_off
+    return f"does not {verb} before the data ends" if h is None else f"{verb}s in {fmt_hours(h)}"
 
 st.set_page_config(page_title="LunaNav", page_icon="🌘", layout="wide")
 st.title("LunaNav — where and when should we land?")
 st.caption("Pick mission constraints. Every site × start date is scored on sunlight, "
            "Earth visibility and battery survival.")
+
+with st.expander("New here? How to read this page (2 min)"):
+    st.markdown("""
+**The question:** a solar-powered lander near the Moon's south pole needs two things — **sunlight** for power and
+**Earth in the sky** to talk to mission control. Near the pole the Sun never rises high: it crawls around the horizon
+once a month, so a hill a few hundred metres tall can put the lander in shadow for days. Earth hangs low too and
+wobbles a little (libration), so it also slips behind hills.
+
+**What LunaNav does:** for each landing site it uses NASA's laser-altimeter terrain (LOLA) to work out the real horizon
+in every direction, and JPL's planetary ephemeris (DE440) to know where the Sun and Earth are, hour by hour, until 2028.
+
+**How to use it**
+1. Set the mission in the sidebar (how long on the surface, how much sun and Earth contact you need, battery size).
+2. The **heatmap** colours every site × landing date: green = all requirements met, dark = not.
+3. **Best options** lists the top choices. *delay_ok_days* = how many days the launch could slip and still be fine.
+4. **Inspect one option** shows the 360° view from the lander, a time slider ("what does the lander see on day 5?"),
+   when the Sun and Earth will next set, and whether the battery survives.
+
+**Cited vs derived points:** *cited* sites are coordinates copied from publications (source shown at the bottom).
+A *derived* point is LunaNav's own pick: the best spot within 1 km of a cited site with a gentle slope. It is
+always labelled and never replaces the cited one.
+""")
 
 # ---------------- sidebar: mission constraints ----------------
 with st.sidebar:
@@ -27,13 +72,21 @@ with st.sidebar:
     load = st.number_input("Average load (W)", 10, 3000, 150, 10)
     batt = st.number_input("Battery (Wh)", 100, 50_000, 2000, 100)
     min_soc = st.slider("Failure below state of charge", 0, 90, 20, format="%d%%") / 100
-    stride = st.selectbox("Start-date step", [6, 12, 24], index=2, format_func=lambda h: f"{h} h")
+    stride = st.selectbox("Start-date step", [6, 12, 24], index=2, format_func=lambda h: f"{h} h",
+                          help="How finely landing dates are sampled. 6 h is finer but slower.")
+    show_derived = any(s.derived for s in load_sites()) and st.toggle(
+        "Show derived best points (≤ 1 km)", value=True,
+        help="LunaNav's own pick near each cited site: most hours with Sun and Earth "
+             "both in view, on a gentle slope. Computed, not published.")
 
 c = MissionConstraints(duration_days=duration, min_sun_frac=min_sun, min_comm_frac=min_comm,
                        max_dark_hours=max_dark,
                        power=PowerConfig(array_peak_w=peak, load_w=load, battery_wh=batt, min_soc=min_soc))
 
 sites = load_sites()
+if not show_derived:
+    sites = [s for s in sites if not s.derived]
+by_id = {s.id: s for s in load_sites()}
 data = {s.id: load_series(s.id) for s in sites}
 sites = [s for s in sites if data[s.id][0] is not None]
 if not sites:
@@ -44,7 +97,7 @@ if not sites:
 terrain_labels = {data[s.id][2] for s in sites}
 if any("SYNTHETIC" in t for t in terrain_labels):
     st.warning("⚠️ SYNTHETIC demo data — not real lunar geometry. Run scripts/precompute.py.")
-if any(not s.verified for s in sites):
+if any(not s.verified and not s.derived for s in sites):
     st.info("Some site coordinates are approximate and still being verified (marked †).")
 
 
@@ -61,7 +114,17 @@ key = (duration, min_sun, min_comm, max_dark, peak, load, batt, min_soc, stride)
 scans = scan(key, tuple(s.id for s in sites))
 
 # ---------------- heatmap: site × start date ----------------
-labels = [s.name + (" (reference)" if s.reference else "") + ("" if s.verified else " †") for s in sites]
+COMPASS8 = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+
+
+def site_label(s):
+    if s.derived:
+        d = COMPASS8[int(((s.bearing_deg or 0) + 22.5) // 45) % 8]
+        return f"↳ derived: {s.distance_m:.0f} m {d} of {by_id[s.derived_from].name.split(' (')[0]}"
+    return s.name + (" (reference)" if s.reference else "") + ("" if s.verified else " †")
+
+
+labels = [site_label(s) for s in sites]
 starts = scans[sites[0].id][0]
 Z = np.array([[r.score for r in scans[s.id][1]] for s in sites])
 hover = np.array([[("✅ feasible" if r.meets_constraints else "❌ " + "; ".join(r.fail_reasons))
@@ -84,7 +147,8 @@ for s in sites:
     st_, res = scans[s.id]
     slack = delay_tolerance([r.meets_constraints for r in res], stride)
     for t0, r, sl_h in zip(st_, res, slack):
-        rows.append(dict(site=s.name, start=pd.Timestamp(t0), score=r.score, feasible=r.meets_constraints,
+        rows.append(dict(site=labels[sites.index(s)], point="derived" if s.derived else "cited",
+                         start=pd.Timestamp(t0), score=r.score, feasible=r.meets_constraints,
                          delay_ok_days=sl_h / 24 if sl_h >= 0 else np.nan,
                          sun=r.sun_frac, earth=r.comm_frac, longest_shadow_h=r.longest_dark_h,
                          min_battery=r.min_soc))
@@ -101,40 +165,104 @@ st.dataframe(df.head(10).style.format({"score": "{:.1f}", "sun": "{:.0%}", "eart
 # ---------------- detail view ----------------
 st.subheader("Inspect one option")
 col1, col2 = st.columns(2)
-best_idx = next(i for i, s_ in enumerate(sites) if s_.name == df.iloc[0].site)
+best_idx = labels.index(df.iloc[0].site)
 site = sites[col1.selectbox("Site", range(len(sites)), index=best_idx, format_func=lambda i: labels[i])]
 v, step, terrain = data[site.id]
 start_choice = col2.select_slider("Start", options=list(pd.to_datetime(starts)),
-                                  value=pd.Timestamp(df[df.site == site.name].iloc[0].start),
+                                  value=pd.Timestamp(df[df.site == labels[sites.index(site)]].iloc[0].start)
+                                  if (df.site == labels[sites.index(site)]).any() else pd.Timestamp(starts[0]),
                                   format_func=lambda t: t.strftime("%Y-%m-%d %H:%M"))
 i0 = int(np.searchsorted(v.times_utc, np.datetime64(start_choice.to_datetime64(), "s")))
 sl = slice(i0, i0 + int(duration * 24 / step))
 r = evaluate_window(v.sun_fraction[sl], v.sun_alt[sl], v.earth_visible[sl], step, c)
 p = simulate_battery(v.sun_fraction[sl], v.sun_alt[sl], step, c.power)
 tt = pd.to_datetime(v.times_utc[sl])
+n_steps = len(tt)
+
+if site.derived:
+    st.info(f"**Derived point.** {site.note} "
+            f"Slope here {site.slope_deg:.1f}° (cited point {site.cited_slope_deg:.1f}°).")
+else:
+    sib = next((d for d in sites if d.derived_from == site.id), None)
+    if sib is not None:
+        sv = data[sib.id][0]
+        both = lambda vv, k=slice(None): float(((vv.sun_fraction[k] >= .5) & vv.earth_visible[k]).mean())  # noqa: E731
+        st.caption(f"💡 LunaNav found a derived point {sib.distance_m:.0f} m away (slope {sib.slope_deg:.1f}°). "
+                   f"Hours with Sun **and** Earth in view — this mission: {both(v, sl):.0%} here vs "
+                   f"{both(sv, sl):.0%} there; whole 2026–2028 period: {both(v):.0%} vs {both(sv):.0%}. "
+                   f"Pick “{labels[sites.index(sib)]}” above to inspect it.")
 
 m = st.columns(5)
 m[0].metric("Score", r.score)
-m[1].metric("Sunlit", f"{r.sun_frac:.0%}")
-m[2].metric("Earth in view", f"{r.comm_frac:.0%}")
-m[3].metric("Longest shadow", f"{r.longest_dark_h:.0f} h")
+m[1].metric("Sunlit", f"{r.sun_frac:.0%}", help="Share of mission hours with at least half the Sun's disk above the terrain.")
+m[2].metric("Earth in view", f"{r.comm_frac:.0%}", help="Share of mission hours with Earth above the terrain: direct-to-Earth radio is possible.")
+m[3].metric("Longest shadow", f"{r.longest_dark_h:.0f} h", help="Longest continuous stretch without usable sunlight.")
 m[4].metric("Min battery", f"{r.min_soc:.0%}", "survives" if p.survived else "FAILS",
             delta_color="normal" if p.survived else "inverse")
 if r.fail_reasons:
     st.error(" · ".join(r.fail_reasons))
+
+# ---- time cursor: "what does the lander see at this moment?" ----
+cur = st.slider("Moment in the mission (hours after landing)", 0, n_steps - 1, 0,
+                help="Move through the mission to see where the Sun and Earth are, and how long until they set.")
+gi = i0 + cur
+lit_mask = v.sun_fraction >= 0.5
+now = tt[cur]
+sun_txt = (f"☀️ **Sun:** {v.sun_fraction[gi]:.0%} of the disk above the terrain — "
+           + until(lit_mask, gi, step, "set", "rise"))
+earth_txt = ("🌍 **Earth:** " + ("in view" if v.earth_visible[gi] else "behind terrain") + " — "
+             + until(v.earth_visible, gi, step, "set", "rise"))
+st.markdown(f"**{now:%Y-%m-%d %H:%M} UTC** (day {cur * step / 24:.1f})  \n{sun_txt}  \n{earth_txt}")
+
+# ---- 360° panorama ----
+hz = horizons().get(site.id) or HorizonProfile.flat(site.id, site.lat, site.lon)
+center = circular_mean_deg(v.earth_az[sl])
+lo, hi = center - 180.0, center + 180.0
+xg = np.linspace(lo, hi, 721)
+terr = hz.at(xg % 360.0)
+sx = unwrap_about(v.sun_az[sl], center)
+ex = unwrap_about(v.earth_az[sl], center)
+y_lo = max(-6.0, min(-2.0, terr.min() - 1, v.earth_alt[sl].min() - 1))
+y_hi = max(terr.max(), v.earth_alt[sl].max(), min(v.sun_alt[sl].max(), 90)) + 2
+pan = go.Figure()
+pan.add_scatter(x=np.r_[lo, xg, hi], y=np.r_[y_lo - 50, terr, y_lo - 50], fill="toself", mode="lines",
+                line=dict(color="#8d8d8d", width=1), fillcolor="#4a4a4a", name="terrain horizon",
+                hovertemplate="az %{x:.0f}° · terrain %{y:.2f}°<extra></extra>")
+bx, by = break_at_wraps(sx, v.sun_alt[sl])
+pan.add_scatter(x=bx, y=by, mode="lines", line=dict(color="#f2b705", width=2), name="Sun path",
+                hovertemplate="Sun az %{x:.0f}° alt %{y:.2f}°<extra></extra>")
+bx, by = break_at_wraps(ex, v.earth_alt[sl])
+pan.add_scatter(x=bx, y=by, mode="lines", line=dict(color="#4ea8de", width=2), name="Earth path",
+                hovertemplate="Earth az %{x:.0f}° alt %{y:.2f}°<extra></extra>")
+pan.add_scatter(x=[sx[cur]], y=[v.sun_alt[gi]], mode="markers", name="Sun now",
+                marker=dict(size=18, color="#ffd23f", line=dict(color="white", width=1)))
+pan.add_scatter(x=[ex[cur]], y=[v.earth_alt[gi]], mode="markers", name="Earth now",
+                marker=dict(size=16, color="#1f77b4", line=dict(color="white", width=1)))
+tv, tl = compass_ticks(lo, hi)
+pan.update_layout(height=340, margin=dict(t=40, b=10), plot_bgcolor="#0b1020",
+                  title="360° view from the lander: terrain horizon, Sun and Earth paths over the mission",
+                  xaxis=dict(range=[lo, hi], tickvals=tv, ticktext=tl, showgrid=False, title="direction"),
+                  yaxis=dict(range=[y_lo, y_hi], title="degrees above horizontal", gridcolor="#1e2a44"),
+                  legend=dict(orientation="h", y=-0.25))
+st.plotly_chart(pan, width="stretch")
+st.caption("Vertical scale is exaggerated. Near the pole the Sun circles the horizon once a month and "
+           "Earth wobbles in a small loop (libration), so a hill a few degrees high decides everything. "
+           "Terrain: " + hz.source)
 
 f2 = go.Figure()
 f2.add_scatter(x=tt, y=v.sun_alt[sl], name="Sun altitude", line=dict(color="#f2b705"))
 f2.add_scatter(x=tt, y=v.sun_horizon[sl], name="terrain toward Sun", line=dict(color="#f2b705", dash="dot"))
 f2.add_scatter(x=tt, y=v.earth_alt[sl], name="Earth altitude", line=dict(color="#4ea8de"))
 f2.add_scatter(x=tt, y=v.earth_horizon[sl], name="terrain toward Earth", line=dict(color="#4ea8de", dash="dot"))
+f2.add_vline(x=now, line_color="#888", line_dash="dash")
 f2.update_layout(height=320, yaxis_title="degrees above horizontal", margin=dict(t=30),
-                 title="Sun and Earth vs. real terrain horizon")
+                 title="Over time: is the Sun / Earth above the terrain? (line above dotted = visible)")
 st.plotly_chart(f2, width="stretch")
 
 f3 = go.Figure()
 f3.add_scatter(x=tt, y=100 * p.soc, fill="tozeroy", name="battery %", line=dict(color="#2e8b57"))
 f3.add_hline(y=100 * c.power.min_soc, line_dash="dash", line_color="#c0392b", annotation_text="failure line")
+f3.add_vline(x=now, line_color="#888", line_dash="dash")
 f3.update_layout(height=260, yaxis=dict(title="state of charge %", range=[0, 105]), margin=dict(t=30),
                  title="Does the lander survive?")
 st.plotly_chart(f3, width="stretch")
@@ -144,5 +272,5 @@ with st.expander("Earth communication windows"):
     st.table(pd.DataFrame([(pd.Timestamp(a), pd.Timestamp(b), (b - a) / np.timedelta64(1, "h"))
                            for a, b in w], columns=["from (UTC)", "to (UTC)", "hours"]))
 
-st.caption(f"Site: {site.name} ({site.lat:.3f}°, {site.lon:.3f}°E) · source: {site.source} · "
+st.caption(f"Site: {labels[sites.index(site)]} ({site.lat:.4f}°, {site.lon:.4f}°E) · source: {site.source} · "
            f"terrain: {terrain} · ephemeris: JPL DE440 via Skyfield · no atmosphere, no refraction.")
