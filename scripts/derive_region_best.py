@@ -136,7 +136,7 @@ def main(argv=None):
             times=vis.times_utc.astype("datetime64[s]").astype("int64"), step_h=step_h,
             **{k: np.asarray(v, dtype=bool if k == "earth_visible" else "float32") for k, v in z.items()},
             terrain=f"{dem_name} (derived point, region search)")
-        site_word = "region centre" if parent.category == "artemis_region" else "published point"
+        site_word = "region centre" if parent.category == "region_centre" else "published point"
         entries = [e for e in entries if e["id"] != did]
         entries.append(dict(
             id=did, name=f"{REGIONS[reg][1]} — best point in the Artemis III region",

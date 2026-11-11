@@ -27,7 +27,8 @@ and expert knowledge. LunaNav answers it in one screen:
   Always labelled, never a replacement for the cited one.
 - **South-pole map** of the sites and NASA's nine Artemis III candidate regions (exact USGS grid
   outlines), true to scale, with the Earth-facing side marked.
-- **Shareable links:** the page address always encodes the scenario (settings, site, start date).
+- **Shareable links:** the page address always encodes the scenario (settings, which site groups are shown,
+  site, start date).
 - **CSV export** of any mission: hourly Sun/Earth position, terrain, visibility and battery.
 - **Plain-language help** in the app for students, educators and the public.
 

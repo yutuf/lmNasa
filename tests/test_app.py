@@ -79,3 +79,26 @@ def test_table_and_detail_show_artemis_region():
     df = at.dataframe[0].value
     assert "artemis_region" in df.columns and (df.artemis_region != "–").any()
     assert any("Artemis III region:" in c.value for c in at.caption)
+
+
+def test_site_group_filter_and_url():
+    at = AppTest.from_file(APP, default_timeout=180).run()
+    ms = next(m for m in at.multiselect if m.label == "Sites to show")
+    assert "Published points" in ms.options and "Derived (≤ 1 km)" in ms.options      # labels
+    assert "pub" in ms.value and "derived" in ms.value                                 # codes
+    ms.set_value(["centre"]).run()
+    assert not at.exception, at.exception
+    opts = _site_box(at).options
+    assert opts and all("region centre" in o for o in opts)
+    assert "centre" in str(at.query_params["show"])
+
+    at = AppTest.from_file(APP, default_timeout=180)
+    at.query_params.update({"show": "pub,ref"})
+    at.run()
+    assert not at.exception and not any(o.startswith("↳") for o in _site_box(at).options)
+
+    at = AppTest.from_file(APP, default_timeout=180)
+    at.query_params.update({"derived": "0"})                    # link from before the filter existed
+    at.run()
+    assert not at.exception and not any(o.startswith("↳") for o in _site_box(at).options)
+    assert any("region centre" in o for o in _site_box(at).options)

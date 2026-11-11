@@ -56,7 +56,7 @@ def test_centroid_round_trip_and_append(tmp_path):
     import yaml
     live = yaml.safe_load((ROOT / "data" / "sites.yaml").read_text())["sites"]
     sites = tmp_path / "sites.yaml"
-    sites.write_text(yaml.safe_dump({"sites": [x for x in live if x.get("category") != "artemis_region"]},
+    sites.write_text(yaml.safe_dump({"sites": [x for x in live if x.get("category") != "region_centre"]},
                                     sort_keys=False, allow_unicode=True))
     added = ar.main([str(src), "--sites", str(sites)])
     assert len(added) == 2
@@ -65,5 +65,5 @@ def test_centroid_round_trip_and_append(tmp_path):
     h, m = got["artemis_haworth"], got["artemis_mons_mouton_plateau"]
     assert h.lat == pytest.approx(-87.45, abs=1e-3) and h.lon == pytest.approx(-4.0, abs=0.05)
     assert m.lat == pytest.approx(-85.5, abs=1e-3) and m.lon == pytest.approx(30.0, abs=0.05)
-    assert "artemis_malapert_massif" not in got and h.verified and h.category == "artemis_region"
+    assert "artemis_malapert_massif" not in got and h.verified and h.category == "region_centre"
     assert ar.main([str(src), "--sites", str(sites)]) == []  # idempotent
