@@ -13,7 +13,10 @@ and expert knowledge. LunaNav answers it in one screen:
 
 ![Inspecting one option: verdict, battery sizing and the 360° view from the lander](docs/inspect.png)
 
-- **Score heatmap:** every candidate site × every start date, bright = go (colour-blind-safe).
+- **All nine NASA Artemis III candidate regions** (USGS grids) plus published candidate points, each with
+  its source.
+- **Score heatmap:** every candidate site × every start date, bright = go (colour-blind-safe), readable
+  on a phone; filter by site group.
 - **Real terrain horizon:** Sun and Earth are compared against the actual LOLA horizon, not a flat one.
 - **Battery survival:** a transparent lander power model shows *when* a mission would die.
 - **Battery sizing:** the smallest battery that survives the chosen mission (exact for the model),
@@ -23,8 +26,9 @@ and expert knowledge. LunaNav answers it in one screen:
 - **Communication windows:** when Earth is above the terrain, and when it next sets or rises.
 - **Cited vs derived points:** every site comes from a publication: a published point, or the centre of an official
   Artemis III region computed from the USGS grid (source shown).
-  Next to it LunaNav can show a **derived** point: the best spot within 1 km on a gentle slope.
-  Always labelled, never a replacement for the cited one.
+  Next to it LunaNav can show a **derived** point (the best spot within 1 km on a gentle slope) and, for
+  Artemis III regions, the **best point in the whole region**. Always labelled, never a replacement for
+  the cited one.
 - **South-pole map** of the sites and NASA's nine Artemis III candidate regions (exact USGS grid
   outlines), true to scale, with the Earth-facing side marked.
 - **Shareable links:** the page address always encodes the scenario (settings, which site groups are shown,
@@ -42,6 +46,8 @@ LOLA south-pole DEM ──► build_horizons.py ──► data/horizons.json ─
 NAIF kernels (DE440 + Moon frames) ──► lunanav.ephemeris ─────────┘                         (scoring, battery, plots)
                                                                                      │
 LOLA DEM + data/series/<cited>.npz ──► derive_best_points.py ──► data/derived_sites.yaml + <site>_derived.npz
+USGS Artemis III grids ──► artemis_regions.py ──► region centres (sites.yaml) + outlines (artemis_regions.json)
+LOLA DEM + USGS grids + series ──► derive_region_best.py ──► <site>_region_best (derived_sites.yaml + .npz)
 ```
 
 `derive_best_points.py` needs only the DEM: the Sun and Earth are so far away that moving
@@ -102,7 +108,7 @@ Every site needs a source. Two ways in:
 
 1. **A published point:** add it to `data/sites.yaml` with `source:` (link) and `verified: true` once the
    numbers are copied from that source.
-2. **NASA's Artemis III candidate regions** (published as ~15 km areas, not points):
+2. **NASA's Artemis III candidate regions** (published as areas of ~20 × 20 km and larger, not points):
    download the USGS navigation grids ([McClernan 2024, doi:10.5066/P1MEQ6UK](https://doi.org/10.5066/P1MEQ6UK)),
    unzip, then `python scripts/artemis_regions.py <folder> --outlines` (`--outlines` also writes the
    region outlines the map draws, `data/artemis_regions.json`). It adds the area-weighted centre of each
@@ -208,12 +214,12 @@ for the large Mons Mouton Plateau; Earth parallax ≤ 0.006°).
   Plateau and 88 km² with Nobile Rim 1; Plateau and Nobile Rim 1 share 42 km². The app lists every
   region that contains a point.
 - Artemis region centres: grid centres lie 0.09–0.47 km from the centres of USGS's own simplified
-  region outlines (same release), for all seven regions.
+  region outlines (same release), for all eight computed centres.
 - New sites' Sun/Earth series checked against the existing sites' independent DE440 runs (rotated to
   the new point): Sun identical to 0.0000°, Earth within 0.0017° over 14–152 km, inside the expected
   Earth-parallax bound. Derived series re-computed independently: same lit / Earth flag on every hour
   (one borderline hour of 19,008 at Cabeus B, from the solar-radius approximation).
-
+- These checks now run on every push: `tests/test_data_integrity.py`.
 - Sun/Earth directions cross-checked against JPL Horizons: differences ~0.0001°.
 - Shackleton connecting ridge: ≥ 50 % of the solar disk visible 91 % of the time (2026-11 → 2028-12);
   Gläser et al. (EPSC 2014) report 88 % average illumination at 2 m over 20 years for the same spot
