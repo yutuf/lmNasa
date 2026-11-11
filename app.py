@@ -123,23 +123,21 @@ if any(not s.verified and not s.derived for s in sites):
     st.info("Some site coordinates are approximate and still being verified (marked †).")
 
 
-@st.cache_data(show_spinner="Scoring every site and start date…")
-def scan(settings: tuple, site_ids: tuple):
-    """Pure in its (hashed) arguments, so any sidebar change recomputes.
+@st.cache_data(show_spinner="Scoring start dates…", max_entries=256)
+def scan_site(settings: tuple, site_id: str):
+    """One site, one set of settings. Pure in its (hashed) arguments, so any sidebar change recomputes,
+    and adding/toggling sites only computes the new ones.
     (Never prefix an argument with "_" here: Streamlit leaves those out of the cache key.)"""
     duration_, min_sun_, min_comm_, max_dark_, peak_, load_, batt_, min_soc_, stride_ = settings
     cc = MissionConstraints(duration_days=duration_, min_sun_frac=min_sun_, min_comm_frac=min_comm_,
                             max_dark_hours=max_dark_,
                             power=PowerConfig(array_peak_w=peak_, load_w=load_, battery_wh=batt_, min_soc=min_soc_))
-    out = {}
-    for sid in site_ids:
-        v_, step_, _ = load_series(sid)
-        out[sid] = scan_start_dates(v_, step_, cc, start_stride_h=stride_)
-    return out
+    v_, step_, _ = load_series(site_id)
+    return scan_start_dates(v_, step_, cc, start_stride_h=stride_)
 
 
-scans = scan((duration, min_sun, min_comm, max_dark, peak, load, batt, min_soc, stride),
-             tuple(s.id for s in sites))
+settings = (duration, min_sun, min_comm, max_dark, peak, load, batt, min_soc, stride)
+scans = {s.id: scan_site(settings, s.id) for s in sites}
 
 # ---------------- heatmap: site × start date ----------------
 COMPASS8 = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
