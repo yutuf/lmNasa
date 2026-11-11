@@ -8,6 +8,7 @@ import streamlit as st
 from pathlib import Path
 
 from lunanav.horizon import HorizonProfile, load_profiles
+from lunanav.outlines import RegionOutlines, polar_xy
 from lunanav.metrics import (MissionConstraints, delay_tolerance, evaluate_window, hours_until_change,
                              scan_start_dates, windows)
 from lunanav.panorama import break_at_wraps, circular_mean_deg, compass_ticks, unwrap_about
@@ -21,8 +22,17 @@ REGION_OUTLINES = HORIZONS.with_name("artemis_regions.json")   # scripts/artemis
 
 @st.cache_resource
 def region_outlines():
-    import json
-    return json.loads(REGION_OUTLINES.read_text()) if REGION_OUTLINES.exists() else None
+    return RegionOutlines.load(REGION_OUTLINES)
+
+
+@st.cache_data
+def _regions_at(lat: float, lon: float) -> str:
+    ro = region_outlines()
+    return " + ".join(ro.regions_at(lat, lon)) if ro else ""
+
+
+def regions_of(s) -> str:
+    return _regions_at(s.lat, s.lon)
 
 
 @st.cache_resource
@@ -222,12 +232,11 @@ with st.expander("Map: where are these sites around the south pole?"):
     ro = region_outlines()
     if ro:
         xs, ys, tx = [], [], []
-        for r in ro["regions"].values():
+        for r in ro.regions.values():
             for line in r["lines"]:
-                la = np.array([p[0] for p in line]); lo = np.array([p[1] for p in line])  # noqa: E702
-                rr = np.radians(90 + la) * 1737.4
-                xs += list(rr * np.sin(np.radians(lo))) + [None]
-                ys += list(rr * np.cos(np.radians(lo))) + [None]
+                lx, ly = polar_xy([p[0] for p in line], [p[1] for p in line])
+                xs += list(lx) + [None]
+                ys += list(ly) + [None]
                 tx += [f"{r['name']} — Artemis III region, {r['area_km2']} km²"] * len(line) + [None]
         mp.add_scatter(x=xs, y=ys, mode="lines", name="Artemis III regions (USGS)", text=tx, hoverinfo="text",
                        line=dict(color="#6b8f71", width=1.5))
@@ -249,12 +258,14 @@ with st.expander("Map: where are these sites around the south pole?"):
 # best options table
 rows = []
 for s in sites:
+    s_region = regions_of(s) or "–"
     if s.reference:
         continue
     st_, res = scans[s.id]
     slack = delay_tolerance([r.meets_constraints for r in res], stride)
     for t0, r, sl_h in zip(st_, res, slack):
         rows.append(dict(site=labels[sites.index(s)], point="derived" if s.derived else "cited",
+                         artemis_region=s_region,
                          start=pd.Timestamp(t0), slope_deg=s.slope_deg, score=r.score, feasible=r.meets_constraints,
                          delay_ok_days=sl_h / 24 if sl_h >= 0 else np.nan,
                          sun=r.sun_frac, earth=r.comm_frac, longest_shadow_h=r.longest_dark_h,
@@ -443,5 +454,7 @@ with st.expander("Assumptions & limits (read before quoting a number)"):
 - Data window: Nov 2026 – Dec 2028, hourly.
 """)
 
-st.caption(f"Site: {labels[sites.index(site)]} ({site.lat:.4f}°, {site.lon:.4f}°E) · source: {site.source} · "
+in_regions = regions_of(site)
+st.caption(f"Site: {labels[sites.index(site)]} ({site.lat:.4f}°, {site.lon:.4f}°E) · "
+           f"Artemis III region: {in_regions or 'none (outside all nine)'} · source: {site.source} · "
            f"terrain: {terrain} · ephemeris: JPL DE440 via Skyfield · no atmosphere, no refraction.")

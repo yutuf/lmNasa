@@ -71,3 +71,11 @@ def test_url_encodes_and_restores_the_scenario():
     at.run()
     assert not at.exception, at.exception
     assert next(s for s in at.slider if s.label == "Surface duration (days)").value == 14
+
+
+def test_table_and_detail_show_artemis_region():
+    at = AppTest.from_file(APP, default_timeout=180).run()
+    assert not at.exception, at.exception
+    df = at.dataframe[0].value
+    assert "artemis_region" in df.columns and (df.artemis_region != "–").any()
+    assert any("Artemis III region:" in c.value for c in at.caption)
