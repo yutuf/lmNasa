@@ -203,7 +203,7 @@ def short_label(s, width=30):
         d = COMPASS8[int(((s.bearing_deg or 0) + 22.5) // 45) % 8]
         return (f"↳ region best {s.distance_m / 1000:.1f} km {d}" if s.search == "region"
                 else f"↳ {s.distance_m:.0f} m {d}")
-    name = s.name.split(" (")[0]
+    name = s.name.split(" (")[0] + (" region" if s.category == "region_centre" else "")  # vs. IM-2 "Mons Mouton"
     name = name if len(name) <= width else name[:width - 1] + "…"
     steep = " ⚠" if s.slope_deg is not None and s.slope_deg > MAX_SLOPE else ""
     return name + ("" if s.verified else " †") + steep
