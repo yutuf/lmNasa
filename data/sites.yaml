@@ -40,7 +40,7 @@ sites:
     category: artemis_region
     note: >-
       Artemis III candidate region (Oct 2024). LROC: "The relatively flat area (86°S, 0°E) ... is the
-      heart of the Artemis 3 landing region". Point is given only to 1 degree (~±1.5 km in latitude).
+      heart of the Artemis 3 landing region". Point is given only to whole degrees (±0.5° ≈ ±15 km in latitude, ≈ ±1 km in longitude at 86°S).
       The older LCDP-SAT point (85.8 S, 356.4 E,
       https://www.lpi.usra.edu/mapsit/standup-committees/LCDP-SAT-REPORT-20211110.pdf) sits ~1.6 km
       lower on the flank in the LOLA DEM (horizon up to 28.6 deg), so it is not used.
