@@ -78,6 +78,9 @@ official Artemis III region (USGS grid). The source is shown at the bottom.
 A *derived* point is LunaNav's own pick: the best spot within 1 km of a cited site with a gentle slope. For the
 Artemis III regions there can also be a *best in region* point: the best spot anywhere inside the official region.
 Both are always labelled and never replace the cited site.
+
+**Teachers:** three 15–25 min classroom activities with answers are in
+[docs/EDUCATORS.md](https://github.com/yutuf/lmNasa/blob/main/docs/EDUCATORS.md).
 """)
 
 # ---------------- shareable state: the URL encodes the whole scenario ----------------
