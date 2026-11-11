@@ -63,6 +63,15 @@ The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit 
 | `lunanav/sites.py` | cited sites (`data/sites.yaml`) + generated derived points (`data/derived_sites.yaml`) |
 | `app.py` | Streamlit UI |
 
+| script (offline) | needs | writes |
+|---|---|---|
+| `scripts/fetch_kernels.py` | internet (NAIF) | `data/kernels/` (DE440 + Moon frames) |
+| `scripts/build_horizons.py` | LOLA DEM | `data/horizons.json` |
+| `scripts/precompute.py` | kernels + `horizons.json` | `data/series/<site>.npz` |
+| `scripts/derive_best_points.py` | LOLA DEM + series | `data/derived_sites.yaml`, `<site>_derived.npz`, horizons |
+| `scripts/artemis_regions.py` | USGS grid shapefiles | Artemis III region centres in `data/sites.yaml` |
+| `scripts/make_demo_series.py` | nothing | synthetic series for UI work only (clearly flagged in the app) |
+
 ## Quick start
 
 ```bash
