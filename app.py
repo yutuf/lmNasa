@@ -51,7 +51,8 @@ in every direction, and JPL's planetary ephemeris (DE440) to know where the Sun 
 **How to use it**
 1. Set the mission in the sidebar (how long on the surface, how much sun and Earth contact you need, battery size).
 2. The **heatmap** colours every site × landing date: bright yellow = all requirements met, dark blue = not (colour-blind-safe scale).
-3. **Best options** lists the top choices. *delay_ok_days* = how many days the launch could slip and still be fine.
+3. **Best options** gives the best landing date for each site. *delay_ok_days* = how many days the launch could
+   slip and still be fine.
 4. **Inspect one option** shows the 360° view from the lander, a time slider ("what does the lander see on day 5?"),
    when the Sun and Earth will next set, and whether the battery survives.
 
@@ -270,8 +271,10 @@ else:
              + " · ".join(r.fail_reasons))
 
 # ---- time cursor: "what does the lander see at this moment?" ----
-cur = st.slider("Moment in the mission (hours after landing)", 0, n_steps - 1, 0,
-                help="Move through the mission to see where the Sun and Earth are, and how long until they set.")
+cur_h = st.slider("Moment in the mission (hours after landing)", 0.0, (n_steps - 1) * step, 0.0, step,
+                  format="%.0f h",
+                  help="Move through the mission to see where the Sun and Earth are, and how long until they set.")
+cur = int(round(cur_h / step))
 gi = i0 + cur
 lit_mask = v.sun_fraction >= 0.5
 now = tt[cur]
@@ -349,6 +352,19 @@ timeline.insert(0, "time_utc", tt)
 st.download_button("⬇ Download this mission timeline (CSV, hourly)", timeline.to_csv(index=False).encode(),
                    file_name=f"lunanav_{site.id}_{start_choice:%Y%m%d_%H%M}.csv", mime="text/csv",
                    help="Every hour of the selected mission: Sun/Earth position, terrain, visibility, battery.")
+
+with st.expander("Assumptions & limits (read before quoting a number)"):
+    st.markdown("""
+- **Geometry is real, the lander is not.** Sun/Earth positions: JPL DE440 + NAIF Moon frames, cross-checked against
+  JPL Horizons (~0.0001°). Terrain: LOLA south-pole DEM, 40 m/pixel, horizon ray-marched to 150 km from a 2 m mast.
+  The power model (two-axis tracking array, constant load, 95 % efficiencies) is **illustrative**, not any real mission.
+- **No atmosphere, so no refraction.** Spherical Moon (R = 1737.4 km) with the DEM on top.
+- **"Sunlit"** = at least half the solar disk above the terrain; **"Earth in view"** = Earth's centre above the terrain.
+  No antenna pattern, no relay satellites, no thermal model.
+- **Slope** comes from the 40 m DEM; boulders and small craters (metre scale) are invisible at that resolution.
+- **Derived points** are LunaNav's computation, not published coordinates.
+- Data window: Nov 2026 – Dec 2028, hourly.
+""")
 
 st.caption(f"Site: {labels[sites.index(site)]} ({site.lat:.4f}°, {site.lon:.4f}°E) · source: {site.source} · "
            f"terrain: {terrain} · ephemeris: JPL DE440 via Skyfield · no atmosphere, no refraction.")
