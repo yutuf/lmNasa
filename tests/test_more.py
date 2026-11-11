@@ -137,3 +137,18 @@ def test_load_sites_places_derived_after_parent(tmp_path):
     s = load_sites(tmp_path / "sites.yaml")
     assert [x.id for x in s] == ["a", "a_derived", "b"] and s[1].derived and not s[0].derived
     assert [x.id for x in load_sites(tmp_path / "sites.yaml", include_derived=False)] == ["a", "b"]
+
+
+def test_required_battery_is_exact_threshold():
+    from dataclasses import replace
+
+    from lunanav.power import required_battery_wh
+    rng = np.random.default_rng(3)
+    sf = np.repeat(rng.uniform(0, 1, 40) > 0.5, 12).astype(float)    # 12 h sun / shadow blocks
+    cfg = PowerConfig(array_peak_w=400, load_w=150, min_soc=0.2)
+    need = required_battery_wh(sf, 1.0, cfg)
+    assert 0 < need < np.inf
+    ok = simulate_battery(sf, None, 1.0, replace(cfg, battery_wh=need * 1.001))
+    bad = simulate_battery(sf, None, 1.0, replace(cfg, battery_wh=need * 0.99))
+    assert ok.survived and not bad.survived
+    assert required_battery_wh(np.ones(50), 1.0, cfg) == 0.0

@@ -9,9 +9,11 @@ Answering a simple planning question — *"at this south-pole site, on which dat
 have Sun and Earth in view, and does the lander survive the night?"* — takes many steps
 and expert knowledge. LunaNav answers it in one screen:
 
-- **Score heatmap:** every candidate site × every start date, green = go.
+- **Score heatmap:** every candidate site × every start date, bright = go (colour-blind-safe).
 - **Real terrain horizon:** Sun and Earth are compared against the actual LOLA horizon, not a flat one.
 - **Battery survival:** a transparent lander power model shows *when* a mission would die.
+- **Battery sizing:** the smallest battery that survives the chosen mission (exact for the model),
+  plus a GO / NO-GO verdict in plain words and the score broken down term by term.
 - **360° view from the lander:** the terrain silhouette with the Sun's and Earth's paths over the
   mission, plus a time slider — *"on day 5, is the Sun up, and when does it set?"*
 - **Communication windows:** when Earth is above the terrain, and when it next sets or rises.
