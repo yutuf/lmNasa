@@ -82,7 +82,7 @@ The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[offline,dev]"
-pytest -q          # unit tests + a smoke test that runs the app on the committed data
+pytest -q          # unit tests, an app smoke test, and integrity checks on the committed data
 
 # real data
 python scripts/fetch_kernels.py                          # ~130 MB (DE440)
