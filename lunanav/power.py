@@ -51,3 +51,27 @@ def simulate_battery(sun_fraction, sun_alt_deg, step_hours: float, cfg: PowerCon
     first = int(below[0]) if below.size else None
     return PowerResult(soc, array_w, float(soc.min()) if soc.size else cfg.initial_soc,
                        first is None, first)
+
+
+def simulate_battery_batch(sun_fraction_2d, step_hours: float, cfg: PowerConfig) -> list[PowerResult]:
+    """Same model as simulate_battery, run for many windows at once.
+
+    sun_fraction_2d has shape (n_windows, n_steps). Loops over time only,
+    so cost is n_steps numpy ops instead of n_windows * n_steps Python steps.
+    """
+    sf = np.atleast_2d(np.asarray(sun_fraction_2d, dtype=float))
+    array_w = cfg.array_peak_w * sf
+    energy = np.full(sf.shape[0], cfg.initial_soc * cfg.battery_wh)
+    soc = np.empty_like(array_w)
+    for j in range(sf.shape[1]):
+        net = (array_w[:, j] - cfg.load_w) * step_hours
+        energy = energy + np.where(net > 0, net * cfg.charge_eff, net / cfg.discharge_eff)
+        energy = np.clip(energy, 0.0, cfg.battery_wh)
+        soc[:, j] = energy / cfg.battery_wh
+    out = []
+    for k in range(sf.shape[0]):
+        below = np.flatnonzero(soc[k] < cfg.min_soc)
+        first = int(below[0]) if below.size else None
+        out.append(PowerResult(soc[k], array_w[k], float(soc[k].min()) if soc.shape[1] else cfg.initial_soc,
+                               first is None, first))
+    return out

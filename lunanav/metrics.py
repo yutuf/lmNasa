@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .power import PowerConfig, simulate_battery
+from .power import PowerConfig, PowerResult, simulate_battery, simulate_battery_batch
 
 
 @dataclass
@@ -52,7 +52,7 @@ def windows(mask: np.ndarray, times) -> list[tuple]:
 
 
 def evaluate_window(sun_fraction, sun_alt, earth_visible, step_hours: float,
-                    c: MissionConstraints) -> WindowMetrics:
+                    c: MissionConstraints, power: PowerResult | None = None) -> WindowMetrics:
     lit = np.asarray(sun_fraction) >= 0.5
     comm = np.asarray(earth_visible, dtype=bool)
     sun_frac = float(lit.mean())
@@ -60,7 +60,7 @@ def evaluate_window(sun_fraction, sun_alt, earth_visible, step_hours: float,
     both = float((lit & comm).mean())
     dark_h = longest_run(~lit) * step_hours
     gap_h = longest_run(~comm) * step_hours
-    p = simulate_battery(sun_fraction, sun_alt, step_hours, c.power)
+    p = power if power is not None else simulate_battery(sun_fraction, sun_alt, step_hours, c.power)
 
     reasons = []
     if sun_frac < c.min_sun_frac:
@@ -90,13 +90,15 @@ def scan_start_dates(vis, step_hours: float, c: MissionConstraints, start_stride
     """
     n_win = int(round(c.duration_days * 24 / step_hours))
     stride = max(1, int(round(start_stride_h / step_hours)))
-    starts, results = [], []
-    for i in range(0, len(vis.times_utc) - n_win + 1, stride):
-        sl = slice(i, i + n_win)
-        starts.append(vis.times_utc[i])
-        results.append(evaluate_window(vis.sun_fraction[sl], vis.sun_alt[sl],
-                                       vis.earth_visible[sl], step_hours, c))
-    return np.array(starts), results
+    first = np.arange(0, len(vis.times_utc) - n_win + 1, stride)
+    if first.size == 0:
+        return np.array([], dtype="datetime64[s]"), []
+    idx = first[:, None] + np.arange(n_win)[None, :]
+    power = simulate_battery_batch(np.asarray(vis.sun_fraction)[idx], step_hours, c.power)
+    results = [evaluate_window(vis.sun_fraction[i:i + n_win], vis.sun_alt[i:i + n_win],
+                               vis.earth_visible[i:i + n_win], step_hours, c, power=p)
+               for i, p in zip(first, power)]
+    return np.asarray(vis.times_utc)[first], results
 
 
 def delay_tolerance(feasible, stride_hours: float) -> np.ndarray:
@@ -110,3 +112,13 @@ def delay_tolerance(feasible, stride_hours: float) -> np.ndarray:
         count = count + 1 if feasible[i] else 0
         run[i] = count
     return np.where(feasible, (run - 1) * stride_hours, -1.0)
+
+
+def hours_until_change(mask, i: int, step_hours: float):
+    """Hours from index i until `mask` changes state. None if it never changes
+    within the series (e.g. Earth always in view at Apollo 11)."""
+    mask = np.asarray(mask, dtype=bool)
+    if i >= len(mask):
+        return None
+    flips = np.flatnonzero(mask[i:] != mask[i])
+    return None if flips.size == 0 else float(flips[0] * step_hours)

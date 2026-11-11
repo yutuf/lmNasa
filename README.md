@@ -10,7 +10,13 @@ and expert knowledge. LunaNav answers it in one screen:
 - **Score heatmap:** every candidate site × every start date, green = go.
 - **Real terrain horizon:** Sun and Earth are compared against the actual LOLA horizon, not a flat one.
 - **Battery survival:** a transparent lander power model shows *when* a mission would die.
-- **Communication windows:** when Earth is above the terrain.
+- **360° view from the lander:** the terrain silhouette with the Sun's and Earth's paths over the
+  mission, plus a time slider — *"on day 5, is the Sun up, and when does it set?"*
+- **Communication windows:** when Earth is above the terrain, and when it next sets or rises.
+- **Cited vs derived points:** every site is a coordinate copied from a publication (source shown).
+  Next to it LunaNav can show a **derived** point: the best spot within 1 km on a gentle slope.
+  Always labelled, never a replacement for the cited one.
+- **Plain-language help** in the app for students, educators and the public.
 
 ## How it works
 
@@ -20,7 +26,15 @@ offline (needs kernels + DEM)                           runtime (Streamlit, ligh
 LOLA south-pole DEM ──► build_horizons.py ──► data/horizons.json ─┐
                                                                   ├─► precompute.py ──► data/series/<site>.npz ──► app.py
 NAIF kernels (DE440 + Moon frames) ──► lunanav.ephemeris ─────────┘                         (scoring, battery, plots)
+                                                                                     │
+LOLA DEM + data/series/<cited>.npz ──► derive_best_points.py ──► data/derived_sites.yaml + <site>_derived.npz
 ```
+
+`derive_best_points.py` needs only the DEM: the Sun and Earth are so far away that moving
+1 km on the Moon changes their direction by < 0.0002°, so the cited site's Sun/Earth alt-az series is
+rotated into each candidate's local frame instead of re-running the ephemeris. (Checked against
+independent DE440 runs: reprojecting Shackleton ridge → de Gerlache rim, ~25 km, matches to 0.0005° in
+altitude.)
 
 The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit Community Cloud).
 
@@ -31,7 +45,10 @@ The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit 
 | `lunanav/ephemeris.py` | Skyfield: Sun/Earth alt-az from a point in the Moon's ME frame (with libration) |
 | `lunanav/visibility.py` | Sun disk fraction above terrain, Earth above terrain |
 | `lunanav/power.py` | battery state-of-charge simulation |
-| `lunanav/metrics.py` | window metrics, constraints, score, sliding start-date scan |
+| `lunanav/metrics.py` | window metrics, constraints, score, vectorised start-date scan, delay tolerance, set/rise timers |
+| `lunanav/panorama.py` | azimuth helpers for the 360° view (circular mean, unwrap, compass ticks) |
+| `lunanav/derive.py` | candidate grid, slope, alt-az reprojection, ranking for derived points |
+| `lunanav/sites.py` | cited sites (`data/sites.yaml`) + generated derived points (`data/derived_sites.yaml`) |
 | `app.py` | Streamlit UI |
 
 ## Quick start
@@ -44,7 +61,8 @@ pytest -q
 # real data
 python scripts/fetch_kernels.py                          # ~130 MB (DE440)
 python scripts/build_horizons.py data/dem/<lola_south_pole>.tif
-python scripts/precompute.py --start 2027-01-01 --end 2028-01-01
+python scripts/precompute.py --start 2026-11-01 --end 2028-12-31
+python scripts/derive_best_points.py data/dem/LDEM_80S_40MPP_ADJ.TIF   # optional: derived points
 
 # or synthetic data just to work on the UI
 python scripts/make_demo_series.py
@@ -65,6 +83,24 @@ For one site and one start date, over the mission duration (1 h steps):
 If any constraint fails (min sunlit, min Earth, max shadow, battery), the score is ×0.25 and the
 reasons are listed. Weights and constraints are editable.
 
+Ties at the top are broken by **delay_ok_days**: how many days the launch can slip with every
+later start still feasible.
+
+## Derived points
+
+For each cited, non-reference site: a grid of candidates (100 m spacing) within 1 km, candidates
+steeper than 10° (40 m baseline) dropped, a full 360° horizon for each, then ranked by the share of
+hours with the Sun (≥ 50 % of the disk) **and** Earth in view; tie-break on sunlight. The cited point
+is recomputed with the same DEM and settings so the comparison is fair. If no candidate beats the
+cited point, no derived point is written. All three numbers are command-line options.
+
+## Validation
+
+- Sun/Earth directions cross-checked against JPL Horizons: differences ~0.0001°.
+- Shackleton connecting ridge: ≥ 50 % of the solar disk visible 91 % of the time (2026-11 → 2028-12);
+  Gläser et al. (EPSC 2014) report 88 % average illumination at 2 m over 20 years for the same spot
+  (different metric and period, so close agreement is what we expect, not identity).
+
 ## Assumptions (stated, not hidden)
 
 - No atmosphere → no refraction. Altitudes are geometric.
@@ -75,6 +111,8 @@ reasons are listed. Weights and constraints are editable.
   95 % charge/discharge efficiency. **Illustrative lander, not any real mission.**
 - Earth visibility uses Earth's center; no antenna pattern or relay satellites.
 - Site coordinates marked † are approximate and must be verified against the cited source.
+- Derived points: slope from the 40 m DEM (a lander needs boulder/hazard maps at metre scale too);
+  apparent solar radius from the date (±0.3 %).
 
 ## License
 
