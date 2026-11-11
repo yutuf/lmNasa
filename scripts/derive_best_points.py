@@ -28,7 +28,7 @@ sys.path.insert(0, str(ROOT))
 from lunanav.derive import candidate_grid, rank_candidates, score_point, slope_deg  # noqa: E402
 from lunanav.horizon import compute_horizon, dem_sampler, load_profiles, save_profiles  # noqa: E402
 from lunanav.series import load_series  # noqa: E402
-from lunanav.sites import SITES_FILE, load_sites  # noqa: E402
+from lunanav.sites import load_sites  # noqa: E402
 
 COMPASS8 = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
@@ -40,14 +40,16 @@ ap.add_argument("--max-slope", type=float, default=10.0, help="max landing slope
 ap.add_argument("--step", type=float, default=120.0, help="horizon ray step, m")
 ap.add_argument("--max-km", type=float, default=150.0, help="horizon ray length, km")
 ap.add_argument("--sites", nargs="*", help="only these site ids")
+ap.add_argument("--data", default=str(ROOT / "data"), help="data folder (sites.yaml, horizons.json, series/)")
 args = ap.parse_args()
 
 sample = dem_sampler(args.dem)
 dem_name = Path(args.dem).name
-hz_path = ROOT / "data" / "horizons.json"
+data_dir = Path(args.data)
+hz_path = data_dir / "horizons.json"
 profiles = load_profiles(hz_path) if hz_path.exists() else {}
-out_dir = ROOT / "data" / "series"
-derived_path = ROOT / "data" / "derived_sites.yaml"
+out_dir = data_dir / "series"
+derived_path = data_dir / "derived_sites.yaml"
 old = yaml.safe_load(derived_path.read_text())["sites"] if derived_path.exists() else []
 
 
@@ -57,11 +59,11 @@ def horizon_at(lat, lon, sid="candidate"):
 
 
 derived = []
-cited_sites = [s for s in load_sites(SITES_FILE, include_derived=False) if not s.reference]
+cited_sites = [s for s in load_sites(data_dir / "sites.yaml", include_derived=False) if not s.reference]
 for s in cited_sites:
     if args.sites and s.id not in args.sites:
         continue
-    vis, step_h, _ = load_series(s.id)
+    vis, step_h, _ = load_series(s.id, out_dir)
     # forget any previous derived result for this site (kept only if re-derived below)
     old = [d for d in old if d["derived_from"] != s.id]
     profiles.pop(f"{s.id}_derived", None)
