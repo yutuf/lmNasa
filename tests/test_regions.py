@@ -51,8 +51,13 @@ def test_centroid_round_trip_and_append(tmp_path):
         _grid(src / f"Mons_Mouton_Plateau_1km_{q}.shp", lat, lon, half_km=3.0)
     _grid(src / "Malapert_Massif_1km.shp", -86.0, 0.0)      # has a published point -> skipped
 
+    # start from the repo's published points only, so the test does not depend on which
+    # region centres have already been added to the live data/sites.yaml
+    import yaml
+    live = yaml.safe_load((ROOT / "data" / "sites.yaml").read_text())["sites"]
     sites = tmp_path / "sites.yaml"
-    sites.write_text((ROOT / "data" / "sites.yaml").read_text())
+    sites.write_text(yaml.safe_dump({"sites": [x for x in live if x.get("category") != "artemis_region"]},
+                                    sort_keys=False, allow_unicode=True))
     added = ar.main([str(src), "--sites", str(sites)])
     assert len(added) == 2
     from lunanav.sites import load_sites

@@ -82,7 +82,7 @@ pytest -q          # unit tests + a smoke test that runs the app on the committe
 # real data
 python scripts/fetch_kernels.py                          # ~130 MB (DE440)
 python scripts/build_horizons.py data/dem/<lola_south_pole>.tif
-python scripts/precompute.py --start 2026-11-01 --end 2028-12-31
+python scripts/precompute.py      # default window 2026-11-01 → 2028-12-31 23:00 UTC (--end 2029-01-01 is exclusive)
 python scripts/derive_best_points.py data/dem/LDEM_80S_40MPP_ADJ.TIF   # optional: derived points
 
 # or synthetic data just to work on the UI
@@ -106,10 +106,12 @@ Every site needs a source. Two ways in:
 Then rebuild the data for the new sites (needs the DEM and kernels):
 
 ```bash
-python scripts/build_horizons.py data/dem/LDEM_80S_40MPP_ADJ.TIF
-python scripts/precompute.py --start 2026-11-01 --end 2028-12-31
-python scripts/derive_best_points.py data/dem/LDEM_80S_40MPP_ADJ.TIF
+python scripts/build_horizons.py data/dem/LDEM_80S_40MPP_ADJ.TIF --sites <new ids>      # other profiles kept
+python scripts/precompute.py --sites <new ids>                                          # other series kept
+python scripts/derive_best_points.py data/dem/LDEM_80S_40MPP_ADJ.TIF --sites <new ids>
 ```
+
+Without `--sites` every site is recomputed. `precompute.py --end` is exclusive.
 
 ## Scoring
 
@@ -148,7 +150,38 @@ The Malapert point is published only to whole degrees (86°S, 0°E: ±0.5° ≈ 
 ≈ ±1 km in longitude at 86°S), so a 447 m move is well inside its own uncertainty; its cited
 coordinate is also steeper than our 10° limit, which the app flags.
 
+**Artemis III region centres** (centre of each region's USGS 1 km grid; Malapert Massif and Mons
+Mouton use their published points above):
+
+| region centre | centre: Sun+Earth / Sun / Earth / slope | derived point | derived: Sun+Earth / Sun / Earth / slope |
+|---|---|---|---|
+| Peak near Cabeus B | 9.1 % / 37.9 % / 28.8 % / **12.0°** | 943 m NE | 48.3 % / 63.8 % / 77.0 % / 6.8° |
+| Mons Mouton Plateau | 20.2 % / 26.1 % / 66.7 % / 2.1° | 1000 m SW | 40.3 % / 46.3 % / 84.7 % / 8.4° |
+| Nobile Rim 2 | 28.1 % / 40.8 % / 65.1 % / 4.7° | 1000 m NE | 31.7 % / 46.6 % / 66.0 % / 7.0° |
+| Nobile Rim 1 | 9.4 % / 29.2 % / 32.2 % / **16.9°** | 985 m SE | 26.5 % / 50.2 % / 48.1 % / 5.7° |
+| de Gerlache Rim 2 | 21.7 % / 37.2 % / 51.3 % / **11.3°** | 500 m NW | 22.0 % / 37.5 % / 51.3 % / 10.0° |
+| Haworth | 6.1 % / 10.0 % / 39.6 % / 2.9° | 1000 m SE | 20.7 % / 36.7 % / 50.9 % / 7.2° |
+| Slater Plain | 2.0 % / 2.3 % / 36.7 % / 3.4° | 1000 m SE | 9.6 % / 21.5 % / 40.6 % / 9.8° |
+
+How to read it:
+- A region is ~20 × 20 km; its centre is just a reference point, so low numbers there say little about
+  the region. The derived point shows what 1 km of freedom buys; the best spots in a region may be
+  further away than LunaNav searches.
+- Four derived points sit on the 1 km search edge (Plateau, Nobile Rim 2, Haworth, Slater Plain), a
+  sign that better ground lies beyond 1 km.
+- The objective is Sun + Earth hours with slope only as a ≤ 10° filter, so a derived point can be
+  steeper than its centre (Plateau 2.1° → 8.4°, Slater Plain 3.4° → 9.8°).
+- de Gerlache Rim 2: the derived point gains only 0.3 points and sits exactly at the 10° limit; treat
+  it as "the centre's neighbourhood is already about as good as it gets within 1 km".
+
 ## Validation
+
+- Artemis region centres: grid centres lie 0.09–0.47 km from the centres of USGS's own simplified
+  region outlines (same release), for all seven regions.
+- New sites' Sun/Earth series checked against the existing sites' independent DE440 runs (rotated to
+  the new point): Sun identical to 0.0000°, Earth within 0.0017° over 14–152 km, inside the expected
+  Earth-parallax bound. Derived series re-computed independently: same lit / Earth flag on every hour
+  (one borderline hour of 19,008 at Cabeus B, from the solar-radius approximation).
 
 - Sun/Earth directions cross-checked against JPL Horizons: differences ~0.0001°.
 - Shackleton connecting ridge: ≥ 50 % of the solar disk visible 91 % of the time (2026-11 → 2028-12);

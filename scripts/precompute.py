@@ -1,6 +1,8 @@
 """Offline: sky tracks + visibility for every site -> data/series/<site>.npz.
 
-usage: python scripts/precompute.py --start 2027-01-01 --end 2028-01-01 [--step-h 1]
+usage: python scripts/precompute.py [--start 2026-11-01] [--end 2029-01-01] [--step-h 1] [--sites id ...]
+--end is EXCLUSIVE: the default window is 2026-11-01 00:00 to 2028-12-31 23:00 UTC (19,008 h),
+the one the committed data uses.
 
 The app reads these npz files, so it needs neither kernels nor the DEM at runtime.
 """
@@ -19,8 +21,9 @@ from lunanav.sites import load_sites  # noqa: E402
 from lunanav.visibility import compute_visibility  # noqa: E402
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--start", default="2027-01-01")
-ap.add_argument("--end", default="2028-01-01")
+ap.add_argument("--start", default="2026-11-01")
+ap.add_argument("--end", default="2029-01-01", help="exclusive")
+ap.add_argument("--sites", nargs="*", help="only these site ids (other series files are left alone)")
 ap.add_argument("--step-h", type=float, default=1.0)
 args = ap.parse_args()
 
@@ -31,6 +34,8 @@ out = ROOT / "data" / "series"
 out.mkdir(parents=True, exist_ok=True)
 
 for s in load_sites():
+    if args.sites and s.id not in args.sites:
+        continue
     hz = horizons.get(s.id) or HorizonProfile.flat(s.id, s.lat, s.lon)
     tr = sky.track(s.lat, s.lon, args.start, args.end, args.step_h, height_m=2.0)
     v = compute_visibility(tr, hz)

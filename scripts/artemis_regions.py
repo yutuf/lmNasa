@@ -104,19 +104,21 @@ def find_regions(folder: Path):
     return out
 
 
-def yaml_entry(reg, lat, lon, area_km2, files):
+def yaml_entry(reg, lat, lon, area_km2, files, indent="  "):
+    """One sites.yaml list item; `indent` matches the file's existing "- id:" lines."""
     sid, name = REGIONS[reg]
-    return (f"  - id: {sid}\n"
-            f"    name: {name} (Artemis III region centre)\n"
-            f"    lat: {lat:.4f}\n"
-            f"    lon: {lon:.4f}\n"
-            f"    category: artemis_region\n"
-            f"    note: >-\n"
-            f"      Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km\n"
-            f"      navigation grid ({area_km2:.0f} km2; {', '.join(p.name for p in files)}), computed by\n"
-            f"      scripts/artemis_regions.py. A region centre, not a landing point: see the derived point.\n"
-            f"    source: \"{SOURCE}\"\n"
-            f"    verified: true\n")
+    i = indent
+    return (f"{i}- id: {sid}\n"
+            f"{i}  name: {name} (Artemis III region centre)\n"
+            f"{i}  lat: {lat:.4f}\n"
+            f"{i}  lon: {lon:.4f}\n"
+            f"{i}  category: artemis_region\n"
+            f"{i}  note: >-\n"
+            f"{i}    Artemis III candidate region (NASA, Oct 2024). Point = area-weighted centre of the USGS 1 km\n"
+            f"{i}    navigation grid ({area_km2:.0f} km2; {', '.join(p.name for p in files)}), computed by\n"
+            f"{i}    scripts/artemis_regions.py. A region centre, not a landing point: see the derived point.\n"
+            f"{i}  source: \"{SOURCE}\"\n"
+            f"{i}  verified: true\n")
 
 
 def main(argv=None):
@@ -129,6 +131,8 @@ def main(argv=None):
 
     sites_path = Path(a.sites)
     text = sites_path.read_text()
+    m = re.search(r"^([ \t]*)- id:", text, re.M)
+    indent = m.group(1) if m else "  "
     found = find_regions(Path(a.folder))
     missing = sorted(set(REGIONS) - set(found))
     if missing:
@@ -150,7 +154,7 @@ def main(argv=None):
         if re.search(rf"^\s*- id: {sid}\s*$", text, re.M):
             print(f"{'':22s} already in sites.yaml, not added again")
             continue
-        added.append(yaml_entry(reg, lat, lon, area_km2, files))
+        added.append(yaml_entry(reg, lat, lon, area_km2, files, indent))
     if added and not a.dry_run:
         sites_path.write_text(text.rstrip("\n") + "\n\n" + "\n".join(added))
         print(f"added {len(added)} region centre(s) to {sites_path}")

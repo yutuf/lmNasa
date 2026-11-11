@@ -163,7 +163,8 @@ fig = go.Figure(go.Heatmap(
     colorscale="Cividis",  # colour-blind-safe
     hovertemplate="%{y}<br>start %{x|%Y-%m-%d %H:%M}<br>score %{z}<br>%{customdata}<extra></extra>",
     colorbar=dict(title="score")))
-fig.update_layout(height=120 + 60 * len(sites), margin=dict(l=10, r=10, t=30, b=10),
+fig.update_layout(height=140 + 32 * len(sites), margin=dict(l=10, r=10, t=30, b=10),
+                  yaxis=dict(autorange="reversed"),   # same top-to-bottom order as the site list
                   title="Mission score by landing site and start date (bright = go)")
 st.plotly_chart(fig, width="stretch")
 
@@ -171,7 +172,22 @@ with st.expander("Map: where are these sites around the south pole?"):
     polar = [s for s in sites if s.lat < -80]
     rho = lambda s: np.radians(90 + s.lat) * 1737.4  # noqa: E731  km from the pole (azimuthal equidistant)
     mp = go.Figure()
-    for ring in (50, 100, 150):
+
+    def label_pos(pts):
+        """Above the marker by default (below near the pole). Two sites within 20 km get side labels:
+        the one further out sideways is labelled on its outer side, the other on the opposite side."""
+        xy = [(rho(s) * np.sin(np.radians(s.lon)), rho(s) * np.cos(np.radians(s.lon))) for s in pts]
+        pos = ["bottom center" if rho(s) < 25 else "top center" for s in pts]
+        for i in range(len(pts)):
+            for j in range(i + 1, len(pts)):
+                if np.hypot(xy[i][0] - xy[j][0], xy[i][1] - xy[j][1]) < 20:
+                    o, n = (i, j) if abs(xy[i][0]) > abs(xy[j][0]) else (j, i)
+                    out_side = "right" if xy[o][0] > 0 else "left"
+                    pos[o] = f"middle {out_side}"
+                    pos[n] = "middle " + ("left" if out_side == "right" else "right")
+        return pos
+
+    for ring in (50, 100, 150, 200):
         th = np.linspace(0, 2 * np.pi, 181)
         mp.add_scatter(x=ring * np.sin(th), y=ring * np.cos(th), mode="lines", hoverinfo="skip",
                        line=dict(color="#2a3550", width=1), showlegend=False)
@@ -183,18 +199,18 @@ with st.expander("Map: where are these sites around the south pole?"):
                            y=[rho(s) * np.cos(np.radians(s.lon)) for s in pts],
                            mode="markers+text" if kind == "cited" else "markers", name=kind,
                            text=[s.name.split(" (")[0] for s in pts],
-                           textposition=["bottom center" if rho(s) < 25 else "top center" for s in pts],
+                           textposition=label_pos(pts),
                            textfont=dict(color="#dfe6f3", size=11),
                            marker=dict(size=11 if kind == "cited" else 8, color=color, symbol=sym),
                            hovertext=[f"{labels[sites.index(s)]}<br>{s.lat:.4f}°, {s.lon:.4f}°E" for s in pts],
                            hoverinfo="text")
     mp.add_scatter(x=[0], y=[0], mode="markers+text", text=["South Pole"], textposition="middle right",
                    marker=dict(symbol="x", size=9, color="white"), textfont=dict(color="white"), showlegend=False)
-    mp.add_annotation(x=0, y=175, text="↑ 0° E — toward Earth (near side)", showarrow=False,
+    mp.add_annotation(x=0, y=212, text="↑ 0° E — toward Earth (near side)", showarrow=False,
                       font=dict(color="#4ea8de"))
-    mp.update_layout(height=520, plot_bgcolor="#0b1020", margin=dict(t=20, b=10),
-                     xaxis=dict(visible=False, range=[-190, 190]),
-                     yaxis=dict(visible=False, range=[-190, 190], scaleanchor="x"),
+    mp.update_layout(height=600, plot_bgcolor="#0b1020", margin=dict(t=20, b=10),
+                     xaxis=dict(visible=False, range=[-222, 222]),
+                     yaxis=dict(visible=False, range=[-222, 222], scaleanchor="x"),
                      legend=dict(orientation="h", y=-0.02))
     st.plotly_chart(mp, width="stretch")
     st.caption("Distances from the pole, true to scale. Derived points sit within 1 km of their cited site, "
@@ -257,7 +273,7 @@ n_steps = len(tt)
 
 if site.slope_deg is not None and site.slope_deg > MAX_SLOPE:
     st.warning(f"⚠ **Steep at the cited point:** the LOLA 40 m terrain gives a {site.slope_deg:.1f}° slope here, "
-               f"above the {MAX_SLOPE:.0f}° limit LunaNav uses for landing. The coordinate is kept exactly as published "
+               f"above the {MAX_SLOPE:.0f}° limit LunaNav uses for landing. The point is kept exactly as cited "
                f"(it marks a region, not a surveyed landing spot); the sunlight and Earth numbers are still valid "
                f"for this point, but a lander would need a flatter spot nearby.")
 if site.derived:
