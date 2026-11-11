@@ -48,3 +48,26 @@ def test_sidebar_changes_recompute_the_scan():
     next(s for s in at.slider if s.label == "Min. sunlit time").set_value(100).run()
     assert not at.exception, at.exception
     assert heat(at)["z"] != base["z"]                              # stricter requirement changes scores
+
+
+def test_url_encodes_and_restores_the_scenario():
+    at = AppTest.from_file(APP, default_timeout=180)
+    at.query_params.update({"days": "7", "sun": "60", "step": "12", "site": "de_gerlache_rim",
+                            "start": "2027-03-01T12:00"})
+    at.run()
+    assert not at.exception, at.exception
+    assert next(s for s in at.slider if s.label == "Surface duration (days)").value == 7
+    assert next(s for s in at.selectbox if s.label == "Start-date step").value == 12
+    assert _site_box(at).value == next(i for i, o in enumerate(_site_box(at).options) if o.startswith("de Gerlache"))
+    start = next(s for s in at.select_slider if s.label == "Start").value
+    assert str(start).startswith("2027-03-01 12:00")
+    qp = at.query_params
+    assert qp["days"] == ["7"] or qp["days"] == "7"
+    assert "de_gerlache_rim" in str(qp["site"]) and "2027-03-01T12:00" in str(qp["start"])
+
+    # garbage in the URL falls back to defaults instead of crashing
+    at = AppTest.from_file(APP, default_timeout=180)
+    at.query_params.update({"days": "banana", "step": "7", "site": "nowhere", "start": "not-a-date"})
+    at.run()
+    assert not at.exception, at.exception
+    assert next(s for s in at.slider if s.label == "Surface duration (days)").value == 14

@@ -61,24 +61,41 @@ A *derived* point is LunaNav's own pick: the best spot within 1 km of a cited si
 always labelled and never replaces the cited one.
 """)
 
+# ---------------- shareable state: the URL encodes the whole scenario ----------------
+# key: (default, min, max). Seeded from the URL once per session; widgets then own the value.
+SETTINGS = {"days": (14, 1, 30), "sun": (70, 0, 100), "earth": (50, 0, 100), "shadow": (48, 0, 200),
+            "peak": (400, 50, 5000), "load": (150, 10, 3000), "batt": (2000, 100, 50_000), "fail": (20, 0, 90),
+            "step": (24, 6, 24), "derived": (1, 0, 1)}
+for k, (dflt, lo_, hi_) in SETTINGS.items():
+    if k not in st.session_state:
+        try:
+            val = min(max(int(st.query_params.get(k, dflt)), lo_), hi_)
+        except (TypeError, ValueError):
+            val = dflt
+        if k == "step" and val not in (6, 12, 24):
+            val = dflt
+        st.session_state[k] = bool(val) if k == "derived" else val
+
 # ---------------- sidebar: mission constraints ----------------
 with st.sidebar:
     st.header("Mission")
-    duration = st.slider("Surface duration (days)", 1, 30, 14)
-    min_sun = st.slider("Min. sunlit time", 0, 100, 70, format="%d%%") / 100
-    min_comm = st.slider("Min. Earth-in-view time", 0, 100, 50, format="%d%%") / 100
-    max_dark = st.slider("Longest tolerable shadow (h)", 0, 200, 48)
+    duration = st.slider("Surface duration (days)", 1, 30, key="days")
+    min_sun = st.slider("Min. sunlit time", 0, 100, format="%d%%", key="sun") / 100
+    min_comm = st.slider("Min. Earth-in-view time", 0, 100, format="%d%%", key="earth") / 100
+    max_dark = st.slider("Longest tolerable shadow (h)", 0, 200, key="shadow")
     st.header("Lander (illustrative)")
-    peak = st.number_input("Solar array peak (W)", 50, 5000, 400, 50)
-    load = st.number_input("Average load (W)", 10, 3000, 150, 10)
-    batt = st.number_input("Battery (Wh)", 100, 50_000, 2000, 100)
-    min_soc = st.slider("Failure below state of charge", 0, 90, 20, format="%d%%") / 100
-    stride = st.selectbox("Start-date step", [6, 12, 24], index=2, format_func=lambda h: f"{h} h",
+    peak = st.number_input("Solar array peak (W)", 50, 5000, step=50, key="peak")
+    load = st.number_input("Average load (W)", 10, 3000, step=10, key="load")
+    batt = st.number_input("Battery (Wh)", 100, 50_000, step=100, key="batt")
+    min_soc = st.slider("Failure below state of charge", 0, 90, format="%d%%", key="fail") / 100
+    stride = st.selectbox("Start-date step", [6, 12, 24], format_func=lambda h: f"{h} h", key="step",
                           help="How finely landing dates are sampled. 6 h is finer but slower.")
     show_derived = any(s.derived for s in load_sites()) and st.toggle(
-        "Show derived best points (≤ 1 km)", value=True,
+        "Show derived best points (≤ 1 km)", key="derived",
         help="LunaNav's own pick near each cited site: most hours with Sun and Earth "
              "both in view, on a gentle slope. Computed, not published.")
+    st.caption("🔗 The page address always holds the current scenario (settings, site, start date): "
+               "copy it from the browser to share exactly this view.")
 
 c = MissionConstraints(duration_days=duration, min_sun_frac=min_sun, min_comm_frac=min_comm,
                        max_dark_hours=max_dark,
@@ -211,13 +228,24 @@ with st.expander("Top 20 site × date options overall"):
 # ---------------- detail view ----------------
 st.subheader("Inspect one option")
 col1, col2 = st.columns(2)
-best_idx = labels.index(df.iloc[0].site)
-site = sites[col1.selectbox("Site", range(len(sites)), index=best_idx, format_func=lambda i: labels[i])]
+ids = [s_.id for s_ in sites]
+url_site = st.query_params.get("site")
+site_idx = ids.index(url_site) if url_site in ids else labels.index(df.iloc[0].site)
+site = sites[col1.selectbox("Site", range(len(sites)), index=site_idx, format_func=lambda i: labels[i])]
 v, step, terrain = data[site.id]
-start_choice = col2.select_slider("Start", options=list(pd.to_datetime(starts)),
-                                  value=pd.Timestamp(df[df.site == labels[sites.index(site)]].iloc[0].start)
-                                  if (df.site == labels[sites.index(site)]).any() else pd.Timestamp(starts[0]),
+start_opts = list(pd.to_datetime(starts))
+site_rows = df[df.site == labels[sites.index(site)]]
+start_default = pd.Timestamp(site_rows.iloc[0].start) if len(site_rows) else start_opts[0]
+try:   # keep the URL's start date only while the URL still points at this site
+    url_start = pd.Timestamp(st.query_params.get("start", ""))
+    if url_site == site.id and url_start in start_opts:
+        start_default = url_start
+except ValueError:
+    pass
+start_choice = col2.select_slider("Start", options=start_opts, value=start_default,
                                   format_func=lambda t: t.strftime("%Y-%m-%d %H:%M"))
+st.query_params.from_dict({**{k: str(int(st.session_state[k])) for k in SETTINGS},
+                           "site": site.id, "start": start_choice.strftime("%Y-%m-%dT%H:%M")})
 i0 = int(np.searchsorted(v.times_utc, np.datetime64(start_choice.to_datetime64(), "s")))
 sl = slice(i0, i0 + int(duration * 24 / step))
 r = evaluate_window(v.sun_fraction[sl], v.sun_alt[sl], v.earth_visible[sl], step, c)
