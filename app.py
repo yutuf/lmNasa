@@ -530,9 +530,10 @@ if mz_rec is not None:
         + f"Independent check: NASA's 18.6-year average illumination here is {mz_rec['mazarico_sun']:.0%}"
         + (f" (LunaNav, 2026–2028, 2 m mast: {mz_rec['lunanav_sun_mean']:.0%} of the solar disk on average). "
            if "lunanav_sun_mean" in mz_rec else ". ")
-        + ("Points LunaNav picked as the best of many tend to read higher here than in NASA's 120 m map "
-           "(median +11 points for best-in-region points; see README, Independent check). "
-           if site.search == "region" else "")
+        + (f"NASA's map reaches {mz_rec['mazarico_sun_max_near']:.0%} within {mz_rec['near_max_at_m']} m: on a narrow "
+           "crest the value depends on exactly where each map puts the crest, so read LunaNav's number as the "
+           "upper end of what NASA's maps support here. "
+           if "mazarico_sun_max_near" in mz_rec and site.search == "region" else "")
         + "Source: Mazarico et al. 2011, Icarus 211 (NASA GSFC PGDA product 69).")
 st.caption(f"Site: {labels[sites.index(site)]} ({site.lat:.4f}°, {site.lon:.4f}°E) · "
            f"Artemis III region: {in_regions or 'none (outside all nine)'} · source: {site.source} · "

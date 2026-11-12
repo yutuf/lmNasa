@@ -255,13 +255,11 @@ expected: NASA counts Earth as visible when any part of its disc shows, LunaNav 
 
 What this means:
 - For points nobody optimised, two independent models agree closely: the core geometry holds.
-- Points LunaNav **picked as the best of ~2,000 candidates read clearly higher** than in NASA's map.
-  Picking the maximum favours places where LunaNav's model is most optimistic. Likely contributors are
-  the 2 m mast (NASA states no height; near the pole a little height matters a lot) and narrow peaks
-  that a 120 m pixel averages away, but this comparison cannot say which. Treat the best-in-region
-  numbers as LunaNav's estimate, not a confirmed value; where NASA's map disagrees strongly (Earth at
-  the Malapert and Nobile Rim 1 best points: 54 % and 68 % vs LunaNav's ~100 %), the difference is
-  unexplained so far.
+- Points LunaNav **picked as the best of ~2,000 candidates read clearly higher** than NASA's value at
+  the same coordinate, but **not higher than NASA's own values right next to them** (see "Crest check"
+  below): the gap is mostly about where each map puts a narrow lit crest. Treat best-in-region numbers
+  as the upper end of what NASA's maps support there. Still unexplained: the Earth-visibility gaps at the
+  Malapert and Nobile Rim 1 best points (NASA 54 % and 68 % vs LunaNav ~100 %).
 - Largest gaps among published points: Shackleton ridge (NASA 78.3 %, LunaNav 91.1 %; Gläser et al.
   report 88 % at 2 m) and de Gerlache rim (53.1 % vs 77.3 %), both near-grazing-Sun sites at 88–89.5°S
   where observer height is known to matter most.
@@ -278,8 +276,14 @@ What this means:
   "best" shift of 30 m, half a 60 m pixel and below what the method resolves: **the two maps are
   registered**, so a misalignment between them does not explain the ridge values. (In the tests the
   script recovers a planted offset exactly.)
-- Next check: whether the 60 m pixel at the ridge coordinate simply sits beside a narrow lit crest.
-  `mazarico_compare.py` now also records NASA's highest value within 120 m of each site.
+- **Crest check:** `mazarico_compare.py` also records NASA's highest value within 120 m of each site.
+  Against that local maximum the best-in-region gap shrinks from +11.3 to **+0.5 points** (median; 78 %
+  within ±3) on the 120 m map, and from +9.2 to +5.1 on the 60 m map. At the Shackleton ridge the 60 m
+  pixel at the coordinate reads 44.3 % while one 73 m away reads 75.5 %. So NASA's maps do contain values
+  like LunaNav's within ~60–110 m: a crest is a pixel or two wide, and the two DEMs (LunaNav: LOLA 40 m
+  adjusted; NASA: 2016 LOLA grids) place it slightly differently. A local maximum is itself optimistic
+  (for unoptimised points LunaNav sits 0.8 points *below* it), so the honest range on a crest is between
+  NASA's point value and its local maximum; LunaNav's best-in-region values sit near the top of it.
 
 **Best-in-region points with NASA's numbers and the nearest permanent shadow:**
 
