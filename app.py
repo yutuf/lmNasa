@@ -524,7 +524,8 @@ if mz_rec is not None:
     near = mz_rec.get("psr_nearest_km")
     st.caption(
         "🧊 **Permanent shadow (possible ice):** "
-        + (f"nearest {near:.1f} km away, {mz_rec['psr_area_within_5km_km2']:.1f} km² within 5 km. "
+        + (f"nearest {near:.1f} km away, {mz_rec['psr_area_within_5km_km2']:.1f} km² within 5 km "
+           "(120 m map: smaller shadows can be closer). "
            if near is not None else "none within the search radius. ")
         + f"Independent check: NASA's 18.6-year average illumination here is {mz_rec['mazarico_sun']:.0%}"
         + (f" (LunaNav, 2026–2028, 2 m mast: {mz_rec['lunanav_sun_mean']:.0%} of the solar disk on average). "
