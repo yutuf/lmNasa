@@ -158,7 +158,8 @@ def main(argv=None):
             slope_deg=round(best.slope_deg, 1), cited_slope_deg=round(p_slope, 1),
             note=(f"Computed by LunaNav, not from a publication: best of {n_eval} points inside the USGS "
                   f"{REGIONS[reg][1]} grid ({grid.area_km2:.0f} km2; {spacing:.0f} m grid, then "
-                  f"{a.refine_spacing:.0f} m around the top {a.top}), slope <= {a.max_slope:.0f} deg; "
+                  f"{a.refine_spacing:.0f} m around the top {a.top} and the site's known points), "
+                  f"slope <= {a.max_slope:.0f} deg; "
                   f"{best.distance_m / 1000:.1f} km {direction} of the {site_word}. Objective: hours with Sun and "
                   f"Earth both in view, {best.both_frac:.1%} vs {p_both:.1%} at the {site_word} "
                   f"({vis.times_utc[0].astype('datetime64[D]')} to {vis.times_utc[-1].astype('datetime64[D]')})."),
