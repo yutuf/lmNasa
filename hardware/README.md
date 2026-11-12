@@ -63,8 +63,9 @@ kicad-cli pcb drc --refill-zones --save-board horizon_compass.kicad_pcb   # fill
 items, but:
 
 - There is no schematic; the netlist lives in the script.
-- The DevKitM-1 pin numbers (5V = 13/14, data = pin 11 / GPIO10, grounds) were written from memory.
-  **Check them against Espressif's pinout before ordering.**
+- The DevKitM-1 pin numbers (5V = 13/14, data = pin 11 / IO10, ten grounds) are checked against KiCad's
+  own symbol with `tools/kicad_pins.py`; that check caught IO6 tied to ground in the first draft. The
+  footprint has not been checked against a physical devkit yet.
 - 3.3 V data into 5 V WS2812B usually works but is out of spec; add a level shifter if it flickers.
 - All 24 LEDs at full white draw about 1.4 A, more than USB through the devkit can supply. The intended
   use lights two LEDs; firmware must cap brightness.
