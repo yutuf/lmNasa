@@ -36,6 +36,7 @@ and expert knowledge. LunaNav answers it in one screen:
 - **CSV export** of any mission: hourly Sun/Earth position, terrain, visibility and battery.
 - **Plain-language help** in the app for students, educators and the public, and four ready-made
   classroom activities with answers: [docs/EDUCATORS.md](docs/EDUCATORS.md).
+- **2-minute demo script** with a link per scene, every verdict checked in CI: [docs/DEMO.md](docs/DEMO.md).
 
 ## Results at a glance
 
