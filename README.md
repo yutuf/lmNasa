@@ -37,6 +37,28 @@ and expert knowledge. LunaNav answers it in one screen:
 - **Plain-language help** in the app for students, educators and the public, and three ready-made
   classroom activities with answers: [docs/EDUCATORS.md](docs/EDUCATORS.md).
 
+## Results at a glance
+
+Data: JPL DE440 + LOLA terrain, hourly, 1 Nov 2026 – 31 Dec 2028; "Sun+Earth" = share of hours with at
+least half the Sun's disk and Earth's centre above the terrain, seen from a 2 m mast.
+
+- **All nine NASA Artemis III candidate regions are covered** (USGS grids), plus published points
+  (Shackleton connecting ridge, de Gerlache rim, Malapert, IM-2 on Mons Mouton) and Apollo 11 for reference.
+- **Region centres are poor stand-ins:** Sun+Earth at the centres ranges from 2 % (Slater Plain) to 28 %
+  (Nobile Rim 2). Searching each whole region finds ground with **35 % to 84 %** on slopes ≤ 6°, best at
+  Malapert Massif (83.6 %, Earth in view all the time), then Mons Mouton (72.5 %) and Nobile Rim 1 (67.9 %).
+- **Terrain beats latitude:** at Malapert, moving 447 m from the published point takes Earth visibility
+  from 44 % to 100 %.
+- **Checked against NASA's independent maps** (Mazarico et al. 2011): for points nobody optimised the
+  median difference is +1.9 points (r = 0.957 over 32 points). LunaNav's best-in-region values are
+  matched by NASA's own values within ~100 m (median +0.5 points), since the two terrain models place
+  narrow crests slightly differently; read them as the upper end of what NASA's maps support. One Earth
+  value (Mons Mouton best point, 60 m map) is still unexplained.
+- **Found along the way:** the IM-2 landing point lies in the Mons Mouton *Plateau* region, not the
+  Mons Mouton one; NASA's regions overlap (e.g. 136 km² shared by Mons Mouton and the Plateau).
+- **Limits:** illustrative lander (not a real spacecraft); slope from a 40 m map, so boulders and small
+  craters are invisible; no thermal model or relay satellites.
+
 ## How it works
 
 ```
