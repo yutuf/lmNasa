@@ -34,7 +34,7 @@ and expert knowledge. LunaNav answers it in one screen:
 - **Shareable links:** the page address always encodes the scenario (settings, which site groups are shown,
   site, start date).
 - **CSV export** of any mission: hourly Sun/Earth position, terrain, visibility and battery.
-- **Plain-language help** in the app for students, educators and the public, and three ready-made
+- **Plain-language help** in the app for students, educators and the public, and four ready-made
   classroom activities with answers: [docs/EDUCATORS.md](docs/EDUCATORS.md).
 
 ## Results at a glance
