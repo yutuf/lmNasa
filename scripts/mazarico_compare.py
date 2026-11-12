@@ -183,6 +183,7 @@ def main(argv=None):
         sun_max, sun_max_d = sun.max_near(s.lat, s.lon, a.near_m)
         rec = {"mazarico_sun": round(m_sun, 4), "mazarico_earth": round(m_earth, 4),
                "mazarico_sun_max_near": round(sun.frac(sun_max), 4), "near_max_at_m": round(sun_max_d),
+               "mazarico_earth_max_near": round(earth.frac(earth.max_near(s.lat, s.lon, a.near_m)[0]), 4),
                "psr_nearest_km": None if dist is None else round(dist, 2), "psr_area_within_5km_km2": round(area, 2)}
         ours = ""
         if v is not None:
