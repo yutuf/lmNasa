@@ -60,6 +60,7 @@ def test_compare_reads_units_finds_psr_and_measures_distance(tmp_path, data):
     r = out["sites"]["shackleton_ridge"]
     assert r["mazarico_sun"] == pytest.approx(0.60, abs=1e-3)       # percent map read as percent
     assert r["mazarico_sun_max_near"] >= r["mazarico_sun"] and r["near_max_at_m"] <= 120
+    assert r["mazarico_earth_max_near"] == pytest.approx(0.50, abs=1e-3)
     assert r["mazarico_earth"] == pytest.approx(0.50, abs=1e-3)     # fraction map read as fraction
     assert r["psr_nearest_km"] == pytest.approx(2.0, abs=0.15)      # 3 km to the centre - 1 km radius
     assert r["psr_area_within_5km_km2"] == pytest.approx(np.pi, rel=0.08)
