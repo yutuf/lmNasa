@@ -1,6 +1,6 @@
 # LunaNav in the classroom
 
-Three short activities (15–25 min each) for ages ~14+. Open the app, then use the sidebar,
+Four short activities (15–25 min each) for ages ~14+. Open the app, then use the sidebar,
 the heatmap, the site list and the **Inspect one option** section (360° view + time slider).
 
 All numbers below come from LunaNav's committed data (JPL DE440 ephemeris, LOLA terrain,
@@ -60,6 +60,26 @@ the worst date needs 35,165 Wh.
 **Discuss:** 66 kWh is roughly the battery of a large electric car, for a lander drawing only
 150 W. Why do real lunar-night survivors need heaters, insulation or nuclear power? Why do
 missions aim for the poles?
+
+---
+
+## 4. How do we know the computer is right?
+
+**Do:** Pick **Haworth (Artemis III region centre)**, then the **Shackleton – de Gerlache connecting ridge**. Under the
+metrics, read the 🧊 line: it shows NASA's own number for the same spot, from an independent
+18.6-year calculation (Mazarico et al. 2011).
+
+**What students should find** (average share of the Sun's disk that is visible):
+
+| | LunaNav | NASA, 120 m map | NASA, 60 m map |
+|---|---|---|---|
+| Haworth region centre (flat ground) | 10.0 % | 10.7 % | 10.4 % |
+| Shackleton ridge point (narrow crest) | 91.1 % | 78.3 % | 44.3 % at the point, 75.5 % just 73 m away |
+
+**Discuss:** on flat ground two independent models agree to within a point. On a crest only a pixel or
+two wide, the answer depends on exactly where each map puts the crest: NASA's own two maps disagree
+with each other there. Another study (Gläser et al.) measured 88 % at this ridge point from 2 m up.
+Scientists trust a number more when independent methods agree, and they say so when they do not.
 
 ---
 
