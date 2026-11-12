@@ -70,3 +70,13 @@ def test_compare_refuses_to_guess_the_psr_code(tmp_path, data):
     sun, earth, psr = _maps(tmp_path, psr_dark=False)               # no code has ~0 % illumination
     with pytest.raises(SystemExit):
         _load().main(["--sun", str(sun), "--earth", str(earth), "--psr", str(psr), "--data", str(data)])
+
+
+def test_sites_outside_the_maps_are_skipped_not_fatal(tmp_path, data):
+    far = dict(id="far_site", name="Far", lat=-80.0, lon=60.0, source="t", verified=True)
+    (data / "sites.yaml").write_text(yaml.safe_dump({"sites": [SITE, far]}))
+    sun, earth, psr = _maps(tmp_path)                                     # maps cover ~40 km around SITE
+    out = _load().main(["--sun", str(sun), "--earth", str(earth), "--psr", str(psr), "--data", str(data),
+                        "--out", str(tmp_path / "m60.json")])
+    assert out["skipped_outside_maps"] == ["far_site"] and "shackleton_ridge" in out["sites"]
+    assert (tmp_path / "m60.json").exists() and not (data / "mazarico.json").exists()

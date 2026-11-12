@@ -1,0 +1,268 @@
+{
+ "source": "Mazarico et al. 2011, Icarus 211, 1066-1081, doi:10.1016/j.icarus.2010.10.030; NASA GSFC PGDA product 69 (https://pgda.gsfc.nasa.gov/products/69)",
+ "products": [
+  "AVGVISIB_75S_120M_201608.TIF",
+  "AVGVISIB_75S_120M_201608_EARTH.TIF",
+  "LPSR_75S_120M_201608.TIF"
+ ],
+ "psr_code": 20000,
+ "note": "18.6-year averages; Earth visible if any part of its disc shows; observer height not stated. LunaNav: Nov 2026 - Dec 2028, 2 m mast, Earth's centre.",
+ "sites": {
+  "shackleton_ridge": {
+   "mazarico_sun": 0.7832,
+   "mazarico_earth": 0.5819,
+   "psr_nearest_km": 0.82,
+   "psr_area_within_5km_km2": 1.79,
+   "lunanav_sun_mean": 0.9113,
+   "lunanav_earth": 0.539
+  },
+  "de_gerlache_rim": {
+   "mazarico_sun": 0.5311,
+   "mazarico_earth": 0.6135,
+   "psr_nearest_km": 4.24,
+   "psr_area_within_5km_km2": 0.12,
+   "lunanav_sun_mean": 0.773,
+   "lunanav_earth": 0.5731
+  },
+  "de_gerlache_rim_derived": {
+   "mazarico_sun": 0.7445,
+   "mazarico_earth": 0.531,
+   "psr_nearest_km": 4.42,
+   "psr_area_within_5km_km2": 0.12,
+   "lunanav_sun_mean": 0.8523,
+   "lunanav_earth": 0.5729
+  },
+  "malapert_massif": {
+   "mazarico_sun": 0.3994,
+   "mazarico_earth": 0.3778,
+   "psr_nearest_km": 0.92,
+   "psr_area_within_5km_km2": 0.13,
+   "lunanav_sun_mean": 0.4255,
+   "lunanav_earth": 0.4411
+  },
+  "malapert_massif_derived": {
+   "mazarico_sun": 0.6584,
+   "mazarico_earth": 0.5851,
+   "psr_nearest_km": 0.64,
+   "psr_area_within_5km_km2": 0.14,
+   "lunanav_sun_mean": 0.6692,
+   "lunanav_earth": 1.0
+  },
+  "malapert_massif_region_best": {
+   "mazarico_sun": 0.6409,
+   "mazarico_earth": 0.536,
+   "psr_nearest_km": 0.18,
+   "psr_area_within_5km_km2": 0.06,
+   "lunanav_sun_mean": 0.834,
+   "lunanav_earth": 1.0
+  },
+  "mons_mouton": {
+   "mazarico_sun": 0.4684,
+   "mazarico_earth": 0.9307,
+   "psr_nearest_km": 2.19,
+   "psr_area_within_5km_km2": 0.88,
+   "lunanav_sun_mean": 0.4552,
+   "lunanav_earth": 0.8206
+  },
+  "mons_mouton_derived": {
+   "mazarico_sun": 0.5193,
+   "mazarico_earth": 0.7696,
+   "psr_nearest_km": 1.72,
+   "psr_area_within_5km_km2": 0.94,
+   "lunanav_sun_mean": 0.5154,
+   "lunanav_earth": 0.8372
+  },
+  "artemis_mons_mouton_plateau": {
+   "mazarico_sun": 0.2626,
+   "mazarico_earth": 0.6852,
+   "psr_nearest_km": 1.16,
+   "psr_area_within_5km_km2": 3.82,
+   "lunanav_sun_mean": 0.2608,
+   "lunanav_earth": 0.6674
+  },
+  "artemis_mons_mouton_plateau_derived": {
+   "mazarico_sun": 0.427,
+   "mazarico_earth": 0.9296,
+   "psr_nearest_km": 1.56,
+   "psr_area_within_5km_km2": 3.8,
+   "lunanav_sun_mean": 0.4633,
+   "lunanav_earth": 0.8474
+  },
+  "artemis_mons_mouton_plateau_region_best": {
+   "mazarico_sun": 0.5625,
+   "mazarico_earth": 0.9952,
+   "psr_nearest_km": 7.0,
+   "psr_area_within_5km_km2": 0.0,
+   "lunanav_sun_mean": 0.5673,
+   "lunanav_earth": 0.9984
+  },
+  "artemis_haworth": {
+   "mazarico_sun": 0.107,
+   "mazarico_earth": 0.4395,
+   "psr_nearest_km": 0.96,
+   "psr_area_within_5km_km2": 3.76,
+   "lunanav_sun_mean": 0.0998,
+   "lunanav_earth": 0.3963
+  },
+  "artemis_haworth_derived": {
+   "mazarico_sun": 0.3726,
+   "mazarico_earth": 0.539,
+   "psr_nearest_km": 1.28,
+   "psr_area_within_5km_km2": 3.84,
+   "lunanav_sun_mean": 0.3661,
+   "lunanav_earth": 0.5087
+  },
+  "artemis_haworth_region_best": {
+   "mazarico_sun": 0.6354,
+   "mazarico_earth": 0.7894,
+   "psr_nearest_km": 1.19,
+   "psr_area_within_5km_km2": 0.3,
+   "lunanav_sun_mean": 0.7482,
+   "lunanav_earth": 0.7459
+  },
+  "artemis_nobile_rim_1": {
+   "mazarico_sun": 0.2656,
+   "mazarico_earth": 0.2741,
+   "psr_nearest_km": 2.05,
+   "psr_area_within_5km_km2": 1.12,
+   "lunanav_sun_mean": 0.2925,
+   "lunanav_earth": 0.3221
+  },
+  "artemis_nobile_rim_1_derived": {
+   "mazarico_sun": 0.4138,
+   "mazarico_earth": 0.5027,
+   "psr_nearest_km": 2.21,
+   "psr_area_within_5km_km2": 1.12,
+   "lunanav_sun_mean": 0.5017,
+   "lunanav_earth": 0.4811
+  },
+  "artemis_nobile_rim_1_region_best": {
+   "mazarico_sun": 0.4956,
+   "mazarico_earth": 0.6832,
+   "psr_nearest_km": 1.08,
+   "psr_area_within_5km_km2": 0.88,
+   "lunanav_sun_mean": 0.6776,
+   "lunanav_earth": 0.9955
+  },
+  "artemis_nobile_rim_2": {
+   "mazarico_sun": 0.3874,
+   "mazarico_earth": 0.6847,
+   "psr_nearest_km": 2.55,
+   "psr_area_within_5km_km2": 0.06,
+   "lunanav_sun_mean": 0.4075,
+   "lunanav_earth": 0.6511
+  },
+  "artemis_nobile_rim_2_derived": {
+   "mazarico_sun": 0.4099,
+   "mazarico_earth": 0.6945,
+   "psr_nearest_km": 2.15,
+   "psr_area_within_5km_km2": 0.19,
+   "lunanav_sun_mean": 0.4657,
+   "lunanav_earth": 0.6599
+  },
+  "artemis_nobile_rim_2_region_best": {
+   "mazarico_sun": 0.516,
+   "mazarico_earth": 0.7458,
+   "psr_nearest_km": 2.31,
+   "psr_area_within_5km_km2": 19.21,
+   "lunanav_sun_mean": 0.5186,
+   "lunanav_earth": 0.8296
+  },
+  "artemis_peak_near_cabeus_b": {
+   "mazarico_sun": 0.362,
+   "mazarico_earth": 0.231,
+   "psr_nearest_km": 1.32,
+   "psr_area_within_5km_km2": 0.36,
+   "lunanav_sun_mean": 0.3798,
+   "lunanav_earth": 0.2877
+  },
+  "artemis_peak_near_cabeus_b_derived": {
+   "mazarico_sun": 0.6648,
+   "mazarico_earth": 0.6516,
+   "psr_nearest_km": 1.04,
+   "psr_area_within_5km_km2": 0.36,
+   "lunanav_sun_mean": 0.6372,
+   "lunanav_earth": 0.77
+  },
+  "artemis_peak_near_cabeus_b_region_best": {
+   "mazarico_sun": 0.5343,
+   "mazarico_earth": 0.7362,
+   "psr_nearest_km": 0.74,
+   "psr_area_within_5km_km2": 0.36,
+   "lunanav_sun_mean": 0.7023,
+   "lunanav_earth": 0.7761
+  },
+  "artemis_slater_plain": {
+   "mazarico_sun": 0.0264,
+   "mazarico_earth": 0.4086,
+   "psr_nearest_km": 0.21,
+   "psr_area_within_5km_km2": 1.05,
+   "lunanav_sun_mean": 0.023,
+   "lunanav_earth": 0.3672
+  },
+  "artemis_slater_plain_derived": {
+   "mazarico_sun": 0.2158,
+   "mazarico_earth": 0.4169,
+   "psr_nearest_km": 1.12,
+   "psr_area_within_5km_km2": 1.14,
+   "lunanav_sun_mean": 0.2163,
+   "lunanav_earth": 0.4057
+  },
+  "artemis_slater_plain_region_best": {
+   "mazarico_sun": 0.6564,
+   "mazarico_earth": 0.4992,
+   "psr_nearest_km": 0.31,
+   "psr_area_within_5km_km2": 0.32,
+   "lunanav_sun_mean": 0.6701,
+   "lunanav_earth": 0.4623
+  },
+  "artemis_de_gerlache_rim_2": {
+   "mazarico_sun": 0.3802,
+   "mazarico_earth": 0.5489,
+   "psr_nearest_km": 3.24,
+   "psr_area_within_5km_km2": 0.01,
+   "lunanav_sun_mean": 0.3711,
+   "lunanav_earth": 0.5133
+  },
+  "artemis_de_gerlache_rim_2_derived": {
+   "mazarico_sun": 0.383,
+   "mazarico_earth": 0.5484,
+   "psr_nearest_km": 3.06,
+   "psr_area_within_5km_km2": 0.03,
+   "lunanav_sun_mean": 0.3742,
+   "lunanav_earth": 0.5129
+  },
+  "artemis_de_gerlache_rim_2_region_best": {
+   "mazarico_sun": 0.6622,
+   "mazarico_earth": 0.6157,
+   "psr_nearest_km": 2.72,
+   "psr_area_within_5km_km2": 0.91,
+   "lunanav_sun_mean": 0.8164,
+   "lunanav_earth": 0.5708
+  },
+  "artemis_mons_mouton": {
+   "mazarico_sun": 0.478,
+   "mazarico_earth": 0.5244,
+   "psr_nearest_km": 0.85,
+   "psr_area_within_5km_km2": 0.92,
+   "lunanav_sun_mean": 0.5067,
+   "lunanav_earth": 0.5561
+  },
+  "artemis_mons_mouton_derived": {
+   "mazarico_sun": 0.674,
+   "mazarico_earth": 0.8948,
+   "psr_nearest_km": 1.06,
+   "psr_area_within_5km_km2": 0.92,
+   "lunanav_sun_mean": 0.7346,
+   "lunanav_earth": 0.9866
+  },
+  "artemis_mons_mouton_region_best": {
+   "mazarico_sun": 0.674,
+   "mazarico_earth": 0.8948,
+   "psr_nearest_km": 1.06,
+   "psr_area_within_5km_km2": 0.92,
+   "lunanav_sun_mean": 0.7346,
+   "lunanav_earth": 0.9866
+  }
+ }
+}

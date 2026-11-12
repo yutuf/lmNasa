@@ -92,3 +92,21 @@ def test_region_centres_have_a_source_and_slope_once_computed():
             assert "10.5066/P1MEQ6UK" in s.source, s.id
             if SERIES[s.id][0] is not None:
                 assert s.slope_deg is not None, f"{s.id}: computed but no slope_deg in sites.yaml"
+
+
+def test_mazarico_json_is_not_stale():
+    """data/mazarico.json stores LunaNav's own numbers next to NASA's; if a series changes later,
+    the file must be regenerated (scripts/mazarico_compare.py), otherwise the app shows old numbers."""
+    import json
+    path = DATA / "mazarico.json"
+    if not path.exists():
+        pytest.skip("no mazarico.json")
+    m = json.loads(path.read_text())
+    for sid, r in m["sites"].items():
+        assert sid in BY_ID, f"{sid} in mazarico.json but not a site any more"
+        v = SERIES[sid][0]
+        if v is None or "lunanav_sun_mean" not in r:
+            continue
+        assert abs(float(np.mean(v.sun_fraction)) - r["lunanav_sun_mean"]) < 1e-3, f"{sid}: stale sun"
+        assert abs(float(np.mean(v.earth_visible)) - r["lunanav_earth"]) < 1e-3, f"{sid}: stale Earth"
+        assert 0 <= r["mazarico_sun"] <= 1 and 0 <= r["mazarico_earth"] <= 1, sid

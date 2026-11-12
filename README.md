@@ -214,8 +214,8 @@ Result (LOLA 40 m, 2026-11-01 → 2028-12-31; Sun+Earth = share of hours with bo
 | region | searched from (Sun+Earth) | best in region | Sun+Earth / Sun / Earth / slope |
 |---|---|---|---|
 | Malapert Massif | published point (15.8 %) | 5.0 km W | **83.6 %** / 83.6 % / 100 % / 2.4° |
+| Mons Mouton | centre (23.8 %) | 0.5 km N | 72.5 % / 73.8 % / 98.7 % / 3.2° (see note) |
 | Nobile Rim 1 | centre (9.4 %) | 10.9 km N | 67.9 % / 67.9 % / 99.5 % / 4.0° |
-| Mons Mouton | centre (23.8 %) | 0.6 km N | 68.6 % / 69.2 % / 99.3 % / 0.9° (see note) |
 | Mons Mouton Plateau | centre (20.2 %) | 42.9 km E | 56.7 % / 56.7 % / 99.8 % / 5.9° |
 | Peak near Cabeus B | centre (9.1 %) | 1.2 km NE | 54.1 % / 70.2 % / 77.6 % / 3.8° |
 | Haworth | centre (6.1 %) | 12.2 km N | 53.4 % / 74.8 % / 74.6 % / 3.0° |
@@ -225,26 +225,67 @@ Result (LOLA 40 m, 2026-11-01 → 2028-12-31; Sun+Earth = share of hours with bo
 
 - Every region has ground with Sun and Earth together for a third to over four fifths of the time on
   slopes ≤ 6°, often far from the centre: the centre says little about a region.
-- **Note, Mons Mouton:** this run's region search (68.6 %) came out *below* the 1 km derived point
-  (72.5 %, 510 m N, also inside the region): the 450 m coarse grid stepped over that narrow peak. The
-  script now also refines around the region's site and its known derived points, so a rerun cannot
-  return less than them; until then, the 1 km derived point is the best known spot there.
+- **Mons Mouton:** a first run's region search (68.6 %) came out below the 1 km derived point
+  (72.5 %, inside the region): the 450 m coarse grid stepped over that narrow peak. The script now also
+  refines around the region's site and its known derived points; the rerun returned 72.5 %.
 - The Nobile Rim 1 result lies where that region overlaps Mons Mouton Plateau.
 
-## Independent check and permanent shadow (prepared)
+## Independent check against NASA's maps, and permanent shadow
 
 `scripts/mazarico_compare.py` reads NASA's polar illumination products (Mazarico et al. 2011, Icarus 211,
-[NASA GSFC PGDA product 69](https://pgda.gsfc.nasa.gov/products/69)): the 18.6-year average solar
-illumination and Earth visibility maps, and the permanent-shadow (PSR) map. For every site it records
-NASA's averages next to LunaNav's own, and the distance to the nearest permanently shadowed region
-(where water ice can survive) plus the PSR area within 5 km. Nothing about the encoding is assumed:
-scale tags are applied, the unit is decided once per map, and the PSR code is the value whose pixels
-have ~0 % average illumination; the script stops rather than guess. Differences to expect: 18.6 years vs
-2026–2028, Earth "any part of the disc" vs Earth's centre, no stated height vs a 2 m mast.
+[NASA GSFC PGDA product 69](https://pgda.gsfc.nasa.gov/products/69)), 75°S–90°S at 120 m/px: the 18.6-year
+average solar illumination, average Earth visibility and the permanent-shadow (PSR) map. For every site
+it stores NASA's averages next to LunaNav's own and the distance to the nearest permanently shadowed
+region, where water ice can survive (`data/mazarico.json`, shown in the app). Nothing about the encoding
+is assumed: GeoTIFF scale tags are applied (the PSR map stores ±20000 with scale 2.5e-5 and offset 0.5,
+i.e. 0 and 1), and the PSR code is the value whose pixels average ~0 % sunlight (0.000 % vs 30.6 % for
+the other code); the script stops rather than guess.
+
+**Agreement** (mean fraction of the solar disk visible; LunaNav minus NASA):
+
+| points | n | median difference | within ±3 points |
+|---|---|---|---|
+| published points and region centres | 12 | +1.9 points | 83 % |
+| 1 km derived points | 11 | +1.1 points | 55 % |
+| best-in-region points | 9 | **+11.3 points** | 33 % |
+
+Correlation over all 32 points: 0.957. Earth visibility is typically 3.5 points *lower* in LunaNav, as
+expected: NASA counts Earth as visible when any part of its disc shows, LunaNav uses its centre.
+
+What this means:
+- For points nobody optimised, two independent models agree closely: the core geometry holds.
+- Points LunaNav **picked as the best of ~2,000 candidates read clearly higher** than in NASA's map.
+  Picking the maximum favours places where LunaNav's model is most optimistic. Likely contributors are
+  the 2 m mast (NASA states no height; near the pole a little height matters a lot) and narrow peaks
+  that a 120 m pixel averages away, but this comparison cannot say which. Treat the best-in-region
+  numbers as LunaNav's estimate, not a confirmed value; where NASA's map disagrees strongly (Earth at
+  the Malapert and Nobile Rim 1 best points: 54 % and 68 % vs LunaNav's ~100 %), the difference is
+  unexplained so far.
+- Largest gaps among published points: Shackleton ridge (NASA 78.3 %, LunaNav 91.1 %; Gläser et al.
+  report 88 % at 2 m) and de Gerlache rim (53.1 % vs 77.3 %), both near-grazing-Sun sites at 88–89.5°S
+  where observer height is known to matter most.
+- Next check that can separate the causes: the same comparison with NASA's 60 m maps (85°S–90°S).
+
+**Best-in-region points with NASA's numbers and the nearest permanent shadow:**
+
+| best in region | Sun+Earth (LunaNav) | mean Sun: NASA / LunaNav | Earth: NASA / LunaNav | nearest PSR | PSR within 5 km |
+|---|---|---|---|---|---|
+| Malapert Massif | 83.6 % | 64.1 % / 83.4 % | 53.6 % / 100 % | 0.18 km | 0.06 km² |
+| Mons Mouton | 72.5 % | 67.4 % / 73.5 % | 89.5 % / 98.7 % | 1.06 km | 0.92 km² |
+| Nobile Rim 1 | 67.9 % | 49.6 % / 67.8 % | 68.3 % / 99.6 % | 1.08 km | 0.88 km² |
+| Mons Mouton Plateau | 56.7 % | 56.2 % / 56.7 % | 99.5 % / 99.8 % | 7.00 km | 0.00 km² |
+| Peak near Cabeus B | 54.1 % | 53.4 % / 70.2 % | 73.6 % / 77.6 % | 0.74 km | 0.36 km² |
+| Haworth | 53.4 % | 63.5 % / 74.8 % | 78.9 % / 74.6 % | 1.19 km | 0.30 km² |
+| de Gerlache Rim 2 | 46.9 % | 66.2 % / 81.6 % | 61.6 % / 57.1 % | 2.72 km | 0.91 km² |
+| Nobile Rim 2 | 43.7 % | 51.6 % / 51.9 % | 74.6 % / 83.0 % | 2.31 km | 19.21 km² |
+| Slater Plain | 34.6 % | 65.6 % / 67.0 % | 49.9 % / 46.2 % | 0.31 km | 0.32 km² |
+
+For Mons Mouton the seeded region search returned the 1 km derived point itself (72.5 %, 0.5 km N),
+closing the gap noted above.
 
 ```bash
 python scripts/mazarico_compare.py --sun AVGVISIB_75S_120M_201608.TIF \
-    --earth AVGVISIB_75S_120M_201608_EARTH.TIF --psr LPSR_75S_120M_201608.TIF
+    --earth AVGVISIB_75S_120M_201608_EARTH.TIF --psr LPSR_75S_120M_201608.TIF [--out other.json]
 ```
 
 ## Validation

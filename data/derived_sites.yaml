@@ -222,23 +222,6 @@ sites:
     Earth both in view, 83.6% vs 15.8% at the published point (2026-11-01 to 2028-12-31).'
   source: derived from malapert_massif with LDEM_80S_40MPP_ADJ.TIF inside Malapert_Massif_PolarLGRS_ACC_1km_S_Grid.shp
   verified: false
-- id: artemis_mons_mouton_region_best
-  name: Mons Mouton — best point in the Artemis III region
-  lat: -85.40316
-  lon: 31.69723
-  category: derived
-  derived_from: artemis_mons_mouton
-  search: region
-  distance_m: 568
-  bearing_deg: 5.3
-  slope_deg: 0.9
-  cited_slope_deg: 7.1
-  note: 'Computed by LunaNav, not from a publication: best of 2009 points inside the
-    USGS Mons Mouton grid (289 km2; 450 m grid, then 100 m around the top 5), slope
-    <= 10 deg; 0.6 km N of the region centre. Objective: hours with Sun and Earth
-    both in view, 68.6% vs 23.8% at the region centre (2026-11-01 to 2028-12-31).'
-  source: derived from artemis_mons_mouton with LDEM_80S_40MPP_ADJ.TIF inside Mons_Mouton_PolarLGRS_ACC_1km_S_Grid.shp
-  verified: false
 - id: artemis_mons_mouton_plateau_region_best
   name: Mons Mouton Plateau — best point in the Artemis III region
   lat: -84.01351
@@ -343,4 +326,22 @@ sites:
     Earth both in view, 46.9% vs 21.7% at the region centre (2026-11-01 to 2028-12-31).'
   source: derived from artemis_de_gerlache_rim_2 with LDEM_80S_40MPP_ADJ.TIF inside
     de_Gerlache_Rim_2_PolarLGRS_ACC_1km_S_Grid.shp
+  verified: false
+- id: artemis_mons_mouton_region_best
+  name: Mons Mouton — best point in the Artemis III region
+  lat: -85.40531
+  lon: 31.71667
+  category: derived
+  derived_from: artemis_mons_mouton
+  search: region
+  distance_m: 510
+  bearing_deg: 11.3
+  slope_deg: 3.2
+  cited_slope_deg: 7.1
+  note: 'Computed by LunaNav, not from a publication: best of 2235 points inside the
+    USGS Mons Mouton grid (289 km2; 450 m grid, then 100 m around the top 5 and the
+    site''s known points), slope <= 10 deg; 0.5 km N of the region centre. Objective:
+    hours with Sun and Earth both in view, 72.5% vs 23.8% at the region centre (2026-11-01
+    to 2028-12-31).'
+  source: derived from artemis_mons_mouton with LDEM_80S_40MPP_ADJ.TIF inside Mons_Mouton_PolarLGRS_ACC_1km_S_Grid.shp
   verified: false

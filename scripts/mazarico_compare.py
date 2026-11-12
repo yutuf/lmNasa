@@ -74,6 +74,16 @@ class Raster:
         xs, ys = self.src.xy(rows.ravel(), cols.ravel())
         return raw, val, np.asarray(xs).reshape(raw.shape), np.asarray(ys).reshape(raw.shape), (x, y)
 
+    def covers(self, lat, lon) -> bool:
+        """True when the site falls on a valid (non-nodata) pixel of this map."""
+        x, y = self.to_xy.transform(lon, lat)
+        row, col = self.src.index(x, y)
+        if not (0 <= row < self.src.height and 0 <= col < self.src.width):
+            return False
+        from rasterio.windows import Window
+        raw = self.src.read(1, window=Window(col, row, 1, 1))[0, 0]
+        return self.nodata is None or raw != self.nodata
+
     def at(self, lat, lon):
         _, val, xs, ys, (x, y) = self.window(lat, lon, self.pix)
         k = np.nanargmin((xs - x) ** 2 + (ys - y) ** 2)
@@ -129,14 +139,22 @@ def main(argv=None):
     ap.add_argument("--psr", required=True, help="LPSR_..._201608.TIF (permanent shadow)")
     ap.add_argument("--radius-km", type=float, default=25.0, help="search radius for the nearest PSR")
     ap.add_argument("--data", default=str(ROOT / "data"))
+    ap.add_argument("--out", help="output JSON (default: <data>/mazarico.json)")
     a = ap.parse_args(argv)
     data = Path(a.data)
+    out_path = Path(a.out) if a.out else data / "mazarico.json"
 
     sun, earth, psr = Raster(a.sun), Raster(a.earth), Raster(a.psr)
     for r in (sun, earth, psr):
         print(f"{r.name}: {r.src.width}x{r.src.height} px, {r.pix:.0f} m/px, dtype {r.src.dtypes[0]}, "
               f"scale {r.scale}, offset {r.offset}, nodata {r.nodata}")
     sites = [s for s in load_sites(data / "sites.yaml") if s.lat < -75]
+    outside = [s.id for s in sites if not all(r.covers(s.lat, s.lon) for r in (sun, earth, psr))]
+    if outside:
+        print(f"outside these maps, skipped: {', '.join(outside)}")
+    sites = [s for s in sites if s.id not in outside]
+    if not sites:
+        raise SystemExit("no site lies on these maps")
     samples = [(s.lat, s.lon) for s in sites if not s.derived]
     sun.calibrate(samples)
     earth.calibrate(samples)
@@ -161,8 +179,9 @@ def main(argv=None):
         print(f"{s.id:40s} {m_sun:>13.1%} / {ours:>12s} {m_earth:>9.1%} / "
               f"{(str(round(100 * rec.get('lunanav_earth', float('nan')), 1)) + '%'):>8s} "
               f"{'>' + str(int(a.radius_km)) if dist is None else f'{dist:.2f}':>7s} {area:12.2f}")
-    (data / "mazarico.json").write_text(json.dumps(out, indent=1))
-    print(f"\nwrote {data / 'mazarico.json'}")
+    out["skipped_outside_maps"] = outside
+    out_path.write_text(json.dumps(out, indent=1))
+    print(f"\nwrote {out_path}")
     return out
 
 
