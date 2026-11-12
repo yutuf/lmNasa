@@ -59,6 +59,7 @@ def test_compare_reads_units_finds_psr_and_measures_distance(tmp_path, data):
     assert out["psr_code"] == 1
     r = out["sites"]["shackleton_ridge"]
     assert r["mazarico_sun"] == pytest.approx(0.60, abs=1e-3)       # percent map read as percent
+    assert r["mazarico_sun_max_near"] >= r["mazarico_sun"] and r["near_max_at_m"] <= 120
     assert r["mazarico_earth"] == pytest.approx(0.50, abs=1e-3)     # fraction map read as fraction
     assert r["psr_nearest_km"] == pytest.approx(2.0, abs=0.15)      # 3 km to the centre - 1 km radius
     assert r["psr_area_within_5km_km2"] == pytest.approx(np.pi, rel=0.08)
@@ -80,3 +81,23 @@ def test_sites_outside_the_maps_are_skipped_not_fatal(tmp_path, data):
                         "--out", str(tmp_path / "m60.json")])
     assert out["skipped_outside_maps"] == ["far_site"] and "shackleton_ridge" in out["sites"]
     assert (tmp_path / "m60.json").exists() and not (data / "mazarico.json").exists()
+
+
+def test_max_near_finds_a_brighter_crest_pixel_beside_the_site(tmp_path):
+    """A one-pixel-wide bright crest 100 m from the site: the point value misses it, max_near finds it."""
+    from rasterio.transform import from_origin
+    geo = pyproj.CRS.from_proj4("+proj=longlat +R=1737400 +no_defs +type=crs")
+    sx, sy = pyproj.Transformer.from_crs(geo, CRS, always_xy=True).transform(SITE["lon"], SITE["lat"])
+    res, n = 60.0, 201
+    x0, y0 = sx - res * (n // 2) - res / 2, sy + res * (n // 2) + res / 2      # site at a pixel centre
+    X = x0 + res * (np.arange(n) + .5)
+    Z = np.full((n, n), 0.40)
+    Z[:, np.argmin(np.abs(X - (sx + 120)))] = 0.85                          # crest two pixels east
+    with rasterio.open(tmp_path / "s.tif", "w", driver="GTiff", height=n, width=n, count=1, dtype="float32",
+                       crs=CRS, transform=from_origin(x0, y0, res, res)) as d:
+        d.write(Z.astype("float32"), 1)
+    r = _load().Raster(tmp_path / "s.tif")
+    assert r.at(SITE["lat"], SITE["lon"]) == pytest.approx(0.40)
+    v, dist = r.max_near(SITE["lat"], SITE["lon"], 150.0)
+    assert v == pytest.approx(0.85) and dist == pytest.approx(120.0, abs=1)
+    assert r.max_near(SITE["lat"], SITE["lon"], 60.0)[0] == pytest.approx(0.40)   # crest outside 60 m

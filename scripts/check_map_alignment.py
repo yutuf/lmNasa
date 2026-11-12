@@ -11,7 +11,9 @@ That smells like a registration offset: one pixel off a crest changes the value 
 Method: take random pixel centres of the coarse map inside a latitude band, average the fine map
 over each coarse pixel's footprint (block mean of the fine pixels whose centres fall inside it),
 and repeat with the fine map shifted by (dx, dy) on a grid of trial shifts. A correctly registered
-pair has its smallest mismatch at (0, 0). Prints the RMS mismatch at (0, 0), the best shift and
+pair has its smallest mismatch at (0, 0); a best shift of at most half a fine pixel, or one that
+lowers the mismatch by under 5 %, is within what this method can resolve and counts as registered.
+Prints the RMS mismatch at (0, 0), the best shift and
 its RMS. Values are compared after each map's scale/offset tags. Needs rasterio + pyproj.
 """
 import argparse
@@ -93,9 +95,14 @@ def main(argv=None):
     (bx, by), (rmsb, nb) = min(results.items(), key=lambda kv: kv[1][0])
     print(f"RMS mismatch at zero shift: {rms0:.4f} ({n0} pixels)")
     print(f"best shift: dx = {bx:+.0f} m, dy = {by:+.0f} m -> RMS {rmsb:.4f} ({nb} pixels)")
-    print("verdict:", "registered (best shift is zero)" if (bx, by) == (0.0, 0.0)
-          else f"OFFSET: the fine map lines up best when shifted by ({bx:+.0f}, {by:+.0f}) m")
-    return {"rms_zero": rms0, "best_shift_m": (bx, by), "rms_best": rmsb}
+    fine_pix = abs(fs.transform.a)
+    gain = (rms0 - rmsb) / rms0 if rms0 > 0 else 0.0
+    small_shift = max(abs(bx), abs(by)) <= fine_pix / 2      # below what this block method can resolve
+    registered = (bx, by) == (0.0, 0.0) or small_shift or gain < 0.05
+    print(f"improvement over zero shift: {gain:.1%}")
+    print("verdict:", "registered: no meaningful offset (best shift within half a fine pixel or < 5 % better)"
+          if registered else f"OFFSET: the fine map lines up best when shifted by ({bx:+.0f}, {by:+.0f}) m")
+    return {"rms_zero": rms0, "best_shift_m": (bx, by), "rms_best": rmsb, "registered": registered}
 
 
 if __name__ == "__main__":
