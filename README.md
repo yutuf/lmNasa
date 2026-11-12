@@ -258,8 +258,8 @@ What this means:
 - Points LunaNav **picked as the best of ~2,000 candidates read clearly higher** than NASA's value at
   the same coordinate, but **not higher than NASA's own values right next to them** (see "Crest check"
   below): the gap is mostly about where each map puts a narrow lit crest. Treat best-in-region numbers
-  as the upper end of what NASA's maps support there. Still unexplained: the Earth-visibility gaps at the
-  Malapert and Nobile Rim 1 best points (NASA 54 % and 68 % vs LunaNav ~100 %).
+  as the upper end of what NASA's maps support there. The same holds for Earth visibility (see "Crest
+  check"), with one open exception.
 - Largest gaps among published points: Shackleton ridge (NASA 78.3 %, LunaNav 91.1 %; Gläser et al.
   report 88 % at 2 m) and de Gerlache rim (53.1 % vs 77.3 %), both near-grazing-Sun sites at 88–89.5°S
   where observer height is known to matter most.
@@ -284,6 +284,13 @@ What this means:
   adjusted; NASA: 2016 LOLA grids) place it slightly differently. A local maximum is itself optimistic
   (for unoptimised points LunaNav sits 0.8 points *below* it), so the honest range on a crest is between
   NASA's point value and its local maximum; LunaNav's best-in-region values sit near the top of it.
+- **Earth, same check:** the large Earth gaps were the same effect. At the Malapert best point NASA's
+  value at the coordinate is 53.6 %, but its maps reach **100 %** within 120 m (LunaNav: 100 %); Nobile
+  Rim 1 best point: NASA up to 91 % within 120 m vs LunaNav 99.6 %. On the 120 m map no point is more
+  than 10 points above NASA's local maximum (best-in-region median +0.3). **Open:** the Mons Mouton best
+  point (= its 1 km derived point) on the 60 m map: LunaNav 98.7 % vs NASA at most 82.3 % within 120 m
+  (89.5 % on the 120 m map). Since NASA counts Earth as visible when *any* part of its disc shows, NASA
+  should read higher, not lower, so this one is unexplained.
 
 **Best-in-region points with NASA's numbers and the nearest permanent shadow:**
 

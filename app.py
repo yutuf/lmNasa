@@ -530,7 +530,9 @@ if mz_rec is not None:
         + f"Independent check: NASA's 18.6-year average illumination here is {mz_rec['mazarico_sun']:.0%}"
         + (f" (LunaNav, 2026–2028, 2 m mast: {mz_rec['lunanav_sun_mean']:.0%} of the solar disk on average). "
            if "lunanav_sun_mean" in mz_rec else ". ")
-        + (f"NASA's map reaches {mz_rec['mazarico_sun_max_near']:.0%} within {mz_rec['near_max_at_m']} m: on a narrow "
+        + (f"NASA's map reaches {mz_rec['mazarico_sun_max_near']:.0%} sunlight"
+           + (f" and {mz_rec['mazarico_earth_max_near']:.0%} Earth visibility" if "mazarico_earth_max_near" in mz_rec else "")
+           + f" within {(mazarico() or {}).get('near_m', 120):.0f} m: on a narrow "
            "crest the value depends on exactly where each map puts the crest, so read LunaNav's number as the "
            "upper end of what NASA's maps support here. "
            if "mazarico_sun_max_near" in mz_rec and site.search == "region" else "")
