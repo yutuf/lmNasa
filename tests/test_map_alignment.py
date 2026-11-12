@@ -42,10 +42,18 @@ def _run(tmp_path, shift):
 
 def test_registered_maps_give_zero_shift(tmp_path):
     out = _run(tmp_path, (0.0, 0.0))
-    assert out["best_shift_m"] == (0.0, 0.0) and out["rms_zero"] < 0.01
+    assert out["best_shift_m"] == (0.0, 0.0) and out["rms_zero"] < 0.01 and out["registered"]
 
 
 def test_offset_map_is_detected(tmp_path):
     out = _run(tmp_path, (60.0, -120.0))              # fine map content displaced 60 m E, 120 m S
     assert out["best_shift_m"] == (-60.0, 120.0)      # shifting it back lines it up
     assert out["rms_best"] < out["rms_zero"] / 2   # residual: coarse map = point values, compared to block means
+    assert not out["registered"]
+
+
+def test_half_pixel_best_shift_with_no_gain_counts_as_registered(tmp_path):
+    """The real 120 m vs 60 m NASA maps gave best shift (0, -30) m with the same RMS as at zero:
+    half a fine pixel, below the method's resolution. That must not be reported as an offset."""
+    out = _run(tmp_path, (0.0, -30.0))
+    assert out["registered"]

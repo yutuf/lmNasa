@@ -89,6 +89,16 @@ class Raster:
         k = np.nanargmin((xs - x) ** 2 + (ys - y) ** 2)
         return float(val.ravel()[k])
 
+    def max_near(self, lat, lon, radius_m):
+        """Largest value of pixels whose centres lie within radius_m of the site, and its distance (m).
+        On a narrow crest the pixel at the coordinate can sit beside the crest; this shows the crest value."""
+        _, val, xs, ys, (x, y) = self.window(lat, lon, radius_m + self.pix)
+        d = np.hypot(xs - x, ys - y)
+        v = np.where(d <= radius_m, val, np.nan)
+        top = np.nanmax(v)
+        k = np.nanargmin(np.where(v == top, d, np.nan))          # ties: the nearest such pixel
+        return float(top), float(d.ravel()[k])
+
 
 def psr_code(psr: Raster, sun: Raster, samples):
     """The PSR value whose pixels have ~zero mean solar illumination (checked on site windows)."""
@@ -138,6 +148,7 @@ def main(argv=None):
     ap.add_argument("--earth", required=True, help="AVGVISIB_..._201608_EARTH.TIF (average Earth visibility)")
     ap.add_argument("--psr", required=True, help="LPSR_..._201608.TIF (permanent shadow)")
     ap.add_argument("--radius-km", type=float, default=25.0, help="search radius for the nearest PSR")
+    ap.add_argument("--near-m", type=float, default=120.0, help="neighbourhood for the highest NASA value")
     ap.add_argument("--data", default=str(ROOT / "data"))
     ap.add_argument("--out", help="output JSON (default: <data>/mazarico.json)")
     a = ap.parse_args(argv)
@@ -161,6 +172,7 @@ def main(argv=None):
     code = psr_code(psr, sun, samples[:6])
 
     out = {"source": SOURCE, "products": [sun.name, earth.name, psr.name], "psr_code": int(code),
+           "near_m": a.near_m,
            "note": ("18.6-year averages; Earth visible if any part of its disc shows; observer height not "
                     "stated. LunaNav: Nov 2026 - Dec 2028, 2 m mast, Earth's centre."), "sites": {}}
     print(f"\n{'site':40s} {'sun: Maz / ours(mean disk)':>28s} {'Earth: Maz / ours':>20s} {'PSR km':>7s} {'PSR km2<=5km':>12s}")
@@ -168,7 +180,9 @@ def main(argv=None):
         v = load_series(s.id, data / "series")[0]
         m_sun, m_earth = sun.frac(sun.at(s.lat, s.lon)), earth.frac(earth.at(s.lat, s.lon))
         dist, area = psr_metrics(psr, code, s.lat, s.lon, a.radius_km * 1000)
+        sun_max, sun_max_d = sun.max_near(s.lat, s.lon, a.near_m)
         rec = {"mazarico_sun": round(m_sun, 4), "mazarico_earth": round(m_earth, 4),
+               "mazarico_sun_max_near": round(sun.frac(sun_max), 4), "near_max_at_m": round(sun_max_d),
                "psr_nearest_km": None if dist is None else round(dist, 2), "psr_area_within_5km_km2": round(area, 2)}
         ours = ""
         if v is not None:

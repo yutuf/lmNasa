@@ -273,9 +273,13 @@ What this means:
   (Gläser et al.: 88 % at 2 m). A crest is narrower than a pixel or two, so a value sampled exactly
   there swings with any registration offset. Conclusion so far: on smooth ground the two models agree;
   on ridges and peaks a single-point comparison is not decisive either way.
-- Registration check (prepared): `scripts/check_map_alignment.py` finds the shift that best aligns two
-  NASA maps over thousands of pixels (it recovers a planted 60 m / 120 m offset in the tests). A
-  non-zero shift between the 120 m and 60 m products would explain the ridge disagreement.
+- **Registration check:** `scripts/check_map_alignment.py` compares NASA's 120 m and 60 m maps over
+  5,555 pixels between 85.5°S and 89.5°S. The mismatch is 0.0194 at zero shift and the same at the
+  "best" shift of 30 m, half a 60 m pixel and below what the method resolves: **the two maps are
+  registered**, so a misalignment between them does not explain the ridge values. (In the tests the
+  script recovers a planted offset exactly.)
+- Next check: whether the 60 m pixel at the ridge coordinate simply sits beside a narrow lit crest.
+  `mazarico_compare.py` now also records NASA's highest value within 120 m of each site.
 
 **Best-in-region points with NASA's numbers and the nearest permanent shadow:**
 
