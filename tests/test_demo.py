@@ -37,3 +37,12 @@ def test_demo_doc_links_match_the_tested_scenes():
     doc = (ROOT / "docs" / "DEMO.md").read_text()
     for params, *_ in SCENES:
         assert "?" + "&".join(f"{k}={v}" for k, v in params.items()) in doc, params
+
+
+def test_every_backup_screenshot_exists():
+    doc = (ROOT / "docs" / "DEMO.md").read_text()
+    import re
+    imgs = re.findall(r"\((demo/[\w.]+\.png)\)", doc)
+    assert len(imgs) == len(SCENES)
+    for rel in imgs:
+        assert (ROOT / "docs" / rel).stat().st_size > 10_000, rel
