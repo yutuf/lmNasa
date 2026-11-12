@@ -1,0 +1,47 @@
+{
+  "dem": "ldem_85s_40m.img",
+  "m_per_px": 40.0,
+  "step": 3,
+  "scale": 200000.0,
+  "exaggeration": 1.0,
+  "size_km": 24.0,
+  "edge_mm": 120.0,
+  "base_mm": 3.0,
+  "relief_mm": 24.225,
+  "elevation_min_m": 326.5,
+  "elevation_max_m": 5171.5,
+  "orientation": "+y = toward lon 0 (Earth side), +x = toward lon 90 E",
+  "triangles": 82400,
+  "sites": [
+    {
+      "id": "malapert_massif",
+      "name": "Malapert Massif (Artemis III region core)",
+      "lat": -86.0,
+      "lon": 0.0,
+      "elevation_m": 4795.0,
+      "x_mm": 71.3,
+      "y_mm": 57.813,
+      "z_mm": 22.342
+    },
+    {
+      "id": "malapert_massif_derived",
+      "name": "Malapert Massif (Artemis III region core) â€” derived best point",
+      "lat": -85.99338,
+      "lon": 0.18879,
+      "elevation_m": 4851.0,
+      "x_mm": 73.302,
+      "y_mm": 58.815,
+      "z_mm": 22.622
+    },
+    {
+      "id": "malapert_massif_region_best",
+      "name": "Malapert Massif â€” best point in the Artemis III region",
+      "lat": -85.96679,
+      "lon": -2.30609,
+      "elevation_m": 4989.5,
+      "x_mm": 46.684,
+      "y_mm": 62.359,
+      "z_mm": 23.315
+    }
+  ]
+}

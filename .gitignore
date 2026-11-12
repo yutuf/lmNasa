@@ -12,3 +12,8 @@ data/dem
 *.egg-info/
 data/illumination
 build/
+
+# KiCad local state
+*.kicad_prl
+fp-info-cache
+*-backups/
