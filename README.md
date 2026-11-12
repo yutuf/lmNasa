@@ -83,6 +83,7 @@ The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit 
 | `scripts/artemis_regions.py` | USGS grid shapefiles | Artemis III region centres in `data/sites.yaml` |
 | `scripts/derive_region_best.py` | LOLA DEM + USGS grids + series | best point inside each region (`<site>_region_best`) |
 | `scripts/mazarico_compare.py` | NASA PGDA illumination + PSR maps | `data/mazarico.json`: independent check + nearest permanent shadow |
+| `scripts/check_map_alignment.py` | two NASA maps | best registration shift between them (diagnostic) |
 | `scripts/make_demo_series.py` | nothing | synthetic series for UI work only (clearly flagged in the app) |
 
 ## Quick start
@@ -264,7 +265,17 @@ What this means:
 - Largest gaps among published points: Shackleton ridge (NASA 78.3 %, LunaNav 91.1 %; Gläser et al.
   report 88 % at 2 m) and de Gerlache rim (53.1 % vs 77.3 %), both near-grazing-Sun sites at 88–89.5°S
   where observer height is known to matter most.
-- Next check that can separate the causes: the same comparison with NASA's 60 m maps (85°S–90°S).
+- **60 m follow-up** (NASA's 85°S–90°S maps, `data/mazarico_60m.json`): the resolution explanation is
+  *not* supported. On the same eight best-in-region points the median gap stays the same (+8.7 → +9.2
+  points), and the Earth gap grows. NASA's own two maps agree on smooth ground (Haworth centre
+  10.7 % / 10.4 %, Slater Plain centre 2.6 % / 2.6 %, de Gerlache Rim 2 centre 38.0 % / 38.0 %) but not
+  on narrow ridges: at the Shackleton ridge point the 120 m map gives 78.3 %, the 60 m map 44.3 %
+  (Gläser et al.: 88 % at 2 m). A crest is narrower than a pixel or two, so a value sampled exactly
+  there swings with any registration offset. Conclusion so far: on smooth ground the two models agree;
+  on ridges and peaks a single-point comparison is not decisive either way.
+- Registration check (prepared): `scripts/check_map_alignment.py` finds the shift that best aligns two
+  NASA maps over thousands of pixels (it recovers a planted 60 m / 120 m offset in the tests). A
+  non-zero shift between the 120 m and 60 m products would explain the ridge disagreement.
 
 **Best-in-region points with NASA's numbers and the nearest permanent shadow:**
 
@@ -279,6 +290,10 @@ What this means:
 | de Gerlache Rim 2 | 46.9 % | 66.2 % / 81.6 % | 61.6 % / 57.1 % | 2.72 km | 0.91 km² |
 | Nobile Rim 2 | 43.7 % | 51.6 % / 51.9 % | 74.6 % / 83.0 % | 2.31 km | 19.21 km² |
 | Slater Plain | 34.6 % | 65.6 % / 67.0 % | 49.9 % / 46.2 % | 0.31 km | 0.32 km² |
+
+Nearest-PSR distances come from the 120 m map, which covers every site. At 60 m smaller shadows
+appear and many distances shrink (e.g. Mons Mouton Plateau best point 7.0 → 0.95 km, de Gerlache Rim 2
+best point 2.72 → 0.25 km), so read the 120 m distances as upper bounds.
 
 For Mons Mouton the seeded region search returned the 1 km derived point itself (72.5 %, 0.5 km N),
 closing the gap noted above.
