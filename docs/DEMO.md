@@ -63,6 +63,23 @@ Point at the heatmap: bright = go. Point at the map: the green boxes are NASA's 
 
 ---
 
+**Offline backup** (no internet at the venue): the same scenes as screenshots of the real app,
+regenerated from these exact links.
+
+| scene | screenshot |
+|---|---|
+| 1. published Malapert point, NO-GO | [demo/1a_malapert_published.png](demo/1a_malapert_published.png) |
+| 1. derived point, battery fails (needs 6,598 Wh) | [demo/1b_malapert_derived.png](demo/1b_malapert_derived.png) |
+| 1. derived point with 6,600 Wh, GO | [demo/1c_malapert_derived_6600Wh.png](demo/1c_malapert_derived_6600Wh.png) |
+| 1. best point in the region, GO | [demo/1d_malapert_region_best.png](demo/1d_malapert_region_best.png) |
+| 2. Apollo 11 at nightfall, NO-GO (66,316 Wh) | [demo/2a_apollo11_nightfall.png](demo/2a_apollo11_nightfall.png) |
+| 2. Apollo 11 at sunrise, GO | [demo/2b_apollo11_sunrise.png](demo/2b_apollo11_sunrise.png) |
+
+To run the app on a laptop without internet: `streamlit run app.py`, then use the same links on
+`http://localhost:8501/`.
+
+---
+
 Honest-answer cheat sheet for questions:
 - *Is the lander real?* No, illustrative (400 W array, 150 W load); all lander numbers are editable.
 - *How accurate is the terrain?* LOLA 40 m/pixel; boulders and small craters are not visible.
