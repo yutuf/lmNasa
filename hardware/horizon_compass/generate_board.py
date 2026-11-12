@@ -167,14 +167,15 @@ def main():
         via(polar(R_VIA, az), "GND")
 
     # ESP32-C3-DevKitM-1 on the back (USB and antenna stay clear of the LED face).
-    # Pin numbers follow Espressif's J1 (1-15) / J3 (16-30) header order: verify before ordering.
+    # Pin numbers checked against KiCad's own symbol (hardware/tools/kicad_pins.py RF_Module ESP32-C3-DevKitM-1):
+    # 5V = 13, 14; IO10 = 11; GND = 1, 6, 8, 12, 15, 16, 19, 24, 27, 30.
     devkit = place("RF_Module", "ESP32-C3-DevKitM-1", "A1", "ESP32-C3-DevKitM-1", CX, CY)
     devkit.SetLayerAndFlip(pcbnew.B_Cu)
     # The library footprint's origin is pin 1: shift it so the two header rows are centred on the board.
     px = [pcbnew.ToMM(p.GetPosition().x) for p in devkit.Pads()]
     py = [pcbnew.ToMM(p.GetPosition().y) for p in devkit.Pads()]
     devkit.SetPosition(pt(2 * CX - (min(px) + max(px)) / 2.0, 2 * CY - (min(py) + max(py)) / 2.0))
-    devkit_nets = {"+5V": (13, 14), "GND": (1, 6, 8, 12, 15, 16, 19, 22, 27, 30), "LED_GPIO": (11,)}
+    devkit_nets = {"+5V": (13, 14), "GND": (1, 6, 8, 12, 15, 16, 19, 24, 27, 30), "LED_GPIO": (11,)}
     numbers = {p.GetNumber() for p in devkit.Pads()}
     for name, pins in devkit_nets.items():
         for n in pins:
