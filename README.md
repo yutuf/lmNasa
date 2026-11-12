@@ -37,6 +37,9 @@ and expert knowledge. LunaNav answers it in one screen:
 - **Plain-language help** in the app for students, educators and the public, and four ready-made
   classroom activities with answers: [docs/EDUCATORS.md](docs/EDUCATORS.md).
 - **2-minute demo script** with a link per scene, every verdict checked in CI: [docs/DEMO.md](docs/DEMO.md).
+- **Physical twin** (design stage, not yet manufactured): a true-scale 3D-printable relief of Malapert
+  Massif with the three demo points, and a 24-LED "horizon compass" PCB that replays a site's Sun and
+  Earth directions from LunaNav's data: [hardware/README.md](hardware/README.md).
 
 ## Results at a glance
 
@@ -108,6 +111,8 @@ The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit 
 | `scripts/mazarico_compare.py` | NASA PGDA illumination + PSR maps | `data/mazarico.json`: independent check + nearest permanent shadow |
 | `scripts/check_map_alignment.py` | two NASA maps | best registration shift between them (diagnostic) |
 | `scripts/make_demo_series.py` | nothing | synthetic series for UI work only (clearly flagged in the app) |
+| `scripts/make_relief.py` | PDS LOLA polar `.img` | 3D-printable terrain tile (`hardware/relief/*.stl` + site positions) |
+| `scripts/export_compass_track.py` | a site's series | LED animation for the horizon compass (`firmware/track.h`) |
 
 ## Quick start
 

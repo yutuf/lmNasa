@@ -68,4 +68,20 @@ items, but:
 - All 24 LEDs at full white draw about 1.4 A, more than USB through the devkit can supply. The intended
   use lights two LEDs; firmware must cap brightness.
 - The ground pour runs under the devkit's antenna; add a keep-out there.
-- No mounting holes, no firmware yet. The LED chain runs counter-clockwise from D1 (north).
+- No mounting holes. The LED chain runs counter-clockwise from D1 (north).
+
+### Firmware and data
+
+`scripts/export_compass_track.py` turns any site's precomputed series into `firmware/track.h`: per hour,
+the LED facing the Sun, its brightness (visible fraction of the solar disk above the terrain) and the LED
+facing Earth (lit while Earth's centre is above the terrain). `firmware/firmware.ino` (Arduino core for
+ESP32, Adafruit NeoPixel) replays it at one hour per frame, so 30 days take about a minute.
+
+```bash
+python scripts/export_compass_track.py malapert_massif --start 2027-09-09 --days 30               # committed default
+python scripts/export_compass_track.py malapert_massif_region_best --start 2027-09-09 --days 30   # 5 km west
+```
+
+Same 30 days, two spots 5 km apart: at the published point the Sun LED is lit in 64 % of the 720 frames
+and the Earth LED in 40 %; at the best point in the region both stay on in every frame. **The firmware
+has not been compiled or run on hardware yet.**
