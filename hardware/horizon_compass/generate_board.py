@@ -217,6 +217,10 @@ def main():
     for a, b in zip(route, route[1:]):
         track(a, b, "LED_GPIO", 0.25)
 
+    # Two M3 mounting holes, outside the devkit's footprint and inside the LED ring.
+    for k, side in enumerate((-1, 1), start=1):
+        place("MountingHole", "MountingHole_3.2mm_M3", f"H{k}", "M3", CX + side * 19.5, CY)
+
     # Ground pours on both layers.
     for layer in (pcbnew.F_Cu, pcbnew.B_Cu):
         zone = pcbnew.ZONE(board)

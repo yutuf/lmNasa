@@ -24,6 +24,7 @@ visibility from 44 % to 100 %.
 | `relief/malapert_massif.stl` | watertight solid, millimetres, 82,400 triangles: ready to slice |
 | `relief/malapert_massif.json` | tile metadata and the model-space position of each point |
 | `relief/malapert_massif.f3d` | Fusion archive: the mesh plus the three pins as solid bodies |
+| `horizon_compass/horizon_compass.step` | the board as a STEP solid, for CAD enclosures |
 
 Rebuild, or make another tile (any site ids from `data/sites.yaml` / `data/derived_sites.yaml`):
 
@@ -68,7 +69,7 @@ items, but:
 - All 24 LEDs at full white draw about 1.4 A, more than USB through the devkit can supply. The intended
   use lights two LEDs; firmware must cap brightness.
 - The ground pour runs under the devkit's antenna; add a keep-out there.
-- No mounting holes. The LED chain runs counter-clockwise from D1 (north).
+- The LED chain runs counter-clockwise from D1 (north). Two M3 mounting holes sit left and right of the devkit.
 
 ### Firmware and data
 
