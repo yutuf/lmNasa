@@ -76,8 +76,9 @@ def test_url_encodes_and_restores_the_scenario():
 def test_table_and_detail_show_artemis_region():
     at = AppTest.from_file(APP, default_timeout=180).run()
     assert not at.exception, at.exception
-    df = at.dataframe[0].value
-    assert "artemis_region" in df.columns and (df.artemis_region != "–").any()
+    assert "Verdict" in at.dataframe[0].value.columns                     # the plain table comes first
+    df = next(d.value for d in at.dataframe if "artemis_region" in d.value.columns)
+    assert (df.artemis_region != "–").any()
     assert any("Artemis III region:" in c.value for c in at.caption)
 
 
