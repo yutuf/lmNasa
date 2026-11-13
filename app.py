@@ -5,6 +5,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+import simple_view
+
 from pathlib import Path
 
 from lunanav.horizon import HorizonProfile, load_profiles
@@ -24,7 +26,7 @@ MAZARICO = HORIZONS.with_name("mazarico.json")                 # scripts/mazaric
 @st.cache_resource
 def mazarico():
     import json
-    return json.loads(MAZARICO.read_text()) if MAZARICO.exists() else None
+    return json.loads(MAZARICO.read_text(encoding="utf-8")) if MAZARICO.exists() else None
 
 
 def psr_km(s):
@@ -64,8 +66,11 @@ def until(mask, i, step, verb_on, verb_off):
     verb = verb_on if mask[i] else verb_off
     return f"does not {verb} before the data ends" if h is None else f"{verb}s in {fmt_hours(h)}"
 
-st.set_page_config(page_title="LunaNav", page_icon="🌘", layout="wide")
-st.title("LunaNav — where and when should we land?")
+st.set_page_config(page_title="LunaNav", page_icon="🌘", layout="wide", initial_sidebar_state="collapsed")
+st.title("LunaNav — where and when should we land on the Moon?")
+simple_box = st.container()   # the judge-first view, filled once the mission settings are known
+st.divider()
+st.header("Planner: every spot × every landing date")
 st.caption("Pick mission constraints. Every site × start date is scored on sunlight, "
            "Earth visibility and battery survival.")
 
@@ -197,6 +202,9 @@ def scan_site(settings: tuple, site_id: str):
 
 settings = (duration, min_sun, min_comm, max_dark, peak, load, batt, min_soc, stride)
 scans = {s.id: scan_site(settings, s.id) for s in sites}
+
+with simple_box:
+    simple_view.render(c, horizons())
 
 # ---------------- heatmap: site × start date ----------------
 COMPASS8 = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]

@@ -31,6 +31,8 @@ def test_demo_scene(params, verdict, needles):
     assert f"**{verdict}**" in text, text[:200]
     for n in needles:
         assert n in text, (n, text[:300])
+    big = next(m.value for m in at.markdown if "font-size:52px" in m.value)     # the simple view's verdict
+    assert f">{verdict}<" in big, big[:300]
 
 
 def test_time_cursor_shows_sun_and_earth_altitude():

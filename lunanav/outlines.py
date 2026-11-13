@@ -65,7 +65,7 @@ class RegionOutlines:
     @classmethod
     def load(cls, path) -> "RegionOutlines | None":
         p = Path(path)
-        return cls(json.loads(p.read_text())) if p.exists() else None
+        return cls(json.loads(p.read_text(encoding="utf-8"))) if p.exists() else None
 
     def regions_at(self, lat, lon) -> list[str]:
         """Display names of every Artemis III region containing (lat, lon). Regions can overlap

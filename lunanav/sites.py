@@ -35,11 +35,11 @@ class Site:
 
 def load_sites(path: str | Path = SITES_FILE, include_derived: bool = True) -> list[Site]:
     """Cited sites; each derived point (if generated) is placed right after its parent."""
-    cited = [Site(**s) for s in yaml.safe_load(Path(path).read_text())["sites"]]
+    cited = [Site(**s) for s in yaml.safe_load(Path(path).read_text(encoding="utf-8"))["sites"]]
     derived_file = Path(path).with_name(DERIVED_FILE.name)
     if not include_derived or not derived_file.exists():
         return cited
-    derived = [Site(**s) for s in (yaml.safe_load(derived_file.read_text()) or {}).get("sites", [])]
+    derived = [Site(**s) for s in (yaml.safe_load(derived_file.read_text(encoding="utf-8")) or {}).get("sites", [])]
     out = []
     for c in cited:
         out.append(c)
