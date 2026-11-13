@@ -14,6 +14,7 @@ export interface Spot {
 }
 
 export interface Manifest {
+  regions?: { name: string; rings: number[][][] }[]
   pole_cap?: { albedo: string; normal: string; r_max_m: number; edge_lat: number }
   start_unix: number
   step_h: number

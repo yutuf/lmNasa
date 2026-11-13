@@ -1,87 +1,193 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
-import { loadDsn, loadManifest, loadPatch, loadSeries, type Manifest, type Series, type Spot } from './data'
-import { directionMoonFixed } from './geometry'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
+import * as THREE from 'three'
+import { dataUrl, loadManifest, type Manifest, type Series } from './data'
+import { insideRing, parseAtlas, parseEphem, pointTrack, type Atlas, type PointResult } from './engine'
 import { T, fmtPct, hours, why, type Lang } from './i18n'
-import { evaluateWindow, requiredBatteryWh } from './model'
+import { evaluateWindow, requiredBatteryWh, type Constraints } from './model'
+import { EngineRunner } from './runner'
 import HorizonView from './components/HorizonView'
+import type { Overlay, Pin } from './components/Globe'
 
 const Globe = lazy(() => import('./components/Globe'))
-const Terrain = lazy(() => import('./components/Terrain'))
 
 const PLANNER_URL = 'https://limitlessapps.streamlit.app/'
 const REPO_URL = 'https://github.com/yutuf/lmNasa'
-const COMPARE = ['malapert_massif', 'malapert_massif_derived', 'malapert_massif_region_best', 'shackleton_ridge',
-  'mission_apollo_11_1969']
 
-function readHash() {
-  const p = new URLSearchParams(location.hash.slice(1))
-  return { spot: p.get('spot') ?? 'malapert_massif', date: p.get('date') ?? '2027-09-09', lang: (p.get('lang') ?? 'en') as Lang }
+type Text = Record<Lang, string>
+const S = {
+  hero: { en: 'Where can we land on the Moon?', tr: "Ay'da nereye inebiliriz?" },
+  sub: {
+    en: 'Describe your mission. LunaNav searches 21,856 points near the lunar south pole, hour by hour, over the real terrain, and shows where and when a solar lander survives.',
+    tr: "Görevinizi tarif edin. LunaNav Ay'ın güney kutbu çevresindeki 21.856 noktayı, gerçek arazi üzerinde saat saat tarar ve güneş enerjili bir aracın nerede ve ne zaman yaşayabileceğini gösterir.",
+  },
+  mission: { en: 'Mission', tr: 'Görev' },
+  window: { en: 'Landing window', tr: 'İniş penceresi' },
+  from: { en: 'from', tr: 'başlangıç' },
+  days: { en: 'days', tr: 'gün' },
+  stay: { en: 'Stay on the surface', tr: 'Yüzeyde kalış' },
+  needSun: { en: 'Sunlight at least', tr: 'En az güneş' },
+  needEarth: { en: 'Earth contact at least', tr: 'En az Dünya bağlantısı' },
+  maxShadow: { en: 'Longest shadow at most', tr: 'En uzun gölge en çok' },
+  battery: { en: 'Battery', tr: 'Batarya' },
+  slope: { en: 'Steepest ground', tr: 'En dik zemin' },
+  dsn: { en: 'Earth contact needs a NASA DSN dish too', tr: 'Dünya bağlantısı NASA DSN anteni de gerektirsin' },
+  search: { en: 'Find landing sites', tr: 'İniş yerlerini bul' },
+  searching: { en: 'Searching', tr: 'Aranıyor' },
+  results: { en: 'Best landing sites', tr: 'En iyi iniş yerleri' },
+  goDays: { en: 'GO on', tr: 'Uygun' },
+  of: { en: 'of', tr: '/' },
+  landingDates: { en: 'landing dates', tr: 'iniş tarihi' },
+  bestDate: { en: 'best landing', tr: 'en iyi iniş' },
+  inRegion: { en: 'Artemis III region', tr: 'Artemis III bölgesi' },
+  nothing: { en: 'No point meets these requirements in this window. Loosen a requirement or move the window.', tr: 'Bu pencerede gereksinimleri karşılayan nokta yok. Bir gereksinimi gevşetin veya pencereyi kaydırın.' },
+  legend: { en: 'Green: GO on most landing dates · red: never GO · clear: too steep', tr: 'Yeşil: çoğu tarihte uygun · kırmızı: hiç uygun değil · boş: çok dik' },
+  stats: { en: 'points checked', tr: 'nokta tarandı' },
+  hoursChecked: { en: 'hour-by-hour checks', tr: 'saatlik kontrol' },
+  seconds: { en: 's', tr: 'sn' },
+  thisSite: { en: 'This site', tr: 'Bu nokta' },
+  otherDates: { en: 'Other landing dates in the window', tr: 'Penceredeki diğer iniş tarihleri' },
+} satisfies Record<string, Text>
+
+const PRESETS = [
+  { id: 'lander', name: { en: 'Solar lander · 14 days', tr: 'Güneş enerjili iniş aracı · 14 gün' }, days: 14, sun: 70, earth: 50, shadow: 48, batt: 2000 },
+  { id: 'long', name: { en: 'Long stay · 28 days', tr: 'Uzun kalış · 28 gün' }, days: 28, sun: 60, earth: 50, shadow: 72, batt: 6000 },
+  { id: 'sprint', name: { en: 'Short sprint · 5 days', tr: 'Kısa görev · 5 gün' }, days: 5, sun: 80, earth: 70, shadow: 24, batt: 1000 },
+]
+
+interface Params { start: string; windowDays: number; days: number; sun: number; earth: number; shadow: number; batt: number; slope: number; dsn: boolean }
+
+function readHash(): { lang: Lang; p: Params } {
+  const q = new URLSearchParams(location.hash.slice(1))
+  const num = (k: string, d: number) => (q.has(k) ? Number(q.get(k)) : d)
+  return {
+    lang: q.get('lang') === 'tr' ? 'tr' : 'en',
+    p: { start: q.get('start') ?? '2027-09-01', windowDays: num('window', 30), days: num('days', 14), sun: num('sun', 70),
+      earth: num('earth', 50), shadow: num('shadow', 48), batt: num('batt', 2000), slope: num('slope', 8), dsn: q.get('dsn') !== '0' },
+  }
 }
 
 export default function App() {
   const init = readHash()
+  const [lang, setLang] = useState<Lang>(init.lang)
+  const [p, setP] = useState<Params>(init.p)
   const [m, setM] = useState<Manifest | null>(null)
+  const [atlas, setAtlas] = useState<Atlas | null>(null)
+  const [results, setResults] = useState<PointResult[] | null>(null)
+  const [ran, setRan] = useState<{ q: Params; ms: number; hoursChecked: number } | null>(null)
+  const [progress, setProgress] = useState<number | null>(null)
+  const [sel, setSel] = useState(0)
   const [dsn, setDsn] = useState<boolean[] | null>(null)
-  const [lang, setLang] = useState<Lang>(init.lang === 'tr' ? 'tr' : 'en')
-  const [spotId, setSpotId] = useState(init.spot)
-  const [date, setDate] = useState(init.date)
-  const [series, setSeries] = useState<Record<string, Series>>({})
-  const [patch, setPatch] = useState<Int16Array | null>(null)
-  const [hour, setHour] = useState(0)
+  const ephemRef = useRef<ArrayBuffer | null>(null)
+  const runner = useRef<EngineRunner | null>(null)
 
-  useEffect(() => { loadManifest().then(setM) }, [])
-  useEffect(() => { if (m) loadDsn(m.dsn).then(setDsn) }, [m])
-  const spot: Spot | undefined = m?.spots.find((s) => s.id === spotId) ?? m?.spots[0]
   useEffect(() => {
-    if (!m || !spot) return
-    const want = new Set([spot.id, ...COMPARE])
-    want.forEach((id) => {
-      const s = m.spots.find((x) => x.id === id)
-      if (s && !series[id]) loadSeries(s, m.n).then((v) => setSeries((old) => ({ ...old, [id]: v })))
-    })
-    setPatch(null)
-    loadPatch(spot).then(setPatch)
-    setHour(0)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [m, spot?.id])
-  useEffect(() => { history.replaceState(null, '', `#spot=${spotId}&date=${date}&lang=${lang}`) }, [spotId, date, lang])
+    (async () => {
+      const man = await loadManifest()
+      const [a, e, d] = await Promise.all(['atlas.bin', 'ephem.bin', man.dsn].map((f) => fetch(dataUrl(f)).then((r) => r.arrayBuffer())))
+      ephemRef.current = e
+      setDsn(Array.from(new Uint8Array(d), (x) => x === 1))
+      setAtlas(parseAtlas(a))
+      runner.current = new EngineRunner(a, e, d, man.n)
+      setM(man)
+    })()
+  }, [])
+  useEffect(() => {
+    history.replaceState(null, '', `#lang=${lang}&start=${p.start}&window=${p.windowDays}&days=${p.days}&sun=${p.sun}` +
+      `&earth=${p.earth}&shadow=${p.shadow}&batt=${p.batt}&slope=${p.slope}&dsn=${p.dsn ? 1 : 0}`)
+  }, [lang, p])
 
-  const c = m?.constraints
-  const len = m && c ? Math.round((c.duration_days * 24) / m.step_h) : 0
-  const startMs = Date.parse(date + 'T00:00:00Z')
-  const i0 = m ? Math.round((startMs / 1000 - m.start_unix) / 3600 / m.step_h) : 0
-  const v = spot ? series[spot.id] : undefined
-  const valid = m && i0 >= 0 && i0 + len <= m.n
+  const constraints = (q: Params): Constraints | null => m && ({ ...m.constraints, duration_days: q.days,
+    min_sun_frac: q.sun / 100, min_comm_frac: q.earth / 100, max_dark_hours: q.shadow, battery_wh: q.batt })
 
-  const verdict = useMemo(() => {
-    if (!m || !c || !v || !valid) return null
-    const sf = v.sunFraction.subarray(i0, i0 + len)
-    const w = evaluateWindow(sf, v.earthVisible.slice(i0, i0 + len), m.step_h, c)
-    return { w, need: requiredBatteryWh(sf, m.step_h, c) }
-  }, [m, c, v, i0, len, valid])
+  const firstHour = (q: Params) => (m ? Math.round((Date.parse(q.start + 'T00:00:00Z') / 1000 - m.start_unix) / 3600) : 0)
 
-  const verdictAt = (id: string, start: number) => {
-    const s = series[id]
-    if (!m || !c || !s || start < 0 || start + len > m.n) return null
-    return evaluateWindow(s.sunFraction.subarray(start, start + len), s.earthVisible.slice(start, start + len), m.step_h, c).go
+  async function run(q: Params) {
+    if (!m || !atlas || !runner.current) return
+    const c = constraints(q)!
+    const fh = firstHour(q)
+    const nStarts = Math.max(1, Math.min(q.windowDays, Math.floor((m.n - fh - q.days * 24) / 24) + 1))
+    if (fh < 0 || nStarts < 1) return
+    setProgress(0)
+    const t0 = performance.now()
+    const res = await runner.current.run(atlas.n, { firstHour: fh, nStarts, strideH: 24, durationH: q.days * 24,
+      maxSlope: q.slope, needDsn: q.dsn }, c, setProgress)
+    setRan({ q: { ...q, windowDays: nStarts }, ms: performance.now() - t0, hoursChecked: res.length * ((nStarts - 1) * 24 + q.days * 24) })
+    setResults(res)
+    setSel(0)
+    setProgress(null)
   }
+  useEffect(() => { if (m && atlas) run(p) }, [m, atlas])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!m || !c || !spot) return <div className="loading">LunaNav…</div>
-  const minDate = new Date(m.start_unix * 1000).toISOString().slice(0, 10)
-  const maxDate = new Date((m.start_unix + (m.n - len) * 3600 * m.step_h) * 1000).toISOString().slice(0, 10)
-  const k = Math.min(hour, len - 1)
-  const sunDir = v && valid ? directionMoonFixed(v.sunAlt[i0], v.sunAz[i0], spot.lat, spot.lon) : [1, 0, 0]
-  const earthDir = v && valid ? directionMoonFixed(v.earthAlt[i0], v.earthAz[i0], spot.lat, spot.lon) : [1, 0, 0]
-  const link = v && dsn && valid ? Array.from({ length: len }, (_, j) => v.earthVisible[i0 + j] && dsn[i0 + j]) : null
-  const groups: [Spot['group'], string][] = [['pole', T.pole[lang]], ['artemis', T.artemis[lang]], ['mission', T.missions[lang]]]
+  // ranking: most GO landing dates, then best score; keep picks at least 6 km apart
+  const top = useMemo(() => {
+    if (!results || !atlas) return []
+    const order = [...results].sort((a, b) => b.goCount - a.goCount || b.bestScore - a.bestScore)
+    const picks: PointResult[] = []
+    for (const r of order) {
+      if (picks.length >= 10) break
+      if (picks.every((q) => Math.hypot(atlas.xKm[q.index] - atlas.xKm[r.index], atlas.yKm[q.index] - atlas.yKm[r.index]) >= 6)) picks.push(r)
+    }
+    return picks
+  }, [results, atlas])
+
+  const overlay: Overlay | null = useMemo(() => {
+    if (!results || !atlas || !ran) return null
+    const n = Math.round((2 * atlas.rMaxM) / atlas.spacingM) + 1
+    const px = new Uint8Array(n * n * 4)
+    for (const r of results) {
+      const col = Math.round((atlas.xKm[r.index] * 1000 + atlas.rMaxM) / atlas.spacingM)
+      const row = Math.round((atlas.yKm[r.index] * 1000 + atlas.rMaxM) / atlas.spacingM)
+      const f = r.goCount / ran.q.windowDays
+      const k = (row * n + col) * 4
+      if (f > 0) { px[k] = 40; px[k + 1] = 200 + 55 * f; px[k + 2] = 110; px[k + 3] = 90 + 150 * Math.min(1, f * 1.5) }
+      else { px[k] = 229; px[k + 1] = 72; px[k + 2] = 77; px[k + 3] = 70 }
+    }
+    const tex = new THREE.DataTexture(px, n, n, THREE.RGBAFormat)
+    tex.magFilter = THREE.LinearFilter
+    tex.minFilter = THREE.LinearFilter
+    tex.needsUpdate = true
+    return { texture: tex, rMaxM: atlas.rMaxM, edgeLat: -84.5 }
+  }, [results, atlas, ran])
+
+  const pick = top[sel]
+  const region = (r: PointResult) => m?.regions?.find((g) => g.rings.some((ring) => insideRing(atlas!.xKm[r.index], atlas!.yKm[r.index], ring)))?.name.replace(/_/g, ' ')
+  const detail = useMemo(() => {
+    if (!pick || !atlas || !ran || !m || !dsn || !ephemRef.current) return null
+    const fh = firstHour(ran.q)
+    const hoursN = (ran.q.windowDays - 1) * 24 + ran.q.days * 24
+    const eph = parseEphem(ephemRef.current, m.n)
+    const tr = pointTrack(atlas, eph, dsn, pick.index, fh, hoursN)
+    const c = constraints(ran.q)!
+    const a = pick.bestStart * 24
+    const len = ran.q.days * 24
+    const sf = tr.sunFraction.subarray(a, a + len)
+    const ev = (ran.q.dsn ? tr.earthVisible.map((v, k) => v && dsn[fh + k]) : tr.earthVisible).slice(a, a + len)
+    const w = evaluateWindow(sf, ev, 1, c)
+    const series: Series = { sunFraction: Float32Array.from(tr.sunFraction), sunAlt: tr.sunAlt, sunAz: tr.sunAz,
+      earthAlt: tr.earthAlt, earthAz: tr.earthAz, earthVisible: ran.q.dsn ? tr.earthVisible.map((v, k) => v && dsn[fh + k]) : tr.earthVisible }
+    const perStart = Array.from({ length: ran.q.windowDays }, (_, s) => evaluateWindow(
+      tr.sunFraction.subarray(s * 24, s * 24 + len), series.earthVisible.slice(s * 24, s * 24 + len), 1, c).go)
+    return { tr, w, need: requiredBatteryWh(sf, 1, c), series, a, len, fh, perStart, c }
+  }, [pick, atlas, ran, m, dsn])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!m || !atlas) return <div className="loading">LunaNav<small>{lang === 'tr' ? 'NASA verisi yükleniyor…' : 'loading NASA data…'}</small></div>
+  const startDate = (s: number) => new Date(Date.parse(ran!.q.start + 'T00:00:00Z') + s * 86400e3)
+  const fmtDate = (d: Date) => d.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' })
+  const pins: Pin[] = top.map((r, k) => ({ lat: r.lat, lon: r.lon, label: String(k + 1), good: r.goCount > 0 }))
+  const sunDir = detail ? detail.tr.sunDir(detail.a) : [1, 0, 0]
+  const earthDir = detail ? detail.tr.earthDir(detail.a) : [1, 0, 0]
+  const set = <K extends keyof Params>(k: K, v: Params[K]) => setP((o) => ({ ...o, [k]: v }))
 
   return (
     <div className="app">
       <section className="hero">
         <div className="globe-wrap">
           <Suspense fallback={null}>
-            <Globe poleCap={m.pole_cap} spots={m.spots} selected={spot} sunDir={sunDir} earthDir={earthDir} lang={lang} onSelect={setSpotId} />
+            <Globe poleCap={m.pole_cap} overlay={overlay} pins={pins} earthLabel={lang === 'tr' ? 'Dünya' : 'Earth'}
+                   selected={pick ? { lat: pick.lat, lon: pick.lon, label: `#${sel + 1}` } : null}
+                   sunDir={sunDir} earthDir={earthDir} onPick={setSel} />
           </Suspense>
+          <div className="legend">{S.legend[lang]}</div>
         </div>
         <header className="topbar">
           <div className="brand">Luna<span>Nav</span></div>
@@ -92,83 +198,95 @@ export default function App() {
           </div>
         </header>
         <aside className="panel">
-          <h1>{T.title[lang]}</h1>
-          <h2>{T.question[lang]}</h2>
-          <p className="intro">{T.intro[lang]}</p>
-          <div className="pickers">
-            <select value={spot.id} onChange={(e) => setSpotId(e.target.value)} aria-label="spot">
-              {groups.map(([g, label]) => (
-                <optgroup key={g} label={label}>
-                  {m.spots.filter((s) => s.group === g).map((s) => <option key={s.id} value={s.id}>{s.name[lang]}</option>)}
-                </optgroup>
-              ))}
-            </select>
-            <input type="date" value={date} min={minDate} max={maxDate} onChange={(e) => e.target.value && setDate(e.target.value)}
-                   aria-label={T.date[lang]} />
+          <h1>{S.hero[lang]}</h1>
+          <p className="intro">{S.sub[lang]}</p>
+          <div className="presets">
+            {PRESETS.map((pr) => (
+              <button key={pr.id} className={p.days === pr.days && p.sun === pr.sun && p.batt === pr.batt ? 'on' : ''}
+                      onClick={() => setP((o) => ({ ...o, days: pr.days, sun: pr.sun, earth: pr.earth, shadow: pr.shadow, batt: pr.batt }))}>
+                {pr.name[lang]}
+              </button>
+            ))}
           </div>
-          <p className="desc">{spot.desc[lang]} <span className="coords">{spot.lat.toFixed(3)}°, {spot.lon.toFixed(3)}°E</span></p>
-          {verdict ? (
-            <>
-              <div className={`verdict ${verdict.w.go ? 'go' : 'nogo'}`}>
-                <div className="word">{verdict.w.go ? 'GO' : 'NO-GO'}</div>
-                <div className="why">{why(verdict.w, m.step_h, c, lang)}</div>
-              </div>
-              <div className="tiles">
-                <Tile icon="☀️" title={T.sunlight[lang]} value={fmtPct(verdict.w.sunFrac, lang)} note={T.ofMission[lang]} ok={verdict.w.sunFrac >= c.min_sun_frac} />
-                <Tile icon="🌍" title={T.earth[lang]} value={fmtPct(verdict.w.commFrac, lang)}
-                      note={link ? `📡 ${fmtPct(link.filter(Boolean).length / len, lang)}` : T.ofMission[lang]} ok={verdict.w.commFrac >= c.min_comm_frac} />
-                <Tile icon="🔋" title={T.battery[lang]} ok={verdict.w.survived}
-                      value={verdict.w.survived ? T.lasts[lang] : `✕ ${hours((verdict.w.power.firstFailure ?? 0) * m.step_h, lang)}`}
-                      note={verdict.need === 0 ? '—' : `${Math.round(verdict.need).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')} Wh`} />
-              </div>
-            </>
-          ) : <div className="verdict wait">…</div>}
+          <div className="form">
+            <label>{S.window[lang]}
+              <span className="row">
+                <input type="date" value={p.start} min="2026-11-01" max="2028-11-30" onChange={(e) => e.target.value && set('start', e.target.value)} />
+                <Slider v={p.windowDays} min={5} max={90} step={5} on={(v) => set('windowDays', v)} unit={` ${S.days[lang]}`} />
+              </span>
+            </label>
+            <label>{S.stay[lang]}<Slider v={p.days} min={1} max={30} on={(v) => set('days', v)} unit={` ${S.days[lang]}`} /></label>
+            <label>{S.needSun[lang]}<Slider v={p.sun} min={0} max={100} step={5} on={(v) => set('sun', v)} unit="%" /></label>
+            <label>{S.needEarth[lang]}<Slider v={p.earth} min={0} max={100} step={5} on={(v) => set('earth', v)} unit="%" /></label>
+            <label>{S.maxShadow[lang]}<Slider v={p.shadow} min={0} max={240} step={6} on={(v) => set('shadow', v)} unit=" h" /></label>
+            <label>{S.battery[lang]}<Slider v={p.batt} min={500} max={20000} step={500} on={(v) => set('batt', v)} unit=" Wh" /></label>
+            <label>{S.slope[lang]}<Slider v={p.slope} min={2} max={20} on={(v) => set('slope', v)} unit="°" /></label>
+            <label className="check"><input type="checkbox" checked={p.dsn} onChange={(e) => set('dsn', e.target.checked)} /> {S.dsn[lang]}</label>
+          </div>
+          <button className="go-btn" disabled={progress !== null} onClick={() => run(p)}>
+            {progress !== null ? `${S.searching[lang]} ${Math.round(progress * 100)}%` : S.search[lang]}
+            {progress !== null && <i style={{ width: `${progress * 100}%` }} />}
+          </button>
+          {ran && (
+            <p className="stats">{atlas.n.toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')} {S.stats[lang]} ·{' '}
+              {(ran.hoursChecked / 1e6).toFixed(1)} M {S.hoursChecked[lang]} · {(ran.ms / 1000).toFixed(1)} {S.seconds[lang]}</p>
+          )}
+          {results && ran && (
+            <div className="results">
+              <h3>{S.results[lang]}</h3>
+              {top.length === 0 || top[0].goCount === 0 ? <p className="note">{S.nothing[lang]}</p> : null}
+              <ol>
+                {top.map((r, k) => (
+                  <li key={r.index} className={k === sel ? 'on' : ''} onClick={() => setSel(k)}>
+                    <b className={r.goCount > 0 ? 'g' : 'r'}>{k + 1}</b>
+                    <span>
+                      <em>{r.lat.toFixed(2)}°, {r.lon.toFixed(2)}°E{region(r) ? ` · ${region(r)}` : ''}</em>
+                      {S.goDays[lang]} {r.goCount} {S.of[lang]} {ran.q.windowDays} {S.landingDates[lang]} · {S.bestDate[lang]} {fmtDate(startDate(r.bestStart))}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
         </aside>
       </section>
 
-      {verdict && v && (
+      {detail && ran && pick && (
         <main className="content">
-          <div className="card">
-            <h3>{T.dayByDay[lang]}</h3>
-            <DayStrip v={v} i0={i0} len={len} perDay={Math.round(24 / m.step_h)} link={link} lang={lang} />
-            <p className="note">📡 {T.dsnNote[lang]}</p>
+          <div className="card site-head">
+            <div>
+              <h3>#{sel + 1} · {pick.lat.toFixed(3)}°, {pick.lon.toFixed(3)}°E {region(pick) ? `· ${S.inRegion[lang]} ${region(pick)}` : ''}</h3>
+              <p className="muted">{S.bestDate[lang]}: {fmtDate(startDate(pick.bestStart))} · {ran.q.days} {S.days[lang]} · {lang === 'tr' ? 'eğim' : 'slope'} {atlas.slope[pick.index].toFixed(1)}° · {lang === 'tr' ? 'yükseklik' : 'height'} {atlas.height[pick.index]} m</p>
+            </div>
+            <div className={`verdict small ${detail.w.go ? 'go' : 'nogo'}`}>
+              <div className="word">{detail.w.go ? 'GO' : 'NO-GO'}</div>
+              <div className="why">{why(detail.w, 1, detail.c, lang)}</div>
+            </div>
+            <div className="tiles">
+              <Tile icon="☀️" title={T.sunlight[lang]} value={fmtPct(detail.w.sunFrac, lang)} note={T.ofMission[lang]} ok={detail.w.sunFrac >= detail.c.min_sun_frac} />
+              <Tile icon="🌍" title={T.earth[lang]} value={fmtPct(detail.w.commFrac, lang)} note={ran.q.dsn ? '📡 + NASA DSN' : T.ofMission[lang]} ok={detail.w.commFrac >= detail.c.min_comm_frac} />
+              <Tile icon="🔋" title={T.battery[lang]} ok={detail.w.survived}
+                    value={detail.w.survived ? T.lasts[lang] : `✕ ${hours(detail.w.power.firstFailure ?? 0, lang)}`}
+                    note={detail.need === 0 ? '—' : `${Math.round(detail.need).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')} Wh`} />
+            </div>
           </div>
           <div className="card">
-            <h3>{T.slips[lang]}</h3>
-            <div className="chips">
-              {([[T.onTime, 0], [T.late1d, 1], [T.late1w, 7], [T.late2w, 14], [T.late1m, 30]] as const).map(([label, d]) => (
-                <Chip key={d} label={label[lang]} go={verdictAt(spot.id, i0 + Math.round((d * 24) / m.step_h))} lang={lang} />
+            <h3>{S.otherDates[lang]}</h3>
+            <div className="calendar">
+              {detail.perStart.map((go, s) => (
+                <span key={s} className={`${go ? 'go' : 'nogo'} ${s === pick.bestStart ? 'best' : ''}`} title={fmtDate(startDate(s))}>
+                  {startDate(s).getUTCDate()}
+                </span>
               ))}
             </div>
-            <h3 style={{ marginTop: 18 }}>{T.otherSpots[lang]}</h3>
-            <div className="chips">
-              {COMPARE.map((id) => {
-                const s = m.spots.find((x) => x.id === id)!
-                return <Chip key={id} label={s.name[lang]} go={verdictAt(id, i0)} lang={lang} onClick={() => setSpotId(id)} />
-              })}
-            </div>
+            <h3 style={{ marginTop: 16 }}>{T.dayByDay[lang]}</h3>
+            <DayStrip sun={Array.from({ length: detail.len }, (_, j) => detail.series.sunFraction[detail.a + j] >= 0.5)}
+                      earth={Array.from({ length: detail.len }, (_, j) => detail.series.earthVisible[detail.a + j])}
+                      link={Array.from({ length: detail.len }, (_, j) => detail.tr.link[detail.a + j])} lang={lang} />
+            <p className="note">📡 {T.dsnNote[lang]}</p>
           </div>
-          <HorizonView horizon={spot.horizon} series={v} i0={i0} len={len} stepH={m.step_h} startMs={startMs} lang={lang} />
-          {spot.patch && patch && (
-            <div className="card">
-              <div className="card-head">
-                <h3>{T.ground3d[lang]}</h3>
-                <span className="muted">{((spot.patch.n - 1) * spot.patch.spacing_m / 1000).toFixed(0)} × {((spot.patch.n - 1) * spot.patch.spacing_m / 1000).toFixed(0)} km · NASA LOLA</span>
-              </div>
-              <div className="terrain-wrap">
-                <Suspense fallback={null}>
-                  <Terrain spot={spot} heights={patch} sunAz={v.sunAz[i0 + k]} sunAlt={v.sunAlt[i0 + k]}
-                           earthAz={v.earthAz[i0 + k]} earthAlt={v.earthAlt[i0 + k]} />
-                </Suspense>
-              </div>
-              <label className="hour">
-                {T.hour[lang]}: <b>{T.day[lang]} {Math.floor((k * m.step_h) / 24) + 1}, {String((k * m.step_h) % 24).padStart(2, '0')}:00</b> ·
-                ☀ {v.sunAlt[i0 + k].toFixed(1)}° · {v.sunFraction[i0 + k] >= 0.5 ? '✅' : '🌑'}
-                <input className="range" type="range" min={0} max={len - 1} value={k} onChange={(e) => setHour(+e.target.value)} />
-              </label>
-              <p className="note">{T.dragTurn[lang]}. {T.terrainNote[lang]}</p>
-            </div>
-          )}
+          <HorizonView horizon={detail.tr.horizon} series={detail.series} i0={detail.a} len={detail.len} stepH={1}
+                       startMs={startDate(pick.bestStart).getTime()} lang={lang} />
           <footer className="foot">
             <a href={PLANNER_URL} target="_blank" rel="noreferrer">{T.planner[lang]} ↗</a>
             <a href={REPO_URL} target="_blank" rel="noreferrer">{T.source[lang]} · GitHub ↗</a>
@@ -177,6 +295,16 @@ export default function App() {
         </main>
       )}
     </div>
+  )
+}
+
+
+function Slider({ v, min, max, step = 1, on, unit }: { v: number; min: number; max: number; step?: number; on: (v: number) => void; unit: string }) {
+  return (
+    <span className="slider">
+      <input type="range" min={min} max={max} step={step} value={v} onChange={(e) => on(+e.target.value)} />
+      <output>{v.toLocaleString()}{unit}</output>
+    </span>
   )
 }
 
@@ -190,40 +318,19 @@ function Tile({ icon, title, value, note, ok }: { icon: string; title: string; v
   )
 }
 
-function Chip({ label, go, lang, onClick }: { label: string; go: boolean | null; lang: Lang; onClick?: () => void }) {
-  const cls = go === null ? 'none' : go ? 'go' : 'nogo'
+function DayStrip({ sun, earth, link, lang }: { sun: boolean[]; earth: boolean[]; link: boolean[]; lang: Lang }) {
+  const days = Math.floor(sun.length / 24)
+  const share = (a: boolean[], d: number) => a.slice(d * 24, d * 24 + 24).filter(Boolean).length / 24
+  const rows: [string, string, boolean[]][] = [[`☀️ ${T.sunUp[lang]}`, '242,183,5', sun], [`🌍 ${T.earthUp[lang]}`, '78,168,222', earth],
+    [`📡 ${T.radio[lang]}`, '52,199,89', link]]
   return (
-    <button className={`chip ${cls}`} onClick={onClick} disabled={!onClick}>
-      <span>{label}</span>
-      <b>{go === null ? T.noData[lang] : go ? 'GO' : 'NO-GO'}</b>
-    </button>
-  )
-}
-
-function DayStrip({ v, i0, len, perDay, link, lang }: { v: Series; i0: number; len: number; perDay: number; link: boolean[] | null; lang: Lang }) {
-  const days = Math.floor(len / perDay)
-  const share = (f: (j: number) => boolean, d: number) => {
-    let n = 0
-    for (let j = d * perDay; j < (d + 1) * perDay; j++) if (f(j)) n++
-    return n / perDay
-  }
-  const rows: [string, string, (j: number) => boolean][] = [
-    [`☀️ ${T.sunUp[lang]}`, '242,183,5', (j) => v.sunFraction[i0 + j] >= 0.5],
-    [`🌍 ${T.earthUp[lang]}`, '78,168,222', (j) => v.earthVisible[i0 + j]],
-  ]
-  if (link) rows.push([`📡 ${T.radio[lang]}`, '52,199,89', (j) => link[j]])
-  return (
-    <div className="strip">
-      {rows.map(([label, rgb, f]) => (
+    <div className="strip" style={{ ['--days' as string]: days }}>
+      {rows.map(([label, rgb, a]) => (
         <div className="strip-row" key={label}>
           <span>{label}</span>
-          {Array.from({ length: days }, (_, d) => {
-            const s = share(f, d)
-            return <i key={d} title={`${T.day[lang]} ${d + 1}: ${fmtPct(s, lang)}`} style={{ background: `rgba(${rgb},${0.08 + 0.92 * s})` }} />
-          })}
+          {Array.from({ length: days }, (_, d) => <i key={d} style={{ background: `rgba(${rgb},${0.08 + 0.92 * share(a, d)})` }} />)}
         </div>
       ))}
-      <div className="strip-row days"><span>{T.day[lang]}</span>{Array.from({ length: days }, (_, d) => <em key={d}>{d + 1}</em>)}</div>
     </div>
   )
 }
