@@ -1,6 +1,7 @@
 # 2-minute demo script
 
-Every scene is a link: append the part after the app address (e.g. `https://<your-app>/` + `?site=…`).
+Every scene is a link: append the part after the app address. **The public app is not online yet**, so for
+now use a local run: `streamlit run app.py`, then `http://localhost:8501/` + `?site=…`.
 The address holds the whole scenario, so each scene opens exactly as described. All verdicts and
 numbers below are checked automatically on every push (`tests/test_demo.py`); default lander and
 mission settings (14 days, 70 % sunlight, 50 % Earth, 2,000 Wh battery).

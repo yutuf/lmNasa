@@ -428,9 +428,11 @@ cur = int(round(cur_h / step))
 gi = i0 + cur
 lit_mask = v.sun_fraction >= 0.5
 now = tt[cur]
-sun_txt = (f"☀️ **Sun:** {v.sun_fraction[gi]:.0%} of the disk above the terrain — "
+sun_txt = (f"☀️ **Sun:** altitude {v.sun_alt[gi]:.2f}° above horizontal (terrain in that direction "
+           f"{v.sun_horizon[gi]:.2f}°) · {v.sun_fraction[gi]:.0%} of the disk above the terrain — "
            + until(lit_mask, gi, step, "set", "rise"))
-earth_txt = ("🌍 **Earth:** " + ("in view" if v.earth_visible[gi] else "behind terrain") + " — "
+earth_txt = (f"🌍 **Earth:** altitude {v.earth_alt[gi]:.2f}° above horizontal (terrain in that direction "
+             f"{v.earth_horizon[gi]:.2f}°) · " + ("in view" if v.earth_visible[gi] else "behind terrain") + " — "
              + until(v.earth_visible, gi, step, "set", "rise"))
 st.markdown(f"**{now:%Y-%m-%d %H:%M} UTC** (day {cur * step / 24:.1f})  \n{sun_txt}  \n{earth_txt}")
 
@@ -506,7 +508,7 @@ st.download_button("⬇ Download this mission timeline (CSV, hourly)", timeline.
 with st.expander("Assumptions & limits (read before quoting a number)"):
     st.markdown("""
 - **Geometry is real, the lander is not.** Sun/Earth positions: JPL DE440 + NAIF Moon frames, cross-checked against
-  JPL Horizons (~0.0001°). Terrain: LOLA south-pole DEM, 40 m/pixel, horizon ray-marched to 150 km from a 2 m mast.
+  official JPL Horizons output to 0.00002° (tests/test_horizons.py). Terrain: LOLA south-pole DEM, 40 m/pixel, horizon ray-marched to 150 km from a 2 m mast.
   The power model (two-axis tracking array, constant load, 95 % efficiencies) is **illustrative**, not any real mission.
 - **No atmosphere, so no refraction.** Spherical Moon (R = 1737.4 km) with the DEM on top.
 - **"Sunlit"** = at least half the solar disk above the terrain; **"Earth in view"** = Earth's centre above the terrain.
@@ -540,3 +542,6 @@ if mz_rec is not None:
 st.caption(f"Site: {labels[sites.index(site)]} ({site.lat:.4f}°, {site.lon:.4f}°E) · "
            f"Artemis III region: {in_regions or 'none (outside all nine)'} · source: {site.source} · "
            f"terrain: {terrain} · ephemeris: JPL DE440 via Skyfield · no atmosphere, no refraction.")
+st.caption(f"🔭 Look at this place in NASA's own viewers: [LROC QuickMap](https://quickmap.lroc.im-ldi.com/) · "
+           f"[NASA Moon Trek](https://trek.nasa.gov/moon/), then enter **{site.lat:.4f}°, {site.lon:.4f}°E**. "
+           "They are complementary viewers for imagery and terrain; LunaNav's numbers are not computed from them.")

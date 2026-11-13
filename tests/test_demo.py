@@ -33,6 +33,26 @@ def test_demo_scene(params, verdict, needles):
         assert n in text, (n, text[:300])
 
 
+def test_time_cursor_shows_sun_and_earth_altitude():
+    """The readout under the time slider states both altitudes, taken from the same series the app plots."""
+    import numpy as np
+
+    from lunanav.series import load_series
+
+    v, _, _ = load_series("malapert_massif")
+    i = int(np.searchsorted(v.times_utc, np.datetime64("2027-09-09T00:00", "s")))
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=180)
+    at.query_params.update({"site": "malapert_massif", "start": "2027-09-09T00:00"})
+    at.run()
+    assert not at.exception, at.exception
+    readout = next(m.value for m in at.markdown if "UTC" in m.value and "Sun:" in m.value)
+    assert f"altitude {v.sun_alt[i]:.2f}° above horizontal" in readout, readout
+    assert f"altitude {v.earth_alt[i]:.2f}° above horizontal" in readout, readout
+    viewers = next(c.value for c in at.caption if "QuickMap" in c.value)
+    assert "https://quickmap.lroc.im-ldi.com/" in viewers and "https://trek.nasa.gov/moon/" in viewers
+    assert "not computed from them" in viewers
+
+
 def test_demo_doc_links_match_the_tested_scenes():
     doc = (ROOT / "docs" / "DEMO.md").read_text()
     for params, *_ in SCENES:
