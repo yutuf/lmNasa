@@ -177,3 +177,45 @@ export function nextChanges(eph: Ephem, profile: Float32Array, xM: number, yM: n
   }
   return { sunUp: sun0, earthUp: c0.earthUp, sunH, earthH }
 }
+
+/** Long-term science layers (psr.bin): permanent shadow, average Sun/Earth visibility, ice favorability. */
+export interface Science { n: number; mPerPx: number; half: number; psr: Uint8Array; sun: Uint8Array; earth: Uint8Array; ice: Uint8Array }
+
+export function parseScience(buf: ArrayBuffer): Science {
+  const v = new DataView(buf)
+  const n = v.getUint32(0, true)
+  const layer = (k: number) => new Uint8Array(buf, 12 + k * n * n, n * n)
+  return { n, mPerPx: v.getFloat32(4, true), half: v.getFloat32(8, true), psr: layer(0), sun: layer(1), earth: layer(2), ice: layer(3) }
+}
+
+/** Layer values (0..1; ice in index units 0..0.85) at a stereographic point, or null outside the map. */
+export function scienceAt(sc: Science, x: number, y: number) {
+  const col = Math.floor((x + sc.half) / sc.mPerPx)
+  const row = Math.floor((sc.half - y) / sc.mPerPx)
+  if (col < 0 || row < 0 || col >= sc.n || row >= sc.n) return null
+  const k = row * sc.n + col
+  return { psr: sc.psr[k] / 255, sun: sc.sun[k] / 255, earth: sc.earth[k] / 255, ice: (sc.ice[k] / 255) * 0.85 }
+}
+
+/** The best permanently shadowed cell to sample near (x, y): most ice-favourable, nearer is better. */
+export function findIceTarget(sc: Science, x: number, y: number, maxM = 6000, minM = 300) {
+  let best: { x: number; y: number; ice: number; dist: number; score: number } | null = null
+  const r = Math.ceil(maxM / sc.mPerPx)
+  const c0 = Math.floor((x + sc.half) / sc.mPerPx)
+  const r0 = Math.floor((sc.half - y) / sc.mPerPx)
+  for (let i = r0 - r; i <= r0 + r; i++) {
+    for (let j = c0 - r; j <= c0 + r; j++) {
+      if (i < 0 || j < 0 || i >= sc.n || j >= sc.n) continue
+      const k = i * sc.n + j
+      if (sc.psr[k] < 230) continue
+      const cx = -sc.half + (j + 0.5) * sc.mPerPx
+      const cy = sc.half - (i + 0.5) * sc.mPerPx
+      const dist = Math.hypot(cx - x, cy - y)
+      if (dist > maxM || dist < minM) continue
+      const ice = (sc.ice[k] / 255) * 0.85
+      const score = ice - dist / 40000
+      if (!best || score > best.score) best = { x: cx, y: cy, ice, dist, score }
+    }
+  }
+  return best
+}

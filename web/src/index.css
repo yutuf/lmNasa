@@ -257,3 +257,11 @@ button.big.ghost { border-color: var(--line); background: rgba(255, 255, 255, .0
 }
 .app.driving > .hero, .app.driving > .content { visibility: hidden; }
 body:has(.drive) { overflow: hidden; }
+.hud.objective { left: 20px; top: 92px; background: rgba(5, 8, 16, .55); border: 1px solid rgba(94, 231, 255, .35);
+  border-radius: 14px; padding: 10px 12px; max-width: 340px; display: grid; gap: 3px; backdrop-filter: blur(8px); }
+.hud.objective .drill { color: #5ee7ff; font-weight: 600; } .hud.objective .done { color: #9ff0b5; font-weight: 700; }
+.hud.objective .psr { color: #9fb4ff; }
+.hud.science { left: 50%; transform: translateX(-50%); top: 64px; background: rgba(20, 40, 90, .6); border-radius: 10px; padding: 6px 12px;
+  font-size: 12px; text-align: center; }
+.compass span.tgt { color: #5ee7ff; font-size: 16px; top: 1px; }
+@media (max-width: 760px) { .hud.objective { top: 130px; max-width: 60vw; } .hud.science { top: 120px; width: 80vw; } }
