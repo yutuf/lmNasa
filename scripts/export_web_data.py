@@ -7,6 +7,8 @@ Writes:
   series/<id>.bin          per hour: float32 sun_fraction, int16 sun_alt*100, int16 sun_az*50,
                            int16 earth_alt*100, int16 earth_az*50, uint8 earth_visible (in that order)
   dsn.bin                  per hour: uint8, 1 when a DSN complex sees the Moon above 10 deg
+  ephem.bin                per hour, float32 blocks: Sun unit vector x,y,z and Earth position x,y,z (km) in the
+                           Moon-fixed frame, then the Sun's apparent radius (deg): the search engine's input
   terrain/<id>.bin         int16 heights (m) of the 3D patch around the spot (see manifest for size and frame)
   moon_albedo.jpg, moon_normal.jpg, pole_albedo.jpg, pole_normal.jpg textures for the 3D Moon, from LOLA LDEM_16
   expected.json            the Python models' results on the exported data (the web tests must match them)
@@ -207,6 +209,18 @@ def main():
             lat, lon, v, hz, mission_patch(ldem, lat, lon), "enu")
         print(f"{sid}: sun {np.mean(frac >= 0.5):.0%}, earth {np.mean(v.earth_visible):.0%}")
 
+    # ephemeris for the in-browser search engine: Sun unit vector and Earth position (km) in the Moon-fixed
+    # frame, and the Sun's apparent radius, hourly; built from Apollo 11's DE440 series (lunanav/anywhere.py)
+    from lunanav.anywhere import R_MOON_KM, _direction, _enu
+    d_sun = _direction(v_ref.sun_alt, v_ref.sun_az, a11.lat, a11.lon)
+    d_earth = _direction(v_ref.earth_alt, v_ref.earth_az, a11.lat, a11.lon)
+    p0 = R_MOON_KM * _enu(a11.lat, a11.lon)[2]
+    b = d_earth @ p0
+    s_km = -b + np.sqrt(b * b - R_MOON_KM ** 2 + km ** 2)
+    earth_xyz = p0 + s_km[:, None] * d_earth
+    eph = [d_sun[:, 0], d_sun[:, 1], d_sun[:, 2], earth_xyz[:, 0], earth_xyz[:, 1], earth_xyz[:, 2],
+           sun_radius_deg(v_ref.times_utc)]
+    (OUT / "ephem.bin").write_bytes(b"".join(np.asarray(a, "<f4").tobytes() for a in eph))
     dsn = DSN.load()
     (OUT / "dsn.bin").write_bytes((dsn.elevation_deg > 10).any(axis=0).astype("u1").tobytes())
     from lunanav.polar_grid import PolarGrid
@@ -227,7 +241,19 @@ def main():
                                  need_wh=round(required_battery_wh(d["sun_fraction"][sl], step, c.power), 3)))
     (OUT / "expected.json").write_text(json.dumps(expected, indent=0), encoding="utf-8")
 
-    manifest = dict(pole_cap=dict(albedo="pole_albedo.jpg", normal="pole_normal.jpg", r_max_m=pole_r, edge_lat=-80.0),
+    # Artemis III region outlines (USGS), as closed rings in the atlas's stereographic plane (km)
+    from lunanav.outlines import chain
+    from lunanav.polar_grid import polar_xy as stereo
+    reg = json.loads((ROOT / "data" / "artemis_regions.json").read_text(encoding="utf-8"))["regions"]
+    regions = []
+    for name, r in reg.items():
+        rings = []
+        for ring in chain(r["lines"]):
+            ring = np.asarray(ring, float)
+            x, y = stereo(ring[:, 0], ring[:, 1])
+            rings.append([[round(float(a) / 1000, 2), round(float(b) / 1000, 2)] for a, b in zip(x, y)][::2])
+        regions.append(dict(name=name, rings=rings))
+    manifest = dict(regions=regions, pole_cap=dict(albedo="pole_albedo.jpg", normal="pole_normal.jpg", r_max_m=pole_r, edge_lat=-80.0),
                     start_unix=int(times[0]), step_h=float(step), n=int(n), dsn="dsn.bin",
                     constraints=dict(duration_days=c.duration_days, min_sun_frac=c.min_sun_frac,
                                      min_comm_frac=c.min_comm_frac, max_dark_hours=c.max_dark_hours,
