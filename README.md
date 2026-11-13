@@ -26,6 +26,11 @@ and expert knowledge. LunaNav answers it in one screen:
 - **360° view from the lander:** the terrain silhouette with the Sun's and Earth's paths over the
   mission, plus a time slider — *"on day 5, is the Sun up, and when does it set?"*
 - **Communication windows:** when Earth is above the terrain, and when it next sets or rises.
+- **Any point near the pole:** pick a spot south of 84.5°S on a LOLA relief map (or type its coordinates); the
+  app traces its horizon on the spot from a compact 200 m / 800 m LOLA grid (`data/polar_grid.npz`, 5 MB) and
+  rotates the Sun/Earth track from the nearest computed site. Against the full-resolution horizons at 27 sites:
+  sunlit share within 0.5 points (median, worst 4.1), Earth in view within 0.0 (median, worst 13.9 on a narrow
+  crest); `tests/test_polar_grid.py`.
 - **Deep Space Network check:** Earth above the lander's horizon is not enough; one of NASA's DSN complexes
   (Goldstone, Madrid, Canberra) must also see the Moon. Precomputed hourly (`data/dsn.npz`): each complex sees
   the Moon above 10° about 41 % of the time, at least one of them 98.3 % of the time.
@@ -122,6 +127,8 @@ runs from a plain `pip install -r requirements.txt` with no secrets or API keys 
 | `scripts/mazarico_compare.py` | NASA PGDA illumination + PSR maps | `data/mazarico.json`: independent check + nearest permanent shadow |
 | `scripts/check_map_alignment.py` | two NASA maps | best registration shift between them (diagnostic) |
 | `scripts/make_demo_series.py` | nothing | synthetic series for UI work only (clearly flagged in the app) |
+| `scripts/make_polar_grid.py` | LOLA 85°S 40 m + 80°S 80 m `.img` | `data/polar_grid.npz` for horizons at any point |
+| `scripts/make_terrain_patches.py` | LOLA 85°S 40 m `.img` | `data/terrain/<site>.npz` for the 3D view |
 | `scripts/precompute_dsn.py` | kernels | `data/dsn.npz`: Moon elevation at the three DSN complexes, hourly |
 | `scripts/make_relief.py` | PDS LOLA polar `.img` | 3D-printable terrain tile (`hardware/relief/*.stl` + site positions) |
 | `scripts/export_compass_track.py` | a site's series | LED animation for the horizon compass (`firmware/track.h`) |

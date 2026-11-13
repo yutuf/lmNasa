@@ -72,3 +72,17 @@ def test_every_backup_screenshot_exists():
     assert len(imgs) == len(SCENES)
     for rel in imgs:
         assert (ROOT / "docs" / rel).stat().st_size > 10_000, rel
+
+
+def test_any_point_matches_the_curated_best_spot():
+    """Typing the coordinates of the region-best Malapert point gives the same verdict as the curated spot."""
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=300)
+    at.query_params.update({"site": "malapert_massif", "start": "2027-09-09T00:00"})
+    at.run()
+    next(w for w in at.get("button_group") if "Landing spot" in str(w.proto.label)).set_value("custom").run()
+    next(n for n in at.number_input if n.label.startswith("Latitude")).set_value(-85.967).run()
+    next(n for n in at.number_input if n.label.startswith("Longitude")).set_value(-2.306).run()
+    assert not at.exception, at.exception
+    big = next(m.value for m in at.markdown if "font-size:52px" in m.value)
+    assert ">GO<" in big, big[:300]
+    assert any("Ground height" in c.value for c in at.caption)
