@@ -1,6 +1,6 @@
 # LunaNav — where and when should we land on the Moon?
 
-NASA Space Apps Challenge 2026 · *Lunar Landing Site Navigator*
+Open-source planning tool for landing sites and dates at the lunar south pole.
 
 [![tests](https://github.com/yutuf/lmNasa/actions/workflows/ci.yml/badge.svg)](https://github.com/yutuf/lmNasa/actions/workflows/ci.yml)
 
