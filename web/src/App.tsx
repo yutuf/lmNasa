@@ -6,6 +6,7 @@ import { T, fmtPct, hours, why, type Lang } from './i18n'
 import { evaluateWindow, requiredBatteryWh, type Constraints } from './model'
 import { EngineRunner } from './runner'
 import HorizonView from './components/HorizonView'
+import Luna, { type LunaAction } from './components/Luna'
 import type { Overlay, Pin } from './components/Globe'
 
 const Globe = lazy(() => import('./components/Globe'))
@@ -177,6 +178,30 @@ export default function App() {
   const sunDir = detail ? detail.tr.sunDir(detail.a) : [1, 0, 0]
   const earthDir = detail ? detail.tr.earthDir(detail.a) : [1, 0, 0]
   const set = <K extends keyof Params>(k: K, v: Params[K]) => setP((o) => ({ ...o, [k]: v }))
+  const clamp = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : d)
+  const lunaContext = () => ({
+    settings: ran?.q ?? p,
+    meaning: 'sun/earth = minimum % of mission hours; shadow = longest tolerated darkness (h); batt = Wh; slope = max degrees; dsn = Earth contact also needs a NASA DSN dish',
+    engine: ran ? { pointsChecked: atlas.n, hourlyChecks: ran.hoursChecked, landingDatesInWindow: ran.q.windowDays, firstDate: ran.q.start } : null,
+    results: top.map((r, k) => ({ rank: k + 1, lat: +r.lat.toFixed(3), lon: +r.lon.toFixed(3), artemisRegion: region(r) ?? null,
+      goLandingDates: r.goCount, bestLanding: startDate(r.bestStart).toISOString().slice(0, 10),
+      bestWindow: { sunlightPct: Math.round(r.sunFrac * 100), earthContactPct: Math.round(r.commFrac * 100), longestDarkHours: r.longestDarkH },
+      slopeDeg: atlas.slope[r.index], heightM: atlas.height[r.index] })),
+    selected: detail && pick ? { rank: sel + 1, verdict: detail.w.go ? 'GO' : 'NO-GO', sunlightPct: Math.round(detail.w.sunFrac * 100),
+      earthContactPct: Math.round(detail.w.commFrac * 100), longestDarkHours: detail.w.longestDarkH,
+      batterySurvives: detail.w.survived, batteryNeededWh: Math.round(detail.need),
+      goOnEachLandingDate: detail.perStart.map((g, s) => `${startDate(s).toISOString().slice(0, 10)}:${g ? 'GO' : 'NO-GO'}`) } : null,
+  })
+  const onLuna = (a: LunaAction) => {
+    if (a.type === 'select') { if (a.rank >= 1 && a.rank <= top.length) setSel(a.rank - 1); return }
+    const q = a.params
+    const start = typeof q.start === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(q.start) && q.start >= '2026-11-01' && q.start <= '2028-11-30' ? q.start : p.start
+    const next: Params = { start, windowDays: clamp(q.windowDays, 5, 90, p.windowDays), days: clamp(q.days, 1, 30, p.days),
+      sun: clamp(q.sun, 0, 100, p.sun), earth: clamp(q.earth, 0, 100, p.earth), shadow: clamp(q.shadow, 0, 240, p.shadow),
+      batt: clamp(q.batt, 500, 20000, p.batt), slope: clamp(q.slope, 2, 20, p.slope), dsn: typeof q.dsn === 'boolean' ? q.dsn : p.dsn }
+    setP(next)
+    run(next)
+  }
 
   return (
     <div className="app">
@@ -197,6 +222,7 @@ export default function App() {
             ))}
           </div>
         </header>
+        <Luna lang={lang} context={lunaContext} onAction={onLuna} />
         <aside className="panel">
           <h1>{S.hero[lang]}</h1>
           <p className="intro">{S.sub[lang]}</p>
