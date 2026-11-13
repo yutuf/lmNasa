@@ -13,6 +13,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from lunanav.dsn import DEFAULT_MASK_DEG, DSN
 from lunanav.horizon import HorizonProfile
 from lunanav.metrics import MissionConstraints, evaluate_window
 from lunanav.power import required_battery_wh, simulate_battery
@@ -39,6 +40,33 @@ SUN, EARTH, GREY = "#f2b705", "#4ea8de", "#6b7280"
 @st.cache_resource
 def _series(site_id):
     return load_series(site_id)
+
+
+@st.cache_resource
+def _dsn():
+    return DSN.load()
+
+
+def _verdict(site_id: str, start: pd.Timestamp, c: MissionConstraints):
+    """GO / NO-GO for one spot and landing date, or None when the window runs past the data."""
+    v, step, _ = _series(site_id)
+    i0 = int(np.searchsorted(v.times_utc, np.datetime64(start.to_datetime64(), "s")))
+    n = int(c.duration_days * 24 / step)
+    if i0 + n > len(v.times_utc):
+        return None
+    sl = slice(i0, i0 + n)
+    p = simulate_battery(v.sun_fraction[sl], v.sun_alt[sl], step, c.power)
+    return evaluate_window(v.sun_fraction[sl], v.sun_alt[sl], v.earth_visible[sl], step, c, p)
+
+
+def _chip(label: str, r) -> str:
+    if r is None:
+        colour, word = GREY, "no data"
+    else:
+        colour, word = (GOOD, "GO") if r.meets_constraints else (BAD, "NO-GO")
+    return (f"<div style='flex:1;min-width:150px;border-radius:12px;padding:10px 12px;background:{colour};"
+            f"color:#ffffff'><div style='font-size:13px;opacity:.9'>{html.escape(label)}</div>"
+            f"<div style='font-size:22px;font-weight:800'>{word}</div></div>")
 
 
 def _hours(h: float) -> str:
@@ -73,14 +101,18 @@ def _tile(icon: str, title: str, value: str, note: str, ok: bool) -> str:
             f"<div style='font-size:14px;opacity:.75'>{html.escape(note)}</div></div>")
 
 
-def _day_strip(v, sl, step: float) -> str:
-    """One square per mission day: yellow = share of hours with the Sun up, blue = with Earth up."""
+def _day_strip(v, sl, step: float, link=None) -> str:
+    """One square per mission day: yellow = share of hours with the Sun up, blue = with Earth up,
+    green = with Earth up and a DSN dish facing the Moon (when `link` is given)."""
     sun = (v.sun_fraction[sl] >= 0.5).astype(float)
     earth = v.earth_visible[sl].astype(float)
     per_day = int(round(24 / step))
     n_days = len(sun) // per_day
     cells = []
-    for row, vals, rgb, label in (("sun", sun, "242,183,5", "☀️ Sun up"), ("earth", earth, "78,168,222", "🌍 Earth up")):
+    rows = [("sun", sun, "242,183,5", "☀️ Sun up"), ("earth", earth, "78,168,222", "🌍 Earth up")]
+    if link is not None:
+        rows.append(("link", link.astype(float), "52,199,89", "📡 Radio link"))
+    for row, vals, rgb, label in rows:
         squares = []
         for d in range(n_days):
             share = float(vals[d * per_day:(d + 1) * per_day].mean())
@@ -206,15 +238,33 @@ def render(c: MissionConstraints, horizons: dict) -> None:
     battery_note = ("no battery needed: the panels cover it" if need == 0 else
                     f"a {need:,.0f} Wh battery would be enough" if not p.survived else
                     f"{c.power.battery_wh:,.0f} Wh battery is enough")
+    dsn = _dsn()
+    link = (v.earth_visible[sl] & dsn.any_in_view(v.times_utc[sl])) if dsn else None
+    earth_note = (f"with a NASA dish facing the Moon too: {link.mean():.0%}" if link is not None
+                  else "of the mission")
     st.markdown(
         "<div style='display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px'>"
         + _tile("☀️", "Sunlight", f"{r.sun_frac:.0%}", "of the mission", r.sun_frac >= c.min_sun_frac)
-        + _tile("🌍", "Can talk to Earth", f"{r.comm_frac:.0%}", "of the mission", r.comm_frac >= c.min_comm_frac)
+        + _tile("🌍", "Earth in the sky", f"{r.comm_frac:.0%}", earth_note, r.comm_frac >= c.min_comm_frac)
         + _tile("🔋", "Battery", battery_value, battery_note, p.survived)
         + "</div>", unsafe_allow_html=True)
 
     st.markdown("**Day by day** (brighter = more hours)")
-    st.markdown(_day_strip(v, sl, step), unsafe_allow_html=True)
+    st.markdown(_day_strip(v, sl, step, link), unsafe_allow_html=True)
+    if link is not None:
+        st.caption(f"📡 A radio link needs Earth above the lander's horizon **and** one of NASA's Deep Space Network "
+                   f"dishes (Goldstone, Madrid, Canberra) seeing the Moon at least {DEFAULT_MASK_DEG:.0f}° above "
+                   "its own horizon.")
+
+    labels_ = dict((s, label) for s, label, _ in SPOTS)
+    st.markdown("**If the launch slips** (same spot)")
+    st.markdown("<div style='display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px'>" + "".join(
+        _chip(name, _verdict(spot, start + pd.Timedelta(days=d), c))
+        for name, d in (("On time", 0), ("1 day late", 1), ("1 week late", 7), ("2 weeks late", 14),
+                        ("1 month late", 30))) + "</div>", unsafe_allow_html=True)
+    st.markdown(f"**Same date, other spots** ({start:%d %B %Y})")
+    st.markdown("<div style='display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px'>" + "".join(
+        _chip(labels_[s], _verdict(s, start, c)) for s in labels_) + "</div>", unsafe_allow_html=True)
 
     st.markdown("**What the lander sees** — press ▶ to play the mission")
     hz = horizons.get(spot) or HorizonProfile.flat(spot, 0.0, 0.0)

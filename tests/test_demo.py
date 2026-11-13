@@ -50,6 +50,9 @@ def test_time_cursor_shows_sun_and_earth_altitude():
     readout = next(m.value for m in at.markdown if "UTC" in m.value and "Sun:" in m.value)
     assert f"altitude {v.sun_alt[i]:.2f}° above horizontal" in readout, readout
     assert f"altitude {v.earth_alt[i]:.2f}° above horizontal" in readout, readout
+    assert any("Deep Space Network" in c.value for c in at.caption)                  # DSN explanation
+    chips = " ".join(m.value for m in at.markdown if "1 month late" in m.value or "Shackleton ridge" in m.value)
+    assert "1 week late" in chips and "Apollo 11 (equator)" in chips                  # slip + other spots
     viewers = next(c.value for c in at.caption if "QuickMap" in c.value)
     assert "https://quickmap.lroc.im-ldi.com/" in viewers and "https://trek.nasa.gov/moon/" in viewers
     assert "not computed from them" in viewers

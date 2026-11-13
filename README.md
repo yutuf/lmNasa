@@ -26,6 +26,12 @@ and expert knowledge. LunaNav answers it in one screen:
 - **360° view from the lander:** the terrain silhouette with the Sun's and Earth's paths over the
   mission, plus a time slider — *"on day 5, is the Sun up, and when does it set?"*
 - **Communication windows:** when Earth is above the terrain, and when it next sets or rises.
+- **Deep Space Network check:** Earth above the lander's horizon is not enough; one of NASA's DSN complexes
+  (Goldstone, Madrid, Canberra) must also see the Moon. Precomputed hourly (`data/dsn.npz`): each complex sees
+  the Moon above 10° about 41 % of the time, at least one of them 98.3 % of the time.
+- **Simple view first:** the page opens on one question, five landing spots, a large GO / NO-GO with the reason in
+  one sentence, a day-by-day strip, what happens if the launch slips (1 day to 1 month), the same date at the
+  other spots, and an animation of the Sun and Earth moving along the real horizon.
 - **Cited vs derived points:** every site comes from a publication: a published point, or the centre of an official
   Artemis III region computed from the USGS grid (source shown).
   Next to it LunaNav can show a **derived** point (the best spot within 1 km on a gentle slope) and, for
@@ -114,6 +120,7 @@ runs from a plain `pip install -r requirements.txt` with no secrets or API keys 
 | `scripts/mazarico_compare.py` | NASA PGDA illumination + PSR maps | `data/mazarico.json`: independent check + nearest permanent shadow |
 | `scripts/check_map_alignment.py` | two NASA maps | best registration shift between them (diagnostic) |
 | `scripts/make_demo_series.py` | nothing | synthetic series for UI work only (clearly flagged in the app) |
+| `scripts/precompute_dsn.py` | kernels | `data/dsn.npz`: Moon elevation at the three DSN complexes, hourly |
 | `scripts/make_relief.py` | PDS LOLA polar `.img` | 3D-printable terrain tile (`hardware/relief/*.stl` + site positions) |
 | `scripts/export_compass_track.py` | a site's series | LED animation for the horizon compass (`firmware/track.h`) |
 
@@ -393,6 +400,8 @@ python scripts/mazarico_compare.py --sun AVGVISIB_75S_120M_201608.TIF \
 - Power: two-axis sun-tracking array (output = peak × visible disk fraction), constant load,
   95 % charge/discharge efficiency. **Illustrative lander, not any real mission.**
 - Earth visibility uses Earth's center; no antenna pattern or relay satellites.
+- DSN: a link is counted when one complex sees the Moon's centre at least 10° above its horizon (station
+  coordinates rounded to 0.001°). Station scheduling, antenna availability and link budgets are not modelled.
 - Site coordinates marked † are approximate and must be verified against the cited source.
 - Derived points: slope from the 40 m DEM (a lander needs boulder/hazard maps at metre scale too);
   apparent solar radius from the date (±0.3 %).
