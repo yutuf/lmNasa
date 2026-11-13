@@ -2,7 +2,7 @@
 
 Open-source planning tool for landing sites and dates at the lunar south pole.
 
-**Live app: https://limitlessapps.streamlit.app/**
+**Live app: https://limitlessapps.streamlit.app/**  ·  **[1-minute demo video](docs/demo/lunanav-demo.mp4)**
 
 [![tests](https://github.com/yutuf/lmNasa/actions/workflows/ci.yml/badge.svg)](https://github.com/yutuf/lmNasa/actions/workflows/ci.yml)
 

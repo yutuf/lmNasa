@@ -1,5 +1,7 @@
 # 2-minute demo script
 
+A recorded 1-minute version of the simple view, with captions: [demo/lunanav-demo.mp4](demo/lunanav-demo.mp4) (made with `scripts/record_demo.py`).
+
 Every scene is a link to the public app, **https://limitlessapps.streamlit.app/** (Streamlit Community Cloud). Locally the same query
 strings work on `http://localhost:8501/` after `streamlit run app.py`.
 The address holds the whole scenario, so each scene opens exactly as described. All verdicts and
