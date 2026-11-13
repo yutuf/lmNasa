@@ -67,6 +67,8 @@ def until(mask, i, step, verb_on, verb_off):
     return f"does not {verb} before the data ends" if h is None else f"{verb}s in {fmt_hours(h)}"
 
 st.set_page_config(page_title="LunaNav", page_icon="🌘", layout="wide", initial_sidebar_state="collapsed")
+st.markdown("<style>" + (Path(__file__).resolve().parent / "lunanav" / "style.css").read_text(encoding="utf-8")
+            + "</style>", unsafe_allow_html=True)
 _lang = st.query_params.get("lang", "en")
 st.session_state.setdefault("lang", "Türkçe" if _lang == "tr" else "English")
 st.segmented_control("Language", simple_view.LANGS, key="lang", label_visibility="collapsed")

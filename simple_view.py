@@ -20,7 +20,7 @@ from lunanav.metrics import MissionConstraints, evaluate_window
 from lunanav.power import required_battery_wh, simulate_battery
 from lunanav.series import load_series
 from lunanav.terrain3d import curvature_corrected, load_patch, shade, shadow_mask, sun_vector
-from lunanav.anywhere import GlobalGrid, load_earth_distance, rotate_earth, rotate_sun
+from lunanav.anywhere import GlobalGrid, _direction, load_earth_distance, rotate_earth, rotate_sun
 from lunanav.derive import sun_radius_deg
 from lunanav.geometry import disk_visible_fraction
 from lunanav.geometry import distance_bearing
@@ -359,6 +359,64 @@ def _world_relief():
     return shade[:, order], lats, lons[order]
 
 
+@st.cache_data
+def _globe_mesh(step_deg: float = 2.0):
+    """Sphere vertices (Moon-fixed, x toward 0 E, z north) and LOLA relief shading on a step_deg grid."""
+    lats = np.arange(-90, 90 + step_deg / 2, step_deg)
+    lons = np.arange(-180, 180 + step_deg / 2, step_deg)
+    LON, LAT = np.meshgrid(lons, lats)
+    h = _global().sample_height(LAT.ravel(), LON.ravel()).reshape(LAT.shape) if _global() else np.zeros(LAT.shape)
+    gy, gx = np.gradient(h)
+    relief = np.clip(0.55 + 0.45 * (-gx - gy) / (np.percentile(np.abs(gx) + np.abs(gy), 99) + 1e-9), 0.05, 1.0)
+    la, lo = np.radians(LAT), np.radians(LON)
+    xyz = np.stack([np.cos(la) * np.cos(lo), np.cos(la) * np.sin(lo), np.sin(la)])
+    return xyz, relief
+
+
+def _pin(lat, lon, r=1.0):
+    la, lo = np.radians(lat), np.radians(lon)
+    return r * np.cos(la) * np.cos(lo), r * np.cos(la) * np.sin(lo), r * np.sin(la)
+
+
+def _globe(lat: float, lon: float, sun_dir: np.ndarray, earth_dir: np.ndarray, when: str) -> go.Figure:
+    """The Moon in 3D, lit by the Sun as on the landing date, with the landing spot, landed missions and Earth."""
+    xyz, relief = _globe_mesh()
+    s = sun_dir / np.linalg.norm(sun_dir)
+    lambert = np.clip(np.einsum("ijk,i->jk", xyz, s), 0, 1)
+    light = relief * (0.07 + 0.93 * np.sqrt(lambert))
+    fig = go.Figure(go.Surface(x=xyz[0], y=xyz[1], z=xyz[2], surfacecolor=light, cmin=0, cmax=1, showscale=False,
+                               colorscale=[[0, "#05060c"], [0.35, "#4b4d57"], [1, "#f4efe1"]], hoverinfo="skip",
+                               lighting=dict(ambient=1, diffuse=0, specular=0)))
+    ms = _missions()
+    mx, my, mz = _pin(np.array([m["lat"] for m in ms]), np.array([m["lon"] for m in ms]), 1.01)
+    fig.add_scatter3d(x=mx, y=my, z=mz, mode="markers", marker=dict(size=3, color=SUN),
+                      text=[m["name"] for m in ms], hovertemplate="%{text}<extra></extra>", showlegend=False)
+    px, py, pz = _pin(lat, lon, 1.0)
+    qx, qy, qz = _pin(lat, lon, 1.22)
+    fig.add_scatter3d(x=[px, qx], y=[py, qy], z=[pz, qz], mode="lines", line=dict(color="#ff4b4b", width=8),
+                      hoverinfo="skip", showlegend=False)
+    fig.add_scatter3d(x=[qx], y=[qy], z=[qz], mode="markers+text", text=[T("landing spot", "iniş noktası")],
+                      textposition="top center", marker=dict(size=7, color="#ff4b4b"),
+                      textfont=dict(color="#ffffff", size=13), hoverinfo="skip", showlegend=False)
+    e = earth_dir / np.linalg.norm(earth_dir)
+    fig.add_scatter3d(x=[1.15 * e[0], 1.75 * e[0]], y=[1.15 * e[1], 1.75 * e[1]], z=[1.15 * e[2], 1.75 * e[2]],
+                      mode="lines+text", text=["", T("to Earth", "Dünya'ya")], line=dict(color=EARTH, width=5),
+                      textfont=dict(color=EARTH, size=13), hoverinfo="skip", showlegend=False)
+    fig.add_scatter3d(x=[1.85 * e[0]], y=[1.85 * e[1]], z=[1.85 * e[2]], mode="markers",
+                      marker=dict(size=14, color=EARTH), hoverinfo="skip", showlegend=False)
+    fig.add_scatter3d(x=[1.15 * s[0], 1.75 * s[0]], y=[1.15 * s[1], 1.75 * s[1]], z=[1.15 * s[2], 1.75 * s[2]],
+                      mode="lines+text", text=["", T("sunlight", "güneş ışığı")], line=dict(color=SUN, width=5),
+                      textfont=dict(color=SUN, size=13), hoverinfo="skip", showlegend=False)
+    view = np.array(_pin(max(min(lat, 60.0), -60.0), lon, 1.0)) * 1.55 + np.array([0, 0, 0.35])
+    fig.update_layout(
+        height=430, margin=dict(l=0, r=0, t=34, b=0), paper_bgcolor="rgba(0,0,0,0)",
+        title=dict(text=when, font=dict(size=14, color="#c9cedb"), x=0.02),
+        scene=dict(xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False),
+                   aspectmode="data", bgcolor="rgba(0,0,0,0)",
+                   camera=dict(eye=dict(x=view[0], y=view[1], z=view[2]))))
+    return fig
+
+
 def _world_picker(lat: float, lon: float):
     """Whole-Moon relief map (simple cylindrical, longitude 0 = Earth-facing centre); select to choose."""
     shade, lats, lons = _world_relief()
@@ -563,7 +621,17 @@ def render(c: MissionConstraints, horizons: dict) -> None:
 
     ok = r.meets_constraints
     colour, word = (GOOD, "GO") if ok else (BAD, "NO-GO")
-    st.markdown(
+    col_verdict, col_globe = st.columns([1.1, 1], gap="large")
+    with col_globe:
+        if site_lat is not None:
+            k0 = sl.start
+            sun_dir = _direction(v.sun_alt[k0], v.sun_az[k0], site_lat, site_lon)
+            earth_dir = _direction(v.earth_alt[k0], v.earth_az[k0], site_lat, site_lon)
+            st.plotly_chart(_globe(site_lat, site_lon, sun_dir, earth_dir,
+                                   T(f"The Moon at landing, {start:%d %b %Y} · drag to turn",
+                                     f"İnişte Ay, {start:%d.%m.%Y} · çevirmek için sürükleyin")),
+                            width="stretch", key="simple_globe")
+    col_verdict.markdown(
         f"<div style='border-radius:16px;padding:18px 24px;background:{colour};color:#ffffff;margin:8px 0 14px'>"
         f"<div style='font-size:52px;font-weight:800;line-height:1'>{word}</div>"
         f"<div style='font-size:19px;margin-top:8px'>{html.escape(_why(r, p, c, step))}</div>"
@@ -585,7 +653,7 @@ def render(c: MissionConstraints, horizons: dict) -> None:
     earth_note = (T(f"with a NASA dish facing the Moon too: {link.mean():.0%}",
                     f"NASA anteni de Ay'a dönükken: {_pct(link.mean())}") if link is not None
                   else T("of the mission", "görev süresinin"))
-    st.markdown(
+    col_verdict.markdown(
         "<div style='display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px'>"
         + _tile("☀️", T("Sunlight", "Güneş ışığı"), _pct(r.sun_frac), T("of the mission", "görev süresinin"),
                 r.sun_frac >= c.min_sun_frac)

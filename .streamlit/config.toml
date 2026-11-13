@@ -1,0 +1,10 @@
+[theme]
+base = "dark"
+primaryColor = "#f2b705"            # Sun amber: buttons, sliders, selected spot
+backgroundColor = "#070a12"
+secondaryBackgroundColor = "#111726"
+textColor = "#e8eaf2"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
