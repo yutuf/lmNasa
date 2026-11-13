@@ -10,7 +10,7 @@ import type { Ephem } from '../engine'
 import { pointLatLon } from '../engine'
 import type { Lang } from '../i18n'
 import { R_M, altAz, bodies, conditions, diskAbove, horizonElev, horizonProfile, makeGround, nextChanges, parseDem,
-  parsePatch, parseScience, planeAz, planeDir, scienceAt, findIceTarget, type Dem, type Patch, type Science, type SiteInfo } from '../terrain'
+  localSky, parsePatch, parseScience, planeAz, planeDir, scienceAt, findIceTarget, type Dem, type Patch, type Science, type SiteInfo } from '../terrain'
 import { dataUrl } from '../data'
 
 export type DriveMode = 'lander' | 'rover'
@@ -62,7 +62,8 @@ const L = {
     tr: 'Bilim görünümü: mavi = kalıcı gölge (hiç güneş görmez), camgöbeği = buz için elverişli' },
   psrHere: { en: 'You are in permanent shadow', tr: 'Kalıcı gölgedesiniz' },
   sciSrc: { en: 'Permanent shadow: Mazarico et al. 2011 (NASA PGDA) · ice index: USGS', tr: 'Kalıcı gölge: Mazarico vd. 2011 (NASA PGDA) · buz endeksi: USGS' },
-  keysLander: { en: 'Drag to look around · play the mission clock below', tr: 'Etrafa bakmak için sürükleyin · görev saatini aşağıdan oynatın' },
+  keysLander: { en: 'Drag to look around · play the mission clock below · dashed lines: where the Sun (yellow) and Earth (blue) travel during the mission',
+    tr: 'Etrafa bakmak için sürükleyin · görev saatini aşağıdan oynatın · kesikli çizgiler: görev boyunca Güneş (sarı) ve Dünya (mavi) yolu' },
   model: { en: 'Rover power model is illustrative (450 W panel, 3 kWh battery, 0.25 m/s); terrain, Sun, Earth and DSN are real data.',
     tr: 'Gezgin güç modeli temsilidir (450 W panel, 3 kWh batarya, 0,25 m/sn); arazi, Güneş, Dünya ve DSN gerçek veridir.' },
   loading: { en: 'Loading LOLA terrain…', tr: 'LOLA arazisi yükleniyor…' },
@@ -373,6 +374,25 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
   }, [])
   const stars = useMemo(starField, [])
   const glare = useMemo(sunGlare, [])
+  const paths = useRef<THREE.Group>(null)
+  // Sun and Earth paths over the whole mission, seen from the lander (drawn on the sky; terrain hides the parts behind ridges)
+  const pathLines = useMemo(() => {
+    const mk = (body: 'sun' | 'earth', color: string) => {
+      const pts: THREE.Vector3[] = []
+      for (let k = 0; k <= start.missionH; k += 1) {
+        const sk = localSky(eph, start.x, start.y, start.hour + k)
+        const b = sk[body]
+        const [dx, dy] = planeDir(sk.lon, b.az)
+        const ca = Math.cos((b.alt * Math.PI) / 180)
+        pts.push(new THREE.Vector3(dx * ca, Math.sin((b.alt * Math.PI) / 180), -dy * ca).multiplyScalar(240000))
+      }
+      const g = new THREE.BufferGeometry().setFromPoints(pts)
+      const line = new THREE.Line(g, new THREE.LineDashedMaterial({ color, dashSize: 2500, gapSize: 2000, transparent: true, opacity: 0.85, toneMapped: false }))
+      line.computeLineDistances()
+      return line
+    }
+    return [mk('sun', '#f2b705'), mk('earth', '#4ea8de')]
+  }, [eph, start])
 
   // world <-> three: x = sx - ox, z = -(sy - oy), y = height - oh - curvature drop from the origin
   const toV = (sx: number, sy: number, lift = 0) => {
@@ -567,6 +587,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
     }
     if (lander.current) { lander.current.position.copy(toV(start.x, start.y)); lander.current.rotation.y = landerYaw.current }
     if (ambient.current) ambient.current.intensity = s.science ? 0.9 : 0.04
+    if (paths.current) paths.current.visible = s.mode === 'lander'
     if (beacon.current) {
       beacon.current.visible = !!s.target && s.mode === 'rover' && s.phase === 'go'
       if (s.target && Math.hypot(s.target.x - s.x, s.target.y - s.y) < 6000) beacon.current.position.copy(toV(s.target.x, s.target.y))
@@ -643,6 +664,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
       </mesh>
       <group ref={skyGroup}>
         <primitive object={stars} />
+        <group ref={paths}>{pathLines.map((l, k) => <primitive key={k} object={l} />)}</group>
         <sprite ref={glareRef} scale={[60000, 60000, 1]} material={glare} />
         <mesh ref={sunMesh}>
           <sphereGeometry args={[sunR, 24, 16]} />
