@@ -17,3 +17,8 @@ build/
 *.kicad_prl
 fp-info-cache
 *-backups/
+data/diviner
+data/lola5m
+data/lola20m
+data/models
+data/usgs

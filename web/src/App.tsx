@@ -8,8 +8,10 @@ import { EngineRunner } from './runner'
 import HorizonView from './components/HorizonView'
 import Luna, { type LunaAction } from './components/Luna'
 import type { Overlay, Pin } from './components/Globe'
+import type { DriveMode, DriveStart } from './components/Drive'
 
 const Globe = lazy(() => import('./components/Globe'))
+const Drive = lazy(() => import('./components/Drive'))
 
 const PLANNER_URL = 'https://limitlessapps.streamlit.app/'
 const REPO_URL = 'https://github.com/yutuf/lmNasa'
@@ -47,6 +49,9 @@ const S = {
   seconds: { en: 's', tr: 'sn' },
   thisSite: { en: 'This site', tr: 'Bu nokta' },
   otherDates: { en: 'Other landing dates in the window', tr: 'Penceredeki diğer iniş tarihleri' },
+  standHere: { en: 'Stand on the lander', tr: 'İniş aracında dur' },
+  driveHere: { en: 'Drive a rover here', tr: 'Burada gezgin sür' },
+  beThere: { en: 'Be there: see what the lander sees on the best landing date, or drive a rover over the real terrain.', tr: 'Oradaymış gibi: en iyi iniş tarihinde iniş aracının gördüğünü görün ya da gerçek arazide gezgin sürün.' },
 } satisfies Record<string, Text>
 
 const PRESETS = [
@@ -80,6 +85,7 @@ export default function App() {
   const [dsn, setDsn] = useState<boolean[] | null>(null)
   const ephemRef = useRef<ArrayBuffer | null>(null)
   const runner = useRef<EngineRunner | null>(null)
+  const [drive, setDrive] = useState<{ mode: DriveMode; start: DriveStart } | null>(null)
 
   useEffect(() => {
     (async () => {
@@ -151,13 +157,13 @@ export default function App() {
   }, [results, atlas, ran])
 
   const pick = top[sel]
+  const eph = useMemo(() => (m && ephemRef.current ? parseEphem(ephemRef.current, m.n) : null), [m])
   const region = (r: PointResult) => m?.regions?.find((g) => g.rings.some((ring) => insideRing(atlas!.xKm[r.index], atlas!.yKm[r.index], ring)))?.name.replace(/_/g, ' ')
   const detail = useMemo(() => {
     if (!pick || !atlas || !ran || !m || !dsn || !ephemRef.current) return null
     const fh = firstHour(ran.q)
     const hoursN = (ran.q.windowDays - 1) * 24 + ran.q.days * 24
-    const eph = parseEphem(ephemRef.current, m.n)
-    const tr = pointTrack(atlas, eph, dsn, pick.index, fh, hoursN)
+    const tr = pointTrack(atlas, eph!, dsn, pick.index, fh, hoursN)
     const c = constraints(ran.q)!
     const a = pick.bestStart * 24
     const len = ran.q.days * 24
@@ -169,7 +175,7 @@ export default function App() {
     const perStart = Array.from({ length: ran.q.windowDays }, (_, s) => evaluateWindow(
       tr.sunFraction.subarray(s * 24, s * 24 + len), series.earthVisible.slice(s * 24, s * 24 + len), 1, c).go)
     return { tr, w, need: requiredBatteryWh(sf, 1, c), series, a, len, fh, perStart, c }
-  }, [pick, atlas, ran, m, dsn])  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pick, atlas, ran, m, dsn, eph])  // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!m || !atlas) return <div className="loading">LunaNav<small>{lang === 'tr' ? 'NASA verisi yükleniyor…' : 'loading NASA data…'}</small></div>
   const startDate = (s: number) => new Date(Date.parse(ran!.q.start + 'T00:00:00Z') + s * 86400e3)
@@ -203,8 +209,20 @@ export default function App() {
     run(next)
   }
 
+  const enter = (mode: DriveMode) => {
+    if (!pick || !detail || !ran) return
+    setDrive({ mode, start: { x: atlas.xKm[pick.index] * 1000, y: atlas.yKm[pick.index] * 1000, hour: detail.fh + detail.a,
+      missionH: detail.len, startMs: startDate(pick.bestStart).getTime(),
+      label: `#${sel + 1} · ${region(pick) ?? `${pick.lat.toFixed(2)}°, ${pick.lon.toFixed(2)}°E`} · ${fmtDate(startDate(pick.bestStart))}` } })
+  }
+
   return (
-    <div className="app">
+    <div className={`app ${drive ? 'driving' : ''}`}>
+      {drive && eph && dsn && (
+        <Suspense fallback={<div className="drive"><div className="drive-loading">…</div></div>}>
+          <Drive start={drive.start} eph={eph} dsn={dsn} lang={lang} initialMode={drive.mode} onExit={() => setDrive(null)} />
+        </Suspense>
+      )}
       <section className="hero">
         <div className="globe-wrap">
           <Suspense fallback={null}>
@@ -294,6 +312,13 @@ export default function App() {
               <Tile icon="🔋" title={T.battery[lang]} ok={detail.w.survived}
                     value={detail.w.survived ? T.lasts[lang] : `✕ ${hours(detail.w.power.firstFailure ?? 0, lang)}`}
                     note={detail.need === 0 ? '—' : `${Math.round(detail.need).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')} Wh`} />
+            </div>
+          </div>
+          <div className="card be-there">
+            <p>{S.beThere[lang]}</p>
+            <div className="be-btns">
+              <button className="big" onClick={() => enter('lander')}>🛬 {S.standHere[lang]}</button>
+              <button className="big" onClick={() => enter('rover')}>🚙 {S.driveHere[lang]}</button>
             </div>
           </div>
           <div className="card">
