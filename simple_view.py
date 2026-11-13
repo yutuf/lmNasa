@@ -20,7 +20,9 @@ from lunanav.metrics import MissionConstraints, evaluate_window
 from lunanav.power import required_battery_wh, simulate_battery
 from lunanav.series import load_series
 from lunanav.terrain3d import curvature_corrected, load_patch, shade, shadow_mask, sun_vector
-from lunanav.derive import score_point
+from lunanav.anywhere import GlobalGrid, load_earth_distance, rotate_earth, rotate_sun
+from lunanav.derive import sun_radius_deg
+from lunanav.geometry import disk_visible_fraction
 from lunanav.geometry import distance_bearing
 from lunanav.horizon import compute_horizon
 from lunanav.polar_grid import PolarGrid, polar_xy
@@ -39,8 +41,9 @@ SPOTS = [
     ("apollo_11", "Apollo 11 (equator)",
      "Tranquility Base, for comparison: at the equator, day and night each last two weeks."),
     ("custom", "📍 Any point",
-     "Any point south of 84.5°S: drag a small box on the map (or click it), or type the coordinates. The horizon "
-     "is traced from NASA LOLA terrain on the spot (200 m grid)."),
+     "Any point on the Moon: pick a landed mission, drag a small box on a map (or click it), or type the "
+     "coordinates. The horizon is traced from NASA LOLA terrain on the spot (200 m grid near the south pole, "
+     "1.9 km elsewhere)."),
 ]
 CUSTOM = "custom"
 SPOTS_TR = {
@@ -54,8 +57,9 @@ SPOTS_TR = {
     "apollo_11": ("Apollo 11 (ekvator)",
                   "Karşılaştırma için Sükûnet Üssü: ekvatorda gündüz de gece de iki hafta sürer."),
     "custom": ("📍 Herhangi bir nokta",
-               "84,5°G'nin güneyindeki herhangi bir nokta: haritada küçük bir kutu çizin (ya da tıklayın) veya "
-               "koordinatları yazın. Ufuk, NASA LOLA arazi verisinden o anda hesaplanır (200 m ızgara)."),
+               "Ay'da herhangi bir nokta: bir iniş görevi seçin, haritada küçük bir kutu çizin (ya da tıklayın) veya "
+               "koordinatları yazın. Ufuk, NASA LOLA arazi verisinden o anda hesaplanır (güney kutbunda 200 m, "
+               "başka yerlerde 1,9 km ızgara)."),
 }
 LANGS = ("English", "Türkçe")
 DEFAULT_SPOT, DEFAULT_DATE = "malapert_massif", "2027-09-09"
@@ -105,18 +109,45 @@ def _grid():
     return PolarGrid.load()
 
 
+@st.cache_resource
+def _global():
+    return GlobalGrid.load()
+
+
+@st.cache_resource
+def _earth_km():
+    return load_earth_distance()
+
+
+@st.cache_resource
+def _missions():
+    import yaml
+    from pathlib import Path
+    f = Path(__file__).resolve().parent / "data" / "landed_missions.yaml"
+    return yaml.safe_load(f.read_text(encoding="utf-8"))["missions"] if f.exists() else []
+
+
+POLAR_EDGE = -84.5   # south of this the 200 m polar grid is used, elsewhere the 1.9 km global grid
+
+
 @st.cache_data(max_entries=64, show_spinner="Tracing the horizon from NASA terrain…")
 def _custom(lat: float, lon: float):
-    """Visibility at any polar point: horizon from the compact LOLA grid, Sun/Earth rotated from the nearest
-    computed site (exact for the Sun; Earth parallax under 0.0002 deg per km)."""
-    grid = _grid()
-    polar = [s for s in _sites() if s.lat < -84 and _series(s.id)[0] is not None]
-    near = min(polar, key=lambda s: distance_bearing(s.lat, s.lon, lat, lon)[0])
-    hz = compute_horizon(grid.sample_height, "custom", lat, lon, step_m=200.0, source=grid.source)
+    """Visibility at any point on the Moon: horizon traced from LOLA, Sun/Earth rotated from the nearest computed
+    site (lunanav.anywhere; checked against independent DE440 runs to 0.018 deg, Earth parallax included)."""
+    polar_pt = lat <= POLAR_EDGE and _grid() is not None
+    grid = _grid() if polar_pt else _global()
+    hz = compute_horizon(grid.sample_height, "custom", lat, lon, step_m=200.0 if polar_pt else 800.0,
+                         source=grid.source)
+    computed = [s for s in _sites() if _series(s.id)[0] is not None]
+    near = min(computed, key=lambda s: distance_bearing(s.lat, s.lon, lat, lon)[0])
     v0, step, _ = _series(near.id)
-    d = score_point(v0, near.lat, near.lon, lat, lon, hz)
-    v = Visibility(v0.times_utc, d["sun_alt"], d["sun_az"], d["sun_horizon"], d["sun_fraction"],
-                   d["earth_alt"], d["earth_az"], d["earth_horizon"], d["earth_visible"])
+    times, km = _earth_km()
+    assert np.array_equal(times, v0.times_utc.astype("datetime64[s]").astype(np.int64))
+    sun_alt, sun_az = rotate_sun(v0.sun_alt, v0.sun_az, near.lat, near.lon, lat, lon)
+    earth_alt, earth_az = rotate_earth(v0.earth_alt, v0.earth_az, km, near.lat, near.lon, lat, lon)
+    sun_h, earth_h = hz.at(sun_az), hz.at(earth_az)
+    frac = disk_visible_fraction(sun_alt, sun_h, sun_radius_deg(v0.times_utc))
+    v = Visibility(v0.times_utc, sun_alt, sun_az, sun_h, frac, earth_alt, earth_az, earth_h, earth_alt > earth_h)
     height = float(grid.sample_height(np.array([lat]), np.array([lon]))[0])
     return v, step, hz, near.id, height
 
@@ -288,12 +319,22 @@ def _patch(site_id):
     if p is None:
         return None
     z, x, y, spacing = p
-    return z, x, y, spacing, curvature_corrected(z, x, y)
+    return z, x, y, spacing, curvature_corrected(z, x, y), 40.0
 
 
 @st.cache_data(max_entries=16)
 def _patch_at(lat: float, lon: float, size_km: float = 40.0, spacing_m: float = 200.0):
-    """The same kind of patch, sampled from the compact grid around any polar point."""
+    """The same kind of patch, sampled around any point: from the polar grid near the pole, else from the
+    global grid on a local tangent-plane grid (x east, y north)."""
+    if lat > POLAR_EDGE:
+        size_km, spacing_m = 160.0, 2000.0
+        n = int(size_km * 1000 / spacing_m) + 1
+        km = (np.arange(n) - (n - 1) / 2) * spacing_m / 1000.0
+        X, Y = np.meshgrid(km, km[::-1])
+        dlat = np.degrees(Y / 1737.4)
+        dlon = np.degrees(X / (1737.4 * max(np.cos(np.radians(lat)), 0.05)))
+        z = _global().sample_height((lat + dlat).ravel(), (lon + dlon).ravel()).reshape(X.shape)
+        return z, km, km[::-1], spacing_m, curvature_corrected(z, km, km[::-1]), size_km
     x0, y0 = polar_xy(lat, lon)
     n = int(size_km * 1000 / spacing_m) + 1
     km = (np.arange(n) - (n - 1) / 2) * spacing_m / 1000.0
@@ -302,7 +343,43 @@ def _patch_at(lat: float, lon: float, size_km: float = 40.0, spacing_m: float = 
     if not np.isfinite(z).all():
         return None
     x, y = km, km[::-1]
-    return z, x, y, spacing_m, curvature_corrected(z, x, y)
+    return z, x, y, spacing_m, curvature_corrected(z, x, y), size_km
+
+
+@st.cache_data
+def _world_relief():
+    g = _global()
+    h = g.h[::8, ::8]                                   # 2 px/deg
+    gy, gx = np.gradient(h, 1000.0)
+    shade = np.clip(0.5 + 0.4 * (-gx - gy) / (np.percentile(np.hypot(gx, gy), 99) + 1e-9), 0, 1)
+    lats = 90 - (np.arange(h.shape[0]) + 0.5) / 2.0
+    lons = (np.arange(h.shape[1]) + 0.5) / 2.0
+    lons = ((lons + 180) % 360) - 180
+    order = np.argsort(lons)
+    return shade[:, order], lats, lons[order]
+
+
+def _world_picker(lat: float, lon: float):
+    """Whole-Moon relief map (simple cylindrical, longitude 0 = Earth-facing centre); select to choose."""
+    shade, lats, lons = _world_relief()
+    fig = go.Figure(go.Heatmap(x=lons, y=lats, z=shade, colorscale="Greys", showscale=False, hoverinfo="skip"))
+    PX, PY = np.meshgrid(np.arange(-178.5, 180, 3.0), np.arange(-88.5, 90, 3.0))
+    fig.add_scatter(x=PX.ravel(), y=PY.ravel(), mode="markers", marker=dict(size=9, color="rgba(255,255,255,0.01)"),
+                    hovertemplate="%{y:.1f}°, %{x:.1f}°E<extra>" + T("select to choose", "seçmek için işaretleyin")
+                    + "</extra>", showlegend=False)
+    ms = _missions()
+    fig.add_scatter(x=[m["lon"] for m in ms], y=[m["lat"] for m in ms], mode="markers",
+                    marker=dict(size=7, color=SUN), text=[m["name"] for m in ms], hovertemplate="%{text}<extra></extra>",
+                    showlegend=False)
+    fig.add_scatter(x=[lon], y=[lat], mode="markers", marker=dict(size=16, color="#ff4b4b", symbol="x"),
+                    hoverinfo="skip", showlegend=False)
+    fig.add_annotation(x=0, y=84, text=T("near side (faces Earth)", "yakın yüz (Dünya'ya dönük)"),
+                       showarrow=False, font=dict(color=EARTH, size=13))
+    fig.add_annotation(x=150, y=84, text=T("far side", "uzak yüz"), showarrow=False, font=dict(color=GREY, size=13))
+    fig.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0), clickmode="event+select", dragmode="select",
+                      xaxis=dict(range=[-180, 180], showgrid=False, zeroline=False, title=None, tickvals=[-90, 0, 90]),
+                      yaxis=dict(range=[-90, 90], showgrid=False, zeroline=False, scaleanchor="x", tickvals=[-60, 0, 60]))
+    return fig
 
 
 def _map_picker(lat: float, lon: float):
@@ -341,13 +418,22 @@ def _map_picker(lat: float, lon: float):
     return fig
 
 
-def _scene(p, lon: float, sun_az: float, sun_alt: float, earth_az: float, earth_alt: float,
+def scene_sun(lat: float, lon: float, az: float, alt: float) -> np.ndarray:
+    """Direction toward a body in patch coordinates: polar patches use the stereographic plane, others a
+    local east-north grid."""
+    if lat <= POLAR_EDGE:
+        return sun_vector(lon, az, alt)
+    a, e = math.radians(az), math.radians(alt)
+    return np.array([math.cos(e) * math.sin(a), math.cos(e) * math.cos(a), math.sin(e)])
+
+
+def _scene(p, lat: float, lon: float, sun_az: float, sun_alt: float, earth_az: float, earth_alt: float,
            sun_up: bool, title: str) -> go.Figure | None:
     """3D terrain around the lander, lit and shadowed by the Sun at one moment."""
     if p is None:
         return None
-    z, x, y, spacing, zc = p
-    sun = sun_vector(lon, sun_az, sun_alt)
+    z, x, y, spacing, zc, _size = p
+    sun = scene_sun(lat, lon, sun_az, sun_alt)
     light = shade(zc, spacing, sun, shadow_mask(zc, spacing, sun))
     if not sun_up:                                   # hidden by terrain beyond the patch: show the site dark too
         n = len(x) // 2
@@ -361,7 +447,7 @@ def _scene(p, lon: float, sun_az: float, sun_alt: float, earth_az: float, earth_
         lighting=dict(ambient=1.0, diffuse=0.0, specular=0.0, roughness=1.0)))
     for az, alt, colour, name in ((sun_az, sun_alt, SUN, T("to the Sun", "Güneş'e")),
                                   (earth_az, earth_alt, EARTH, T("to Earth", "Dünya'ya"))):
-        d = sun_vector(lon, az, alt) * 9.0
+        d = scene_sun(lat, lon, az, alt) * (_size / 4.5)
         fig.add_scatter3d(x=[0, d[0]], y=[0, d[1]], z=[site_z, site_z + d[2] * 1000.0], mode="lines+text",
                           text=["", name], line=dict(color=colour, width=7), textfont=dict(color=colour, size=14),
                           hoverinfo="skip", showlegend=False)
@@ -410,14 +496,38 @@ def render(c: MissionConstraints, horizons: dict) -> None:
                 st.session_state["simple_lat"] = round(max(-89.9, min(-84.5, -90.0 + 2.0 * float(
                     np.degrees(np.arctan(r_km * 1000.0 / (2.0 * 1_737_400.0)))))), 3)
                 st.session_state["simple_lon"] = round(float(np.degrees(np.arctan2(px, py))), 3)
+        ev_w = st.session_state.get("simple_world")
+        sel_w = ev_w.get("selection") if isinstance(ev_w, dict) else getattr(ev_w, "selection", None)
+        pts_w = (sel_w.get("points") if isinstance(sel_w, dict) else getattr(sel_w, "points", None)) or []
+        xy_w = [(float(q["x"]), float(q["y"])) for q in pts_w if "x" in q and "y" in q]
+        if xy_w:
+            wx, wy = (float(a) for a in np.mean(xy_w, axis=0))           # lon, lat in degrees
+            if ("w", wx, wy) != st.session_state.get("simple_last_pick"):
+                st.session_state["simple_last_pick"] = ("w", wx, wy)
+                st.session_state["simple_lat"] = round(max(-89.9, min(89.9, wy)), 3)
+                st.session_state["simple_lon"] = round(((wx + 180) % 360) - 180, 3)
+        missions = _missions()
+        pick = st.selectbox(T("Jump to a landed mission", "Bir iniş görevine git"), ["–"] + [m["name"] for m in missions],
+                            key="simple_mission")
+        if pick != "–" and pick != st.session_state.get("simple_last_mission"):
+            st.session_state["simple_last_mission"] = pick
+            m = next(m for m in missions if m["name"] == pick)
+            st.session_state["simple_lat"], st.session_state["simple_lon"] = float(m["lat"]), float(m["lon"])
         st.session_state.setdefault("simple_lat", float(st.query_params.get("lat", -89.0)))
         st.session_state.setdefault("simple_lon", float(st.query_params.get("lon", -140.0)))
         col_a, col_b = st.columns(2)
-        lat = col_a.number_input(T("Latitude (°, south is negative)", "Enlem (°, güney negatif)"), -89.9, -84.5, step=0.01, format="%.3f",
-                                 key="simple_lat")
+        lat = col_a.number_input(T("Latitude (°, south is negative)", "Enlem (°, güney negatif)"), -89.9, 89.9,
+                                 step=0.01, format="%.3f", key="simple_lat")
         lon = col_b.number_input(T("Longitude (°E)", "Boylam (°D)"), -180.0, 180.0, step=0.1, format="%.3f", key="simple_lon")
-        st.plotly_chart(_map_picker(lat, lon), width="stretch", key="simple_map", on_select="rerun",
-                        selection_mode=("points", "box"))
+        which = st.segmented_control(T("Map", "Harita"), [T("Whole Moon", "Tüm Ay"), T("South pole", "Güney kutbu")],
+                                     default=T("South pole", "Güney kutbu") if lat <= POLAR_EDGE else
+                                     T("Whole Moon", "Tüm Ay"), key="simple_which_map")
+        if which == T("South pole", "Güney kutbu"):
+            st.plotly_chart(_map_picker(lat, lon), width="stretch", key="simple_map", on_select="rerun",
+                            selection_mode=("points", "box"))
+        else:
+            st.plotly_chart(_world_picker(lat, lon), width="stretch", key="simple_world", on_select="rerun",
+                            selection_mode=("points", "box"))
         v, step, hz_custom, near_id, height = _custom(round(lat, 4), round(lon, 4))
         st.caption(T(f"Ground height {height:,.0f} m. Horizon traced from LOLA terrain out to 150 km; Sun and Earth "
                      "positions rotated from the nearest computed site. Checked against the full-resolution data at "
@@ -427,12 +537,13 @@ def render(c: MissionConstraints, horizons: dict) -> None:
                      "Dünya konumları en yakın hesaplanmış noktadan döndürüldü. Tam çözünürlüklü veriyle 27 noktada "
                      "karşılaştırıldı: güneşli süre 0,5 puan içinde (medyan, en kötü 4,1), Dünya görünürlüğü 0,0 "
                      "(medyan, en kötü 13,9; dar bir sırtta)."))
-        site_lon = lon
+        site_lat, site_lon = lat, lon
         patch = _patch_at(round(lat, 3), round(lon, 3))
     else:
         v, step, _ = _series(spot)
         hz_custom = None
-        site_lon = next((s.lon for s in _sites() if s.id == spot), None)
+        site = next((s for s in _sites() if s.id == spot), None)
+        site_lat, site_lon = (site.lat, site.lon) if site else (None, None)
         patch = _patch(spot)
     first, last = pd.Timestamp(v.times_utc[0]), pd.Timestamp(v.times_utc[-1])
     try:
@@ -515,8 +626,11 @@ def render(c: MissionConstraints, horizons: dict) -> None:
                  "arkasında kalır ve paneller güç üretmez."))
 
     if patch is not None and site_lon is not None:
-        st.markdown(T("**The ground around the lander in 3D** (40 × 40 km of NASA LOLA terrain, heights × 3)",
-                      "**Aracın çevresindeki arazi, 3B** (NASA LOLA verisinden 40 × 40 km, yükseklikler × 3)"))
+        size = patch[5]
+        st.markdown(T(f"**The ground around the lander in 3D** ({size:.0f} × {size:.0f} km of NASA LOLA terrain, "
+                      "heights × 3)",
+                      f"**Aracın çevresindeki arazi, 3B** (NASA LOLA verisinden {size:.0f} × {size:.0f} km, "
+                      "yükseklikler × 3)"))
         n_h = sl.stop - sl.start
         h = st.slider(T("Hour of the mission", "Görevin saati"), 0, n_h - 1, 0, key="simple_hour",
                       help=T("Move through the mission and watch the shadows the low Sun casts.",
@@ -528,7 +642,7 @@ def render(c: MissionConstraints, horizons: dict) -> None:
                   + ("shining on the lander" if up else "hidden from the lander"),
                   f"Gün {h * step / 24 + 1:.0f}, {when:%d.%m %H:%M} UTC · Güneş {v.sun_alt[k]:.1f}° yukarıda, "
                   + ("araca vuruyor" if up else "araçtan gizli"))
-        fig3d = _scene(patch, site_lon, float(v.sun_az[k]), float(v.sun_alt[k]), float(v.earth_az[k]),
+        fig3d = _scene(patch, site_lat, site_lon, float(v.sun_az[k]), float(v.sun_alt[k]), float(v.earth_az[k]),
                        float(v.earth_alt[k]), up, title)
         st.plotly_chart(fig3d, width="stretch", key="simple_3d")
         st.caption(T("Drag to turn the view. Shadows are cast by the terrain in this patch; ridges further away can "
