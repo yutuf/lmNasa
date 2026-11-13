@@ -1,0 +1,65 @@
+{
+ "source": "LOLA 5 m/px site maps, Barker et al. 2021 (NASA GSFC PGDA product 78), averaged to 10 m",
+ "sites": [
+  {
+   "id": "site01",
+   "name": "Connecting ridge",
+   "file": "sites/site01.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    -19000.0,
+    -20000.0,
+    -3000.0,
+    -4000.0
+   ],
+   "center": [
+    -89.4632,
+    222.51
+   ],
+   "z_range_m": [
+    -522,
+    1959
+   ]
+  },
+  {
+   "id": "site04",
+   "name": "Shackleton rim",
+   "file": "sites/site04.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    -9000.0,
+    -15000.0,
+    7000.0,
+    1000.0
+   ],
+   "center": [
+    -89.7668,
+    188.13
+   ],
+   "z_range_m": [
+    -2847,
+    1805
+   ]
+  },
+  {
+   "id": "site07",
+   "name": "Peak near Shackleton",
+   "file": "sites/site07.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    22000.0,
+    -28000.0,
+    38000.0,
+    -12000.0
+   ],
+   "center": [
+    -88.811,
+    123.69
+   ],
+   "z_range_m": [
+    -418,
+    1649
+   ]
+  }
+ ]
+}

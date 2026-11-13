@@ -7,6 +7,8 @@ Writes:
   series/<id>.bin          per hour: float32 sun_fraction, int16 sun_alt*100, int16 sun_az*50,
                            int16 earth_alt*100, int16 earth_az*50, uint8 earth_visible (in that order)
   dsn.bin                  per hour: uint8, 1 when a DSN complex sees the Moon above 10 deg
+  pole_dem.bin             uint32 rows, cols; float32 m_per_px, line0, sample0, scale; int16 heights (south polar
+                           stereographic, 200 m): terrain for the rover and lander views
   ephem.bin                per hour, float32 blocks: Sun unit vector x,y,z and Earth position x,y,z (km) in the
                            Moon-fixed frame, then the Sun's apparent radius (deg): the search engine's input
   terrain/<id>.bin         int16 heights (m) of the 3D patch around the spot (see manifest for size and frame)
@@ -221,6 +223,14 @@ def main():
     eph = [d_sun[:, 0], d_sun[:, 1], d_sun[:, 2], earth_xyz[:, 0], earth_xyz[:, 1], earth_xyz[:, 2],
            sun_radius_deg(v_ref.times_utc)]
     (OUT / "ephem.bin").write_bytes(b"".join(np.asarray(a, "<f4").tobytes() for a in eph))
+    # South-pole terrain for the rover and lander views: the 200 m polar grid (85 S product), int16 in 0.5 m units
+    from lunanav.polar_grid import GRID_FILE
+    zg = np.load(GRID_FILE)
+    fine = zg["fine_dn"]
+    (OUT / "pole_dem.bin").write_bytes(np.array([fine.shape[0], fine.shape[1]], "<u4").tobytes()
+                                      + np.array([float(zg["fine_m_per_px"]), float(zg["fine_line0"]),
+                                                  float(zg["fine_sample0"]), float(zg["scale"])], "<f4").tobytes()
+                                      + fine.astype("<i2").tobytes())
     dsn = DSN.load()
     (OUT / "dsn.bin").write_bytes((dsn.elevation_deg > 10).any(axis=0).astype("u1").tobytes())
     from lunanav.polar_grid import PolarGrid
