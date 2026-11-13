@@ -26,6 +26,8 @@ and expert knowledge. LunaNav answers it in one screen:
 - **360° view from the lander:** the terrain silhouette with the Sun's and Earth's paths over the
   mission, plus a time slider — *"on day 5, is the Sun up, and when does it set?"*
 - **Communication windows:** when Earth is above the terrain, and when it next sets or rises.
+- **English / Türkçe:** a switch at the top translates the simple view (the planner stays in English);
+  `?lang=tr` opens the page in Turkish.
 - **Any point near the pole:** pick a spot south of 84.5°S on a LOLA relief map (or type its coordinates); the
   app traces its horizon on the spot from a compact 200 m / 800 m LOLA grid (`data/polar_grid.npz`, 5 MB) and
   rotates the Sun/Earth track from the nearest computed site. Against the full-resolution horizons at 27 sites:

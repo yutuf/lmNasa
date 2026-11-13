@@ -86,3 +86,15 @@ def test_any_point_matches_the_curated_best_spot():
     big = next(m.value for m in at.markdown if "font-size:52px" in m.value)
     assert ">GO<" in big, big[:300]
     assert any("Ground height" in c.value for c in at.caption)
+
+
+def test_turkish_simple_view():
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=300)
+    at.query_params.update({"site": "malapert_massif", "start": "2027-09-09T00:00", "lang": "tr"})
+    at.run()
+    assert not at.exception, at.exception
+    assert "Ay'a nereye" in at.title[0].value
+    big = next(m.value for m in at.markdown if "font-size:52px" in m.value)
+    assert ">NO-GO<" in big and "Batarya" in big and "günlük görev" in big
+    chips = " ".join(m.value for m in at.markdown if "min-width:150px" in m.value)
+    assert "1 hafta gecikme" in chips
