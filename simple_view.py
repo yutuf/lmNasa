@@ -7,6 +7,7 @@ real horizon.
 from __future__ import annotations
 
 import html
+import math
 
 import numpy as np
 import pandas as pd
@@ -18,6 +19,7 @@ from lunanav.horizon import HorizonProfile
 from lunanav.metrics import MissionConstraints, evaluate_window
 from lunanav.power import required_battery_wh, simulate_battery
 from lunanav.series import load_series
+from lunanav.terrain3d import curvature_corrected, load_patch, shade, shadow_mask, sun_vector
 
 # (site id, button label, one-line description shown under the buttons)
 SPOTS = [
@@ -40,6 +42,12 @@ SUN, EARTH, GREY = "#f2b705", "#4ea8de", "#6b7280"
 @st.cache_resource
 def _series(site_id):
     return load_series(site_id)
+
+
+@st.cache_resource
+def _sites():
+    from lunanav.sites import load_sites
+    return load_sites()
 
 
 @st.cache_resource
@@ -193,6 +201,54 @@ def _animation(v, sl, step: float, hz: HorizonProfile, start: pd.Timestamp) -> g
     return fig
 
 
+@st.cache_resource
+def _patch(site_id):
+    p = load_patch(site_id)
+    if p is None:
+        return None
+    z, x, y, spacing = p
+    return z, x, y, spacing, curvature_corrected(z, x, y)
+
+
+def _scene(site_id: str, lon: float, sun_az: float, sun_alt: float, earth_az: float, earth_alt: float,
+           sun_up: bool, title: str) -> go.Figure | None:
+    """3D terrain around the lander, lit and shadowed by the Sun at one moment."""
+    p = _patch(site_id)
+    if p is None:
+        return None
+    z, x, y, spacing, zc = p
+    sun = sun_vector(lon, sun_az, sun_alt)
+    light = shade(zc, spacing, sun, shadow_mask(zc, spacing, sun))
+    if not sun_up:                                   # hidden by terrain beyond the patch: show the site dark too
+        n = len(x) // 2
+        light[n - 2:n + 3, n - 2:n + 3] = np.minimum(light[n - 2:n + 3, n - 2:n + 3], 0.04)
+    n = len(x) // 2
+    site_z = z[n, n]
+    span = (x[-1] - x[0]) * 1000.0
+    fig = go.Figure(go.Surface(
+        x=x, y=y, z=z, surfacecolor=light, cmin=0, cmax=1, showscale=False, hoverinfo="skip",
+        colorscale=[[0, "#020205"], [0.3, "#4a4b52"], [1, "#fbf6e6"]],
+        lighting=dict(ambient=1.0, diffuse=0.0, specular=0.0, roughness=1.0)))
+    for az, alt, colour, name in ((sun_az, sun_alt, SUN, "to the Sun"), (earth_az, earth_alt, EARTH, "to Earth")):
+        d = sun_vector(lon, az, alt) * 9.0
+        fig.add_scatter3d(x=[0, d[0]], y=[0, d[1]], z=[site_z, site_z + d[2] * 1000.0], mode="lines+text",
+                          text=["", name], line=dict(color=colour, width=7), textfont=dict(color=colour, size=14),
+                          hoverinfo="skip", showlegend=False)
+    fig.add_scatter3d(x=[0], y=[0], z=[site_z + 150], mode="markers+text", text=["lander"],
+                      marker=dict(size=7, color="#ff4b4b"), textfont=dict(color="#ffffff", size=14),
+                      hoverinfo="skip", showlegend=False)
+    relief = float(z.max() - z.min())
+    h = math.hypot(sun[0], sun[1]) or 1.0           # camera on the Sun's side, 40 deg off, so lit slopes face us
+    a = math.atan2(sun[1] / h, sun[0] / h) + math.radians(40)
+    eye = dict(x=1.5 * math.cos(a), y=1.5 * math.sin(a), z=0.95)
+    fig.update_layout(
+        title=dict(text=title, font=dict(size=16)), height=520, margin=dict(l=0, r=0, t=40, b=0),
+        scene=dict(xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False),
+                   aspectmode="manual", aspectratio=dict(x=1, y=1, z=min(0.6, 3 * relief / span)),
+                   camera=dict(eye=eye), bgcolor="#05060a"))
+    return fig
+
+
 def render(c: MissionConstraints, horizons: dict) -> None:
     st.markdown("## Can a solar lander survive here?")
     st.markdown("A lander near the Moon's south pole needs **sunlight** for power and **Earth in the sky** to "
@@ -271,3 +327,20 @@ def render(c: MissionConstraints, horizons: dict) -> None:
     st.plotly_chart(_animation(v, sl, step, hz, start), width="stretch", key="simple_anim")
     st.caption("Grey: the real terrain around the lander, seen in every direction. When the Sun dot drops into "
                "the grey, it is hidden behind a hill and the panels make no power.")
+
+    site_lon = next((s.lon for s in _sites() if s.id == spot), None)
+    if _patch(spot) is not None and site_lon is not None:
+        st.markdown("**The ground around the lander in 3D** (40 × 40 km of NASA LOLA terrain, heights × 3)")
+        n_h = sl.stop - sl.start
+        h = st.slider("Hour of the mission", 0, n_h - 1, 0, key="simple_hour",
+                      help="Move through the mission and watch the shadows the low Sun casts.")
+        k = sl.start + h
+        when = start + pd.Timedelta(hours=h * step)
+        up = bool(v.sun_fraction[k] >= 0.5)
+        title = (f"Day {h * step / 24 + 1:.0f}, {when:%d %b %H:%M} UTC · Sun {v.sun_alt[k]:.1f}° up, "
+                 + ("shining on the lander" if up else "hidden from the lander"))
+        fig3d = _scene(spot, site_lon, float(v.sun_az[k]), float(v.sun_alt[k]), float(v.earth_az[k]),
+                       float(v.earth_alt[k]), up, title)
+        st.plotly_chart(fig3d, width="stretch", key="simple_3d")
+        st.caption("Drag to turn the view. Shadows are cast by the terrain in this patch; ridges further away can "
+                   "also hide the Sun, which the verdict above already includes.")

@@ -31,7 +31,9 @@ and expert knowledge. LunaNav answers it in one screen:
   the Moon above 10° about 41 % of the time, at least one of them 98.3 % of the time.
 - **Simple view first:** the page opens on one question, five landing spots, a large GO / NO-GO with the reason in
   one sentence, a day-by-day strip, what happens if the launch slips (1 day to 1 month), the same date at the
-  other spots, and an animation of the Sun and Earth moving along the real horizon.
+  other spots, and an animation of the Sun and Earth moving along the real horizon, and a 3D view of the 40 × 40 km of terrain
+  around the lander with the shadows the Sun casts at any hour of the mission (`data/terrain/`, cut from LOLA
+  by `scripts/make_terrain_patches.py`; shadows from terrain inside the patch only, see `lunanav/terrain3d.py`).
 - **Cited vs derived points:** every site comes from a publication: a published point, or the centre of an official
   Artemis III region computed from the USGS grid (source shown).
   Next to it LunaNav can show a **derived** point (the best spot within 1 km on a gentle slope) and, for
