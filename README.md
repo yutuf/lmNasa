@@ -2,6 +2,8 @@
 
 Open-source planning tool for landing sites and dates at the lunar south pole.
 
+**Live app: https://limitlessapps.streamlit.app/**
+
 [![tests](https://github.com/yutuf/lmNasa/actions/workflows/ci.yml/badge.svg)](https://github.com/yutuf/lmNasa/actions/workflows/ci.yml)
 
 Existing tools (QuickMap, Moon Trek, JPL Horizons) are built for detailed analysis.
@@ -136,11 +138,10 @@ streamlit run app.py
 
 ## Deploy
 
-**The public app is not online yet.** Until it is, run it locally (`streamlit run app.py`, then open
-`http://localhost:8501/`).
+The public app runs on Streamlit Community Cloud at **https://limitlessapps.streamlit.app/**, deployed from this repo's `main` branch.
+Locally: `streamlit run app.py`, then open `http://localhost:8501/`.
 
-To put it on Streamlit Community Cloud (free; needs the repo owner's GitHub account, which only a person can
-authorise):
+To deploy a copy (free; needs a GitHub account, and the sign-in can only be done by a person):
 
 1. Sign in at https://share.streamlit.io with GitHub and allow access to `yutuf/lmNasa`.
 2. Create app → repository `yutuf/lmNasa`, branch `main`, main file `app.py`.

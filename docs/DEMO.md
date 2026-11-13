@@ -1,7 +1,7 @@
 # 2-minute demo script
 
-Every scene is a link: append the part after the app address. **The public app is not online yet**, so for
-now use a local run: `streamlit run app.py`, then `http://localhost:8501/` + `?site=…`.
+Every scene is a link to the public app, **https://limitlessapps.streamlit.app/** (Streamlit Community Cloud). Locally the same query
+strings work on `http://localhost:8501/` after `streamlit run app.py`.
 The address holds the whole scenario, so each scene opens exactly as described. All verdicts and
 numbers below are checked automatically on every push (`tests/test_demo.py`); default lander and
 mission settings (14 days, 70 % sunlight, 50 % Earth, 2,000 Wh battery).
@@ -19,33 +19,33 @@ Point at the heatmap: bright = go. Point at the map: the green boxes are NASA's 
 
 **1. Same day, three spots within 5 km (45 s)**
 
-`?site=malapert_massif&start=2027-09-09T00:00`
+[`?site=malapert_massif&start=2027-09-09T00:00`](https://limitlessapps.streamlit.app/?site=malapert_massif&start=2027-09-09T00:00)
 
 > "The published Malapert point, landing 9 September 2027: **NO-GO**. Sunlight 45 %, a 164-hour
 > shadow."
 
-`?site=malapert_massif_derived&start=2027-09-09T00:00`
+[`?site=malapert_massif_derived&start=2027-09-09T00:00`](https://limitlessapps.streamlit.app/?site=malapert_massif_derived&start=2027-09-09T00:00)
 
 > "447 metres away: sunlight 90 %, Earth 100 %. Still NO-GO, but only because the battery dies in a
 > 35-hour shadow. LunaNav tells us exactly what would fix it: **6,598 Wh**."
 
-`?site=malapert_massif_derived&start=2027-09-09T00:00&batt=6600`
+[`?site=malapert_massif_derived&start=2027-09-09T00:00&batt=6600`](https://limitlessapps.streamlit.app/?site=malapert_massif_derived&start=2027-09-09T00:00&batt=6600)
 
 > "Give it 6,600 Wh: **GO**."
 
-`?site=malapert_massif_region_best&start=2027-09-09T00:00`
+[`?site=malapert_massif_region_best&start=2027-09-09T00:00`](https://limitlessapps.streamlit.app/?site=malapert_massif_region_best&start=2027-09-09T00:00)
 
 > "Or search the whole Artemis region: 5 km west there is ground with sunlight and Earth 100 % of the
 > time: **GO** with the small battery. Terrain beats latitude."
 
 **2. Why the pole at all? (25 s)**
 
-`?site=apollo_11&start=2026-11-01T00:00`
+[`?site=apollo_11&start=2026-11-01T00:00`](https://limitlessapps.streamlit.app/?site=apollo_11&start=2026-11-01T00:00)
 
 > "Apollo 11's site, landing at nightfall: two weeks of darkness, **NO-GO**; surviving it would take
 > **66,316 Wh** of battery."
 
-`?site=apollo_11&start=2027-02-12T00:00`
+[`?site=apollo_11&start=2027-02-12T00:00`](https://limitlessapps.streamlit.app/?site=apollo_11&start=2027-02-12T00:00)
 
 > "Land at sunrise instead and it needs no battery at all. At the equator the date decides everything;
 > at the pole, the exact spot does."
