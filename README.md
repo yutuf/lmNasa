@@ -83,7 +83,8 @@ rotated into each candidate's local frame instead of re-running the ephemeris. (
 independent DE440 runs: reprojecting Shackleton ridge → de Gerlache rim, ~25 km, matches to 0.0005° in
 altitude.)
 
-The app never touches the DEM or the kernels, so it deploys anywhere (Streamlit Community Cloud).
+The app never touches the DEM or the kernels: everything it reads is committed under `data/`, so it
+runs from a plain `pip install -r requirements.txt` with no secrets or API keys (see [Deploy](#deploy)).
 
 | module | job |
 |---|---|
@@ -132,6 +133,19 @@ python scripts/make_demo_series.py
 
 streamlit run app.py
 ```
+
+## Deploy
+
+**The public app is not online yet.** Until it is, run it locally (`streamlit run app.py`, then open
+`http://localhost:8501/`).
+
+To put it on Streamlit Community Cloud (free; needs the repo owner's GitHub account, which only a person can
+authorise):
+
+1. Sign in at https://share.streamlit.io with GitHub and allow access to `yutuf/lmNasa`.
+2. Create app → repository `yutuf/lmNasa`, branch `main`, main file `app.py`.
+3. Under Advanced settings pick Python 3.13 (what CI tests); no secrets are needed.
+4. Deploy. Dependencies come from `requirements.txt`; the app imports `lunanav/` from the repo root.
 
 ## Adding sites
 
@@ -360,7 +374,11 @@ python scripts/mazarico_compare.py --sun AVGVISIB_75S_120M_201608.TIF \
   Earth-parallax bound. Derived series re-computed independently: same lit / Earth flag on every hour
   (one borderline hour of 19,008 at Cabeus B, from the solar-radius approximation).
 - These checks now run on every push: `tests/test_data_integrity.py`.
-- Sun/Earth directions cross-checked against JPL Horizons: differences ~0.0001°.
+- Sun/Earth directions checked against official JPL Horizons output (DE441, observer on the Moon, airless):
+  726 positions (3 sites × Sun and Earth × every 6 h in January 2027), largest difference 0.000015°, which is
+  the float32 rounding of the stored series. `tests/test_horizons.py` runs on every push against the saved
+  Horizons answers in `tests/fixtures/horizons.json` (fetched with `scripts/fetch_horizons_fixture.py`) and
+  fails above 0.0001°.
 - Shackleton connecting ridge: ≥ 50 % of the solar disk visible 91 % of the time (2026-11 → 2028-12);
   Gläser et al. (EPSC 2014) report 88 % average illumination at 2 m over 20 years for the same spot
   (different metric and period, so close agreement is what we expect, not identity).
