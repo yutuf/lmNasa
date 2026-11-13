@@ -127,5 +127,5 @@ def save_profiles(profiles: list[HorizonProfile], path: str | Path):
 
 
 def load_profiles(path: str | Path) -> dict[str, HorizonProfile]:
-    data = json.loads(Path(path).read_text())
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
     return {d["site_id"]: HorizonProfile.from_dict(d) for d in data}

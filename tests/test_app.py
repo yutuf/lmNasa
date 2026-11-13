@@ -36,8 +36,8 @@ def test_sidebar_changes_recompute_the_scan():
     import json
 
     def heat(at):
-        fig = json.loads(at.get("plotly_chart")[0].proto.spec)
-        return fig["data"][0]
+        figs = [json.loads(c.proto.spec) for c in at.get("plotly_chart")]
+        return next(f["data"][0] for f in figs if f["data"][0].get("type") == "heatmap")
 
     at = AppTest.from_file(APP, default_timeout=180).run()
     base = heat(at)
