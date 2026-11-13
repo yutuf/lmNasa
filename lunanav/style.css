@@ -1,0 +1,54 @@
+/* LunaNav design language: dark space background, Space Grotesk headings, Inter text,
+   Sun amber / Earth blue / GO green / NO-GO red, rounded cards. Loaded by app.py. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+/* text only: icon fonts (Material Symbols) must keep their own family */
+.stApp, .stMarkdown, .stMarkdown p, .stCaption, [data-testid="stWidgetLabel"] p, button p, input {
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+h1, h2, h3, h4 {
+  font-family: "Space Grotesk", "Inter", system-ui, sans-serif !important;
+  letter-spacing: -0.01em;
+}
+h1 { font-weight: 700 !important; }
+
+.stApp {
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(78, 168, 222, 0.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgba(242, 183, 5, 0.07), transparent 60%),
+    #070a12;
+}
+/* faint stars */
+.stApp::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .35;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 72% 12%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 38% 66%, #cfd8ff 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 58%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 22% 84%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 56% 38%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 94% 88%, #cfd8ff 50%, transparent 51%);
+}
+[data-testid="stHeader"] { background: transparent; }
+
+/* section headings in the simple view */
+.stMarkdown p strong:first-child { color: #f4efe1; }
+
+/* segmented controls: pill buttons */
+[data-testid="stButtonGroup"] button {
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
+
+/* plotly charts sit on cards */
+[data-testid="stPlotlyChart"] {
+  background: rgba(17, 23, 38, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 6px;
+}
+[data-testid="stExpander"] {
+  border-radius: 14px !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
