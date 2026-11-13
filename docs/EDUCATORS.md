@@ -33,7 +33,7 @@ hills block it.
 
 ## 2. Terrain beats latitude
 
-**Do:** Pick **Malapert Massif**, then the derived point **↳ 447 m NE** under it. Compare the
+**Do:** Pick **Malapert Massif**, then the derived point **↳ better spot 447 m NE** under it. Compare the
 "Sunlit" and "Earth in view" numbers, and the terrain line in the 360° view.
 
 **What students should find:** the metrics show the selected mission; over the whole data period,

@@ -230,8 +230,8 @@ def short_label(s, width=30):
     """Compact heatmap tick: derived rows sit right under their parent, so direction + distance is enough."""
     if s.derived:
         d = COMPASS8[int(((s.bearing_deg or 0) + 22.5) // 45) % 8]
-        return (f"↳ region best {s.distance_m / 1000:.1f} km {d}" if s.search == "region"
-                else f"↳ {s.distance_m:.0f} m {d}")
+        return (f"↳ best in region, {s.distance_m / 1000:.1f} km {d}" if s.search == "region"
+                else f"↳ better spot {s.distance_m:.0f} m {d}")
     name = s.name.split(" (")[0] + (" region" if s.category == "region_centre" else "")  # vs. IM-2 "Mons Mouton"
     name = name if len(name) <= width else name[:width - 1] + "…"
     steep = " ⚠" if s.slope_deg is not None and s.slope_deg > MAX_SLOPE else ""
@@ -346,15 +346,24 @@ for s in sites:
                          min_battery=r.min_soc))
 df = pd.DataFrame(rows).sort_values(["feasible", "score", "delay_ok_days"], ascending=False)
 st.subheader("Best options")
-st.caption("Best landing date for each site. **delay_ok_days** = how many days the launch can slip and every "
-           "later start is still feasible (breaks ties in score). Reference sites (e.g. Apollo 11) are shown on "
-           "the heatmap but not ranked.")
+st.caption("Best landing date for each spot. **Launch can slip** = how many days the launch can be late with every "
+           "later start still GO. Reference sites (e.g. Apollo 11) are shown on the heatmap but not ranked.")
 FMT = {"score": "{:.1f}", "sun": "{:.0%}", "earth": "{:.0%}", "min_battery": "{:.0%}", "longest_shadow_h": "{:.0f}",
        "delay_ok_days": "{:.0f}", "slope_deg": lambda x: "–" if pd.isna(x) else f"{x:.1f}°",
        "start": lambda t: t.strftime("%Y-%m-%d %H:%M")}
 if "nearest_psr_km" in df:
     FMT["nearest_psr_km"] = lambda x: "–" if pd.isna(x) else f"{x:.1f} km"
-st.dataframe(df.groupby("site", sort=False).head(1).style.format(FMT), width="stretch", hide_index=True)
+best = df.groupby("site", sort=False).head(1)
+simple = pd.DataFrame({
+    "Spot": best["site"], "Best landing (UTC)": best["start"].dt.strftime("%d %b %Y %H:%M"),
+    "Verdict": np.where(best["feasible"], "✅ GO", "❌ NO-GO"),
+    "Sunlight": best["sun"].map("{:.0%}".format), "Earth in view": best["earth"].map("{:.0%}".format),
+    "Longest shadow": best["longest_shadow_h"].map("{:.0f} h".format),
+    "Launch can slip": best["delay_ok_days"].map(lambda x: "–" if pd.isna(x) else f"{x:.0f} days"),
+})
+st.dataframe(simple, width="stretch", hide_index=True)
+with st.expander("All columns (score, region, slope, battery, nearest permanent shadow)"):
+    st.dataframe(best.style.format(FMT), width="stretch", hide_index=True)
 with st.expander("Top 20 site × date options overall"):
     st.dataframe(df.head(20).style.format(FMT), width="stretch", hide_index=True)
 
