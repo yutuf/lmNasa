@@ -1,0 +1,404 @@
+{
+  "board": "site_map",
+  "units": "mm from the board's top-left corner, x right, y down",
+  "projection": "south polar stereographic, sphere R = 1737.4 km, longitude 0 up, 90 E right",
+  "km_per_mm": 4.0,
+  "scale": "1:4000000",
+  "pole_mm": [
+    53.0,
+    53.0
+  ],
+  "board_mm": [
+    100.0,
+    100.0
+  ],
+  "led_min_pitch_mm": 9.0,
+  "chain": "J1 pin 2 -> R1 -> D1 ... -> last LED -> J2 pin 2",
+  "leds": [
+    {
+      "chain_index": 0,
+      "ref": "D1",
+      "capacitor": "C1",
+      "site_id": "shackleton_ridge",
+      "name": "Shackleton – de Gerlache connecting ridge",
+      "silk_label": "CONN RIDGE",
+      "kind": "published_point",
+      "region": null,
+      "source": "data/sites.yaml",
+      "lat": -89.4395,
+      "lon": -137.1934,
+      "map_km": [
+        -11.55,
+        -12.47
+      ],
+      "true_mm": [
+        50.113,
+        56.117
+      ],
+      "placed_mm": [
+        50.113,
+        56.117
+      ],
+      "offset_mm": 0.0,
+      "offset_km": 0.0,
+      "moved": false,
+      "true_dot": "none (LED is on the true position)",
+      "leader_visible_mm": null,
+      "rotation_deg": 180,
+      "label_mm": [
+        50.11,
+        61.83
+      ]
+    },
+    {
+      "chain_index": 1,
+      "ref": "D2",
+      "capacitor": "C2",
+      "site_id": "de_gerlache_rim",
+      "name": "de Gerlache crater rim (site 011)",
+      "silk_label": "DG RIM 011",
+      "kind": "published_point",
+      "region": null,
+      "source": "data/sites.yaml",
+      "lat": -88.67,
+      "lon": -68.1,
+      "map_km": [
+        -37.42,
+        15.04
+      ],
+      "true_mm": [
+        43.645,
+        49.239
+      ],
+      "placed_mm": [
+        51.989,
+        47.159
+      ],
+      "offset_mm": 8.6,
+      "offset_km": 34.4,
+      "moved": true,
+      "true_dot": "hidden under D3",
+      "leader_visible_mm": 2.1,
+      "rotation_deg": 270,
+      "label_mm": [
+        62.83,
+        49.79
+      ]
+    },
+    {
+      "chain_index": 2,
+      "ref": "D3",
+      "capacitor": "C3",
+      "site_id": "artemis_de_gerlache_rim_2_region_best",
+      "name": "de Gerlache Rim 2 — best point in the Artemis III region",
+      "silk_label": "DG RIM 2",
+      "kind": "region_best",
+      "region": "de_Gerlache_Rim_2",
+      "source": "data/derived_sites.yaml",
+      "lat": -88.58866,
+      "lon": -67.78065,
+      "map_km": [
+        -39.62,
+        16.18
+      ],
+      "true_mm": [
+        43.095,
+        48.954
+      ],
+      "placed_mm": [
+        43.095,
+        48.954
+      ],
+      "offset_mm": 0.0,
+      "offset_km": 0.0,
+      "moved": false,
+      "true_dot": "none (LED is on the true position)",
+      "leader_visible_mm": null,
+      "rotation_deg": 0,
+      "label_mm": [
+        34.09,
+        42.9
+      ]
+    },
+    {
+      "chain_index": 3,
+      "ref": "D4",
+      "capacitor": "C4",
+      "site_id": "artemis_peak_near_cabeus_b_region_best",
+      "name": "Peak near Cabeus B — best point in the Artemis III region",
+      "silk_label": "CABEUS B",
+      "kind": "region_best",
+      "region": "Peak_Near_Cabeus_B",
+      "source": "data/derived_sites.yaml",
+      "lat": -83.61501,
+      "lon": -68.57237,
+      "map_km": [
+        -180.42,
+        70.81
+      ],
+      "true_mm": [
+        7.895,
+        35.299
+      ],
+      "placed_mm": [
+        7.895,
+        35.299
+      ],
+      "offset_mm": 0.0,
+      "offset_km": 0.0,
+      "moved": false,
+      "true_dot": "none (LED is on the true position)",
+      "leader_visible_mm": null,
+      "rotation_deg": 270,
+      "label_mm": [
+        7.89,
+        40.12
+      ]
+    },
+    {
+      "chain_index": 4,
+      "ref": "D5",
+      "capacitor": "C5",
+      "site_id": "artemis_haworth_region_best",
+      "name": "Haworth — best point in the Artemis III region",
+      "silk_label": "HAWORTH",
+      "kind": "region_best",
+      "region": "Haworth",
+      "source": "data/derived_sites.yaml",
+      "lat": -86.36589,
+      "lon": -23.2176,
+      "map_km": [
+        -43.46,
+        101.31
+      ],
+      "true_mm": [
+        42.136,
+        27.673
+      ],
+      "placed_mm": [
+        42.136,
+        27.673
+      ],
+      "offset_mm": 0.0,
+      "offset_km": 0.0,
+      "moved": false,
+      "true_dot": "none (LED is on the true position)",
+      "leader_visible_mm": null,
+      "rotation_deg": 180,
+      "label_mm": [
+        42.14,
+        23.55
+      ]
+    },
+    {
+      "chain_index": 5,
+      "ref": "D6",
+      "capacitor": "C6",
+      "site_id": "malapert_massif_region_best",
+      "name": "Malapert Massif — best point in the Artemis III region",
+      "silk_label": "MALAPERT",
+      "kind": "region_best",
+      "region": "Malapert_Massif",
+      "source": "data/derived_sites.yaml",
+      "lat": -85.96679,
+      "lon": -2.30609,
+      "map_km": [
+        -4.92,
+        122.25
+      ],
+      "true_mm": [
+        51.769,
+        22.437
+      ],
+      "placed_mm": [
+        51.769,
+        22.437
+      ],
+      "offset_mm": 0.0,
+      "offset_km": 0.0,
+      "moved": false,
+      "true_dot": "none (LED is on the true position)",
+      "leader_visible_mm": null,
+      "rotation_deg": 180,
+      "label_mm": [
+        51.77,
+        18.31
+      ]
+    },
+    {
+      "chain_index": 6,
+      "ref": "D7",
+      "capacitor": "C7",
+      "site_id": "artemis_mons_mouton_region_best",
+      "name": "Mons Mouton — best point in the Artemis III region",
+      "silk_label": "MOUTON",
+      "kind": "region_best",
+      "region": "Mons_Mouton",
+      "source": "data/derived_sites.yaml",
+      "lat": -85.40531,
+      "lon": 31.71667,
+      "map_km": [
+        73.29,
+        118.58
+      ],
+      "true_mm": [
+        71.321,
+        23.354
+      ],
+      "placed_mm": [
+        66.15,
+        23.898
+      ],
+      "offset_mm": 5.2,
+      "offset_km": 20.8,
+      "moved": true,
+      "true_dot": "drawn",
+      "leader_visible_mm": 0.55,
+      "rotation_deg": 180,
+      "label_mm": [
+        66.15,
+        29.61
+      ]
+    },
+    {
+      "chain_index": 7,
+      "ref": "D8",
+      "capacitor": "C8",
+      "site_id": "artemis_nobile_rim_1_region_best",
+      "name": "Nobile Rim 1 — best point in the Artemis III region",
+      "silk_label": "NOBILE 1",
+      "kind": "region_best",
+      "region": "Nobile_Rim_1",
+      "source": "data/derived_sites.yaml",
+      "lat": -85.08348,
+      "lon": 36.37822,
+      "map_km": [
+        88.48,
+        120.11
+      ],
+      "true_mm": [
+        75.12,
+        22.974
+      ],
+      "placed_mm": [
+        75.12,
+        22.974
+      ],
+      "offset_mm": 0.0,
+      "offset_km": 0.0,
+      "moved": false,
+      "true_dot": "none (LED is on the true position)",
+      "leader_visible_mm": null,
+      "rotation_deg": 180,
+      "label_mm": [
+        76.63,
+        29.78
+      ]
+    },
+    {
+      "chain_index": 8,
+      "ref": "D9",
+      "capacitor": "C9",
+      "site_id": "artemis_mons_mouton_plateau_region_best",
+      "name": "Mons Mouton Plateau — best point in the Artemis III region",
+      "silk_label": "PLATEAU",
+      "kind": "region_best",
+      "region": "Mons_Mouton_Plateau",
+      "source": "data/derived_sites.yaml",
+      "lat": -84.01351,
+      "lon": 44.21441,
+      "map_km": [
+        126.7,
+        130.23
+      ],
+      "true_mm": [
+        84.676,
+        20.443
+      ],
+      "placed_mm": [
+        84.676,
+        20.443
+      ],
+      "offset_mm": 0.0,
+      "offset_km": 0.0,
+      "moved": false,
+      "true_dot": "none (LED is on the true position)",
+      "leader_visible_mm": null,
+      "rotation_deg": 90,
+      "label_mm": [
+        89.75,
+        15.62
+      ]
+    },
+    {
+      "chain_index": 9,
+      "ref": "D10",
+      "capacitor": "C10",
+      "site_id": "artemis_nobile_rim_2_region_best",
+      "name": "Nobile Rim 2 — best point in the Artemis III region",
+      "silk_label": "NOBILE 2",
+      "kind": "region_best",
+      "region": "Nobile_Rim_2",
+      "source": "data/derived_sites.yaml",
+      "lat": -84.11918,
+      "lon": 57.74913,
+      "map_km": [
+        150.95,
+        95.24
+      ],
+      "true_mm": [
+        90.737,
+        29.189
+      ],
+      "placed_mm": [
+        90.737,
+        29.189
+      ],
+      "offset_mm": 0.0,
+      "offset_km": 0.0,
+      "moved": false,
+      "true_dot": "none (LED is on the true position)",
+      "leader_visible_mm": null,
+      "rotation_deg": 90,
+      "label_mm": [
+        80.42,
+        34.36
+      ]
+    },
+    {
+      "chain_index": 10,
+      "ref": "D11",
+      "capacitor": "C11",
+      "site_id": "artemis_slater_plain_region_best",
+      "name": "Slater Plain — best point in the Artemis III region",
+      "silk_label": "SLATER",
+      "kind": "region_best",
+      "region": "Slater_Plain",
+      "source": "data/derived_sites.yaml",
+      "lat": -87.28139,
+      "lon": 127.94145,
+      "map_km": [
+        65.03,
+        -50.7
+      ],
+      "true_mm": [
+        69.256,
+        65.674
+      ],
+      "placed_mm": [
+        69.256,
+        65.674
+      ],
+      "offset_mm": 0.0,
+      "offset_km": 0.0,
+      "moved": false,
+      "true_dot": "none (LED is on the true position)",
+      "leader_visible_mm": null,
+      "rotation_deg": 0,
+      "label_mm": [
+        73.86,
+        59.97
+      ]
+    }
+  ]
+}
