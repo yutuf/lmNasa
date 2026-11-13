@@ -60,3 +60,23 @@ describe('terrain', () => {
     expect(profileAt(prof, -0.5)).toBeCloseTo(3)
   })
 })
+
+describe('science layers', () => {
+  it('reads the layers and picks the most ice-favourable permanent shadow nearby', async () => {
+    const { parseScience, scienceAt, findIceTarget } = await import('./terrain')
+    const n = 50
+    const buf = new ArrayBuffer(12 + 4 * n * n)
+    const v = new DataView(buf)
+    v.setUint32(0, n, true); v.setFloat32(4, 240, true); v.setFloat32(8, (n * 240) / 2, true)
+    const L = (k: number) => new Uint8Array(buf, 12 + k * n * n, n * n)
+    const at = (x: number, y: number) => Math.floor((6000 - y) / 240) * n + Math.floor((x + 6000) / 240)
+    L(0)[at(1000, 0)] = 255; L(3)[at(1000, 0)] = 30          // PSR, little ice, 1 km east
+    L(0)[at(-2000, 0)] = 255; L(3)[at(-2000, 0)] = 200       // PSR, lots of ice, 2 km west
+    const sc = parseScience(buf)
+    expect(scienceAt(sc, 1000, 0)?.psr).toBe(1)
+    expect(scienceAt(sc, 1e6, 0)).toBeNull()
+    const t = findIceTarget(sc, 0, 0)!
+    expect(t.x).toBeLessThan(0)
+    expect(t.ice).toBeCloseTo((200 / 255) * 0.85)
+  })
+})

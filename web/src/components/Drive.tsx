@@ -10,7 +10,7 @@ import type { Ephem } from '../engine'
 import { pointLatLon } from '../engine'
 import type { Lang } from '../i18n'
 import { R_M, altAz, bodies, conditions, diskAbove, horizonElev, horizonProfile, makeGround, nextChanges, parseDem,
-  parsePatch, planeAz, planeDir, type Dem, type Patch, type SiteInfo } from '../terrain'
+  parsePatch, parseScience, planeAz, planeDir, scienceAt, findIceTarget, type Dem, type Patch, type Science, type SiteInfo } from '../terrain'
 import { dataUrl } from '../data'
 
 export type DriveMode = 'lander' | 'rover'
@@ -19,6 +19,7 @@ export interface DriveStart { x: number; y: number; hour: number; missionH: numb
 // Rover power model (illustrative, VIPER-class): stated on screen so nobody mistakes it for a real spec.
 const ROVER = { batteryWh: 3000, panelW: 450, driveW: 220, idleW: 120, maxSpeed: 0.25, maxSlope: 20, mast: 2 }
 const WARPS = [1, 10, 60, 600, 3600]
+const PARK = [7, 4]   // rover parking spot beside the lander (m)
 const NEAR = { half: 1200, step: 10 }
 const FAR = { half: 80000, step: 800 }
 
@@ -47,7 +48,20 @@ const L = {
   restart: { en: 'Try again', tr: 'Tekrar dene' },
   terrain10: { en: 'LOLA 10 m terrain', tr: 'LOLA 10 m arazi' },
   terrain200: { en: 'LOLA 200 m terrain', tr: 'LOLA 200 m arazi' },
-  keys: { en: 'W/S drive · A/D steer · C camera · L lights · 1–5 time speed · drag to look', tr: 'W/S sür · A/D dön · C kamera · L far · 1–5 zaman hızı · sürükle: bak' },
+  keys: { en: 'W/S drive · A/D steer · E drill · V science view · C camera · L lights · 1–5 time speed · drag to look',
+    tr: 'W/S sür · A/D dön · E del · V bilim görünümü · C kamera · L far · 1–5 zaman hızı · sürükle: bak' },
+  target: { en: 'Ice target', tr: 'Buz hedefi' },
+  inPsr: { en: 'in permanent shadow', tr: 'kalıcı gölgede' },
+  iceIdx: { en: 'ice favorability', tr: 'buz olasılık endeksi' },
+  drillHint: { en: 'Hold E to drill (2 h at 300 W)', tr: 'Delmek için E basılı tutun (2 sa, 300 W)' },
+  drilling: { en: 'Drilling', tr: 'Deliniyor' },
+  bringBack: { en: 'Sample collected: bring it back into sunlight', tr: 'Örnek alındı: güneş ışığına geri getirin' },
+  complete: { en: 'Mission complete', tr: 'Görev tamam' },
+  noTarget: { en: 'No permanent shadow within 6 km: explore freely', tr: '6 km içinde kalıcı gölge yok: serbest keşif' },
+  science: { en: 'Science view: blue = permanent shadow (never sunlit), cyan = ice-favourable',
+    tr: 'Bilim görünümü: mavi = kalıcı gölge (hiç güneş görmez), camgöbeği = buz için elverişli' },
+  psrHere: { en: 'You are in permanent shadow', tr: 'Kalıcı gölgedesiniz' },
+  sciSrc: { en: 'Permanent shadow: Mazarico et al. 2011 (NASA PGDA) · ice index: USGS', tr: 'Kalıcı gölge: Mazarico vd. 2011 (NASA PGDA) · buz endeksi: USGS' },
   keysLander: { en: 'Drag to look around · play the mission clock below', tr: 'Etrafa bakmak için sürükleyin · görev saatini aşağıdan oynatın' },
   model: { en: 'Rover power model is illustrative (450 W panel, 3 kWh battery, 0.25 m/s); terrain, Sun, Earth and DSN are real data.',
     tr: 'Gezgin güç modeli temsilidir (450 W panel, 3 kWh batarya, 0,25 m/sn); arazi, Güneş, Dünya ve DSN gerçek veridir.' },
@@ -56,14 +70,15 @@ const L = {
   mission: { en: 'Mission day', tr: 'Görev günü' },
 } as const
 
-interface World { dem: Dem; patches: Patch[]; ground: ReturnType<typeof makeGround> }
+interface World { dem: Dem; patches: Patch[]; ground: ReturnType<typeof makeGround>; sci: Science | null }
 
-let demPromise: Promise<{ dem: Dem; sites: SiteInfo[] }> | null = null
+let demPromise: Promise<{ dem: Dem; sites: SiteInfo[]; sci: Science | null }> | null = null
 function loadDem() {
   demPromise ??= Promise.all([
     fetch(dataUrl('pole_dem.bin')).then((r) => r.arrayBuffer()),
     fetch(dataUrl('sites.json')).then((r) => (r.ok ? r.json() : { sites: [] })).catch(() => ({ sites: [] })),
-  ]).then(([b, s]) => ({ dem: parseDem(b), sites: s.sites as SiteInfo[] }))
+    fetch(dataUrl('psr.bin')).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null),
+  ]).then(([b, s, p]) => ({ dem: parseDem(b), sites: s.sites as SiteInfo[], sci: p ? parseScience(p) : null }))
   return demPromise
 }
 const patchCache = new Map<string, Promise<Patch>>()
@@ -86,6 +101,9 @@ interface Sim {
   origin: { x: number; y: number; h: number }
   profile: Float32Array | null; profileAt: { x: number; y: number }
   cond: ReturnType<typeof conditions> | null
+  science: boolean; drillKey: boolean
+  target: { x: number; y: number; ice: number } | null
+  phase: 'go' | 'return' | 'done'; drilled: number; doneHour: number
 }
 
 export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
@@ -93,17 +111,18 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
   const [world, setWorld] = useState<World | null>(null)
   const [hud, setHud] = useState(0)
   const sim = useRef<Sim>({
-    mode: initialMode, x: start.x, y: start.y, heading: 0, speed: 0, throttle: 0, steer: 0,
+    mode: initialMode, x: start.x + PARK[0], y: start.y + PARK[1], heading: 0, speed: 0, throttle: 0, steer: 0,
     hour: start.hour, warp: initialMode === 'rover' ? 60 : 600, playing: initialMode === 'rover', battery: ROVER.batteryWh,
     solarW: 0, useW: 0, driven: 0, startHour: start.hour, dead: false, steep: false, lights: true,
     cam: 'chase', pad: false, padBtn: [], yaw: 0, pitch: initialMode === 'lander' ? 0.02 : -0.12,
     origin: { x: start.x, y: start.y, h: 0 }, profile: null, profileAt: { x: NaN, y: NaN }, cond: null,
+    science: false, drillKey: false, target: null, phase: 'go', drilled: 0, doneHour: 0,
   })
 
   // load the 200 m grid and any 10 m site maps within reach of the start
   useEffect(() => {
     let live = true
-    loadDem().then(async ({ dem, sites }) => {
+    loadDem().then(async ({ dem, sites, sci }) => {
       const patches = await Promise.all(sites.filter((s) => near(s, start.x, start.y, 30000)).map(loadPatch))
       if (!live) return
       const ground = makeGround(dem, patches)
@@ -113,7 +132,9 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
       const sky = conditions(eph, horizonProfile(ground.height, start.x, start.y), start.x, start.y, start.hour)
       const [dx, dy] = planeDir(sky.lon, sky.sun.az)
       s.heading = Math.atan2(dy, dx) + (initialMode === 'rover' ? 0.6 : 0)
-      setWorld({ dem, patches, ground })
+      const tg = sci ? findIceTarget(sci, start.x, start.y) : null
+      s.target = tg && { x: tg.x, y: tg.y, ice: tg.ice }
+      setWorld({ dem, patches, ground, sci })
     })
     return () => { live = false }
   }, [start.x, start.y])  // eslint-disable-line react-hooks/exhaustive-deps
@@ -128,6 +149,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
       const s = sim.current
       s.throttle = (keys.has('w') || keys.has('arrowup') ? 1 : 0) - (keys.has('s') || keys.has('arrowdown') ? 1 : 0)
       s.steer = (keys.has('a') || keys.has('arrowleft') ? 1 : 0) - (keys.has('d') || keys.has('arrowright') ? 1 : 0)
+      s.drillKey = keys.has('e')
     }
     const down = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase()
@@ -135,6 +157,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
       if (k === 'escape') onExit()
       if (k === 'c') s.cam = s.cam === 'chase' ? 'mast' : 'chase'
       if (k === 'l') s.lights = !s.lights
+      if (k === 'v') s.science = !s.science
       if (k === ' ') s.playing = !s.playing
       if (k >= '1' && k <= '5') s.warp = WARPS[+k - 1]
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault()
@@ -161,9 +184,13 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
   const src = world?.ground.source(s.x, s.y)
   const headingAz = planeAz(lon, Math.cos(s.heading + (s.mode === 'lander' ? s.yaw : 0)), Math.sin(s.heading + (s.mode === 'lander' ? s.yaw : 0)))
   void hud
+  const here = world?.sci ? scienceAt(world.sci, s.x, s.y) : null
+  const tgt = s.target
+  const tDist = tgt ? Math.hypot(tgt.x - s.x, tgt.y - s.y) : 0
+  const tAz = tgt ? planeAz(lon, tgt.x - s.x, tgt.y - s.y) : null
 
   const restart = () => {
-    Object.assign(s, { x: start.x, y: start.y, hour: start.hour, startHour: start.hour, battery: ROVER.batteryWh, driven: 0, dead: false, speed: 0 })
+    Object.assign(s, { x: start.x + PARK[0], y: start.y + PARK[1], hour: start.hour, startHour: start.hour, battery: ROVER.batteryWh, driven: 0, dead: false, speed: 0, phase: 'go', drilled: 0 })
     s.profileAt = { x: NaN, y: NaN }
   }
 
@@ -185,7 +212,23 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
         <div className="hud-sub">{lat.toFixed(3)}°, {(((lon % 360) + 360) % 360).toFixed(2)}°E · {src ? `${t('terrain10')} · ${src.name}` : t('terrain200')}</div>
       </div>
 
-      <Compass az={headingAz} sunAz={c?.sun.az ?? 0} earthAz={c?.earth.az ?? 0} sunUp={(c?.sunFrac ?? 0) > 0} earthUp={!!c?.earthUp} lang={lang} />
+      {s.mode === 'rover' && (
+        <div className="hud objective">
+          {!tgt && <div>🧭 {t('noTarget')}</div>}
+          {tgt && s.phase === 'go' && (
+            <>
+              <div><b>🎯 {t('target')}</b> · {tDist < 1000 ? `${Math.round(tDist)} m` : `${(tDist / 1000).toFixed(2)} km`} · {Math.round(tAz ?? 0)}°</div>
+              <div className="hud-sub">{t('inPsr')} · {t('iceIdx')} {tgt.ice.toFixed(2)}</div>
+              {tDist < 25 && <div className="drill">{s.drilled > 0 ? `⛏ ${t('drilling')} ${Math.round((s.drilled / 2) * 100)}%` : `⛏ ${t('drillHint')}`}</div>}
+            </>
+          )}
+          {s.phase === 'return' && <div className="drill">🧪 {t('bringBack')}</div>}
+          {s.phase === 'done' && <div className="done">✅ {t('complete')} · {(s.driven / 1000).toFixed(2)} km · {hrs(Math.round(s.doneHour - s.startHour))}</div>}
+          {here && here.psr > 0.5 && <div className="hud-sub psr">🌑 {t('psrHere')}</div>}
+        </div>
+      )}
+      {s.science && <div className="hud science">{t('science')}<br /><small>{t('sciSrc')}</small></div>}
+      <Compass target={s.mode === 'rover' && s.phase === 'go' ? tAz : null} az={headingAz} sunAz={c?.sun.az ?? 0} earthAz={c?.earth.az ?? 0} sunUp={(c?.sunFrac ?? 0) > 0} earthUp={!!c?.earthUp} lang={lang} />
 
       <div className="hud top-right">
         <div className="clock">{date.toISOString().slice(0, 16).replace('T', ' ')} UTC</div>
@@ -224,7 +267,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
       <div className="hud bottom-right">
         {s.mode === 'lander'
           ? <button className="big" onClick={() => { s.mode = 'rover'; s.warp = 60; s.playing = true; s.pitch = -0.12; s.yaw = 0 }}>🚙 {t('deploy')}</button>
-          : <button className="big ghost" onClick={() => { s.mode = 'lander'; s.x = start.x; s.y = start.y; s.yaw = 0; s.pitch = 0.02; s.profileAt = { x: NaN, y: NaN } }}>🛬 {t('back')}</button>}
+          : <button className="big ghost" onClick={() => { s.mode = 'lander'; s.x = start.x + PARK[0]; s.y = start.y + PARK[1]; s.yaw = 0; s.pitch = 0.02; s.profileAt = { x: NaN, y: NaN } }}>🛬 {t('back')}</button>}
         <button className="big ghost" onClick={onExit}>✕ {t('exit')}</button>
         <p className="keys">{s.mode === 'lander' ? t('keysLander') : t('keys')}</p>
         <p className="keys">{t('model')}</p>
@@ -271,11 +314,12 @@ function LookDrag({ sim }: { sim: React.MutableRefObject<Sim> }) {
   return null
 }
 
-function Compass({ az, sunAz, earthAz, sunUp, earthUp, lang }: { az: number; sunAz: number; earthAz: number; sunUp: boolean; earthUp: boolean; lang: Lang }) {
+function Compass({ az, sunAz, earthAz, sunUp, earthUp, lang, target }: { az: number; sunAz: number; earthAz: number; sunUp: boolean; earthUp: boolean; lang: Lang; target: number | null }) {
   const span = 120
   const marks: [number, string, string][] = [[0, lang === 'tr' ? 'K' : 'N', 'cdir'], [90, lang === 'tr' ? 'D' : 'E', 'cdir'],
     [180, 'S', 'cdir'], [270, lang === 'tr' ? 'B' : 'W', 'cdir'], [sunAz, '☀', sunUp ? 'sun' : 'sun off'], [earthAz, '🌍', earthUp ? 'earth' : 'earth off']]
   for (let a = 0; a < 360; a += 30) if (a % 90) marks.push([a, String(a), 'deg'])
+  if (target !== null) marks.push([target, '◆', 'tgt'])
   return (
     <div className="compass">
       {marks.map(([a, label, cls]) => {
@@ -305,7 +349,9 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
   const head = useRef<THREE.SpotLight>(null)
   const nearMesh = useRef<THREE.Mesh>(null)
   const farMesh = useRef<THREE.Mesh>(null)
-  const chunk = useRef({ cx: NaN, cy: NaN, ox: NaN, oy: NaN, litHour: NaN, litX: NaN, litY: NaN })
+  const chunk = useRef({ cx: NaN, cy: NaN, ox: NaN, oy: NaN, litHour: NaN, litX: NaN, litY: NaN, sci: false })
+  const ambient = useRef<THREE.HemisphereLight>(null)
+  const beacon = useRef<THREE.Group>(null)
   // regolith PBR texture from NASA's Artemis south-pole simulation kit (USGS Astrogeology, 84S project), 1024 px
   const [regColor, regNormal] = useTexture([dataUrl('regolith_color.jpg'), dataUrl('regolith_normal.jpg')])
   useMemo(() => {
@@ -376,6 +422,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
     g.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
     g.setAttribute('color', new THREE.BufferAttribute(col, 3))
+    g.setAttribute('sunlit', new THREE.BufferAttribute(new Float32Array(n * n).fill(1), 1))
     g.setIndex(new THREE.BufferAttribute(idx, 1))
     g.computeVertexNormals()
     g.userData = { cx, cy, half, step, n }
@@ -403,6 +450,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
       }
     }
     const col = g.getAttribute('color') as THREE.BufferAttribute
+    const sunlit = g.getAttribute('sunlit') as THREE.BufferAttribute
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
         const fi = Math.min(i / sub, m - 1.0001)
@@ -413,10 +461,19 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
         const v = fj - c
         const val = lit[a * m + c] * (1 - u) * (1 - v) + lit[a * m + c + 1] * (1 - u) * v + lit[(a + 1) * m + c] * u * (1 - v) + lit[(a + 1) * m + c + 1] * u * v
         const k = i * n + j
-        col.setXYZ(k, val, val, val)
+        sunlit.setX(k, val)
+        if (sim.current.science && world.sci) {
+          const pos = g.getAttribute('position') as THREE.BufferAttribute
+          const o = sim.current.origin
+          const sc = scienceAt(world.sci, pos.getX(k) + o.x, -pos.getZ(k) + o.y)
+          const psr = sc?.psr ?? 0
+          const ice = Math.min(1, (sc?.ice ?? 0) / 0.4) * psr
+          col.setXYZ(k, 1 - 0.7 * psr, 1 - 0.45 * psr + 0.5 * ice, 1 + 0.6 * psr)
+        } else col.setXYZ(k, 1, 1, 1)
       }
     }
     col.needsUpdate = true
+    sunlit.needsUpdate = true
   }
 
   useFrame((_, dtRaw) => {
@@ -440,7 +497,8 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
       buildGrid(farMesh.current, s.origin.x, s.origin.y, FAR.half, FAR.step, { cx: s.x, cy: s.y, half: NEAR.half })
       ck.cx = s.x; ck.cy = s.y; ck.litHour = NaN
     }
-    if (!(Math.abs(s.hour - ck.litHour) < 0.5) || Math.hypot(s.x - ck.litX, s.y - ck.litY) > 300) {
+    if (!(Math.abs(s.hour - ck.litHour) < 0.5) || Math.hypot(s.x - ck.litX, s.y - ck.litY) > 300 || ck.sci !== s.science) {
+      ck.sci = s.science
       paintLit(nearMesh.current, s.hour, 8, 60000)
       paintLit(farMesh.current, s.hour, 4, 60000)
       ck.litHour = s.hour; ck.litX = s.x; ck.litY = s.y
@@ -478,6 +536,12 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
     const c = s.cond
     s.solarW = c ? ROVER.panelW * c.sunFrac * Math.max(0, Math.cos((c.sun.alt * Math.PI) / 180)) : 0
     s.useW = ROVER.idleW + (isRover && Math.abs(s.speed) > 0.01 ? ROVER.driveW : 0) + (s.lights && isRover ? 30 : 0)
+    if (isRover && s.target && s.phase === 'go' && Math.hypot(s.target.x - s.x, s.target.y - s.y) < 25 && s.drillKey && !s.dead) {
+      s.useW += 300
+      s.drilled += simDt / 3600
+      if (s.drilled >= 2) s.phase = 'return'
+    }
+    if (isRover && s.phase === 'return' && c && c.sunFrac >= 0.5) { s.phase = 'done'; s.doneHour = s.hour }
     if (isRover && !s.dead) {
       s.battery = Math.min(ROVER.batteryWh, s.battery + ((s.solarW - s.useW) * simDt) / 3600)
       if (s.battery <= 0) { s.battery = 0; s.dead = true; s.speed = 0 }
@@ -497,11 +561,16 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
     const basis = new THREE.Matrix4().makeBasis(fwd, nrm, fwd.clone().cross(nrm))
     if (rover.current) {
       rover.current.visible = true
-      const rp = s.mode === 'rover' ? p : toV(start.x + 6, start.y + 3)
+      const rp = s.mode === 'rover' ? p : toV(start.x + PARK[0], start.y + PARK[1])
       rover.current.position.copy(rp)
       if (s.mode === 'rover') rover.current.quaternion.setFromRotationMatrix(basis)
     }
     if (lander.current) { lander.current.position.copy(toV(start.x, start.y)); lander.current.rotation.y = landerYaw.current }
+    if (ambient.current) ambient.current.intensity = s.science ? 0.9 : 0.04
+    if (beacon.current) {
+      beacon.current.visible = !!s.target && s.mode === 'rover' && s.phase === 'go'
+      if (s.target && Math.hypot(s.target.x - s.x, s.target.y - s.y) < 6000) beacon.current.position.copy(toV(s.target.x, s.target.y))
+    }
 
     // ---- sky: Sun, Earth, light
     if (c) {
@@ -559,18 +628,18 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
   const earthR = 250000 * Math.tan((0.95 * Math.PI) / 180)
   return (
     <>
-      <hemisphereLight args={['#9fb4d6', '#000000', 0.04]} />
+      <hemisphereLight ref={ambient} args={['#9fb4d6', '#000000', 0.04]} />
       <directionalLight ref={sun} castShadow intensity={4} color="#fff6e6"
                         shadow-mapSize={[4096, 4096]} shadow-bias={-0.0004} shadow-normalBias={0.6}
                         shadow-camera-left={-700} shadow-camera-right={700} shadow-camera-top={700} shadow-camera-bottom={-700}
                         shadow-camera-near={10} shadow-camera-far={8000} />
       <mesh ref={nearMesh} receiveShadow castShadow>
         <bufferGeometry />
-        <meshStandardMaterial map={regColor} normalMap={regNormal} normalScale={[0.8, 0.8]} vertexColors roughness={1} metalness={0} color="#d6d2ca" />
+        <meshStandardMaterial map={regColor} normalMap={regNormal} normalScale={[0.8, 0.8]} vertexColors roughness={1} metalness={0} color="#d6d2ca" onBeforeCompile={sunlitShader} />
       </mesh>
       <mesh ref={farMesh} receiveShadow>
         <bufferGeometry />
-        <meshStandardMaterial vertexColors roughness={1} metalness={0} color="#a7a29a" />
+        <meshStandardMaterial vertexColors roughness={1} metalness={0} color="#a7a29a" onBeforeCompile={sunlitShader} />
       </mesh>
       <group ref={skyGroup}>
         <primitive object={stars} />
@@ -585,12 +654,33 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
         </mesh>
       </group>
       <Lander ref={lander} dish={dish} />
+      <group ref={beacon} visible={false}>
+        <mesh position={[0, 25, 0]}>
+          <cylinderGeometry args={[0.6, 0.6, 50, 16, 1, true]} />
+          <meshBasicMaterial color="#5ee7ff" transparent opacity={0.35} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} />
+        </mesh>
+        <mesh position={[0, 0.3, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[7, 9, 48]} />
+          <meshBasicMaterial color="#5ee7ff" transparent opacity={0.6} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} />
+        </mesh>
+      </group>
       <group ref={rover}>
         <RoverModel panel={panel} />
         <spotLight ref={head} position={[1, 1.1, 0]} angle={0.5} penumbra={0.4} distance={120} decay={1} color="#eaf2ff" castShadow={false} />
       </group>
     </>
   )
+}
+
+/** Distant-ridge shadow: a per-vertex 'sunlit' factor that dims only the Sun (directional light), not the headlights. */
+function sunlitShader(shader: { vertexShader: string; fragmentShader: string }) {
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', '#include <common>\nattribute float sunlit;\nvarying float vSunlit;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSunlit = sunlit;')
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>', '#include <common>\nvarying float vSunlit;')
+    .replace('#include <lights_fragment_begin>', THREE.ShaderChunk.lights_fragment_begin.replace(
+      'getDirectionalLightInfo( directionalLight, directLight );', 'getDirectionalLightInfo( directionalLight, directLight );\n\t\tdirectLight.color *= vSunlit;'))
 }
 
 function sunGlare() {
@@ -648,6 +738,8 @@ function readPad(s: Sim) {
   s.pitch = Math.max(-1.2, Math.min(1.2, s.pitch - dz(ax[3] ?? 0) * 0.03))
   const edge = (i: number) => btn(i) && !s.padBtn[i]
   if (edge(0)) s.cam = s.cam === 'chase' ? 'mast' : 'chase'
+  if (edge(1)) s.science = !s.science
+  s.drillKey = btn(2) || s.drillKey && !s.pad
   if (edge(3)) s.lights = !s.lights
   if (edge(9)) s.playing = !s.playing
   const wi = WARPS.indexOf(s.warp)
