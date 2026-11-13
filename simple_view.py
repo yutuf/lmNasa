@@ -43,9 +43,45 @@ SPOTS = [
      "is traced from NASA LOLA terrain on the spot (200 m grid)."),
 ]
 CUSTOM = "custom"
+SPOTS_TR = {
+    "malapert_massif": ("Malapert: yayınlanan nokta",
+                        "Malapert Dağı, NASA'nın bu Artemis III bölgesi için verdiği nokta (86°G)."),
+    "malapert_massif_derived": ("Malapert: 447 m ötede",
+                                "Yayınlanan noktadan yarım kilometreden az uzakta, aynı dağın üzerinde."),
+    "malapert_massif_region_best": ("Malapert: 5 km ötede",
+                                    "LunaNav'ın aynı Artemis III bölgesinde bulduğu en iyi nokta, 5 km batıda."),
+    "shackleton_ridge": ("Shackleton sırtı", "Kutba 60 km uzaklıkta bir sırt; Ay'ın en çok ışık alan yerlerinden biri."),
+    "apollo_11": ("Apollo 11 (ekvator)",
+                  "Karşılaştırma için Sükûnet Üssü: ekvatorda gündüz de gece de iki hafta sürer."),
+    "custom": ("📍 Herhangi bir nokta",
+               "84,5°G'nin güneyindeki herhangi bir nokta: haritada küçük bir kutu çizin (ya da tıklayın) veya "
+               "koordinatları yazın. Ufuk, NASA LOLA arazi verisinden o anda hesaplanır (200 m ızgara)."),
+}
+LANGS = ("English", "Türkçe")
 DEFAULT_SPOT, DEFAULT_DATE = "malapert_massif", "2027-09-09"
 GOOD, BAD = "#1f9d55", "#d64545"
 SUN, EARTH, GREY = "#f2b705", "#4ea8de", "#6b7280"
+
+
+def _tr() -> bool:
+    return st.session_state.get("lang") == "Türkçe"
+
+
+def T(en: str, tr: str) -> str:
+    """The English or Turkish text, following the language switch at the top of the page."""
+    return tr if _tr() else en
+
+
+def _pct(x: float) -> str:
+    return f"%{x * 100:.0f}" if _tr() else f"{x:.0%}"
+
+
+def _label(site_id: str) -> str:
+    return SPOTS_TR[site_id][0] if _tr() else next(label for s, label, _ in SPOTS if s == site_id)
+
+
+def _desc(site_id: str) -> str:
+    return SPOTS_TR[site_id][1] if _tr() else next(d for s, _, d in SPOTS if s == site_id)
 
 
 @st.cache_resource
@@ -99,7 +135,7 @@ def _verdict(site_id: str, start: pd.Timestamp, c: MissionConstraints, data=None
 
 def _chip(label: str, r) -> str:
     if r is None:
-        colour, word = GREY, "no data"
+        colour, word = GREY, T("no data", "veri yok")
     else:
         colour, word = (GOOD, "GO") if r.meets_constraints else (BAD, "NO-GO")
     return (f"<div style='flex:1;min-width:150px;border-radius:12px;padding:10px 12px;background:{colour};"
@@ -108,27 +144,37 @@ def _chip(label: str, r) -> str:
 
 
 def _hours(h: float) -> str:
+    if _tr():
+        return f"{h:.0f} saat" if h < 48 else f"{h / 24:.1f} gün".replace(".", ",")
     return f"{h:.0f} hours" if h < 48 else f"{h / 24:.1f} days"
 
 
 def _why(r, p, c: MissionConstraints, step: float) -> str:
     """One or two plain sentences for the verdict."""
     if r.meets_constraints:
-        return (f"The lander has sunlight {r.sun_frac:.0%} of the time and can talk to Earth "
-                f"{r.comm_frac:.0%} of the time. Its battery never runs low.")
+        return T(f"The lander has sunlight {r.sun_frac:.0%} of the time and can talk to Earth "
+                 f"{r.comm_frac:.0%} of the time. Its battery never runs low.",
+                 f"Güneşli süre {_pct(r.sun_frac)}, Dünya ile konuşabildiği süre {_pct(r.comm_frac)}. "
+                 "Bataryası hiç azalmıyor.")
     parts = []
     if not p.survived:
         hour = p.first_failure_index * step if p.first_failure_index is not None else None
-        when = f" after {_hours(hour)}" if hour is not None else ""
-        parts.append(f"The battery runs flat{when}: there is no sunlight for up to "
-                     f"{_hours(r.longest_dark_h)} in a row.")
+        when_en = f" after {_hours(hour)}" if hour is not None else ""
+        when_tr = f" {_hours(hour)} sonra" if hour is not None else ""
+        parts.append(T(f"The battery runs flat{when_en}: there is no sunlight for up to "
+                       f"{_hours(r.longest_dark_h)} in a row.",
+                       f"Batarya{when_tr} bitiyor: art arda {_hours(r.longest_dark_h)} boyunca güneş yok."))
     elif r.longest_dark_h > c.max_dark_hours:
-        parts.append(f"There is no sunlight for {_hours(r.longest_dark_h)} in a row.")
+        parts.append(T(f"There is no sunlight for {_hours(r.longest_dark_h)} in a row.",
+                       f"Art arda {_hours(r.longest_dark_h)} boyunca güneş yok."))
     if r.sun_frac < c.min_sun_frac:
-        parts.append(f"Sunlight only {r.sun_frac:.0%} of the time.")
+        parts.append(T(f"Sunlight only {r.sun_frac:.0%} of the time.", f"Güneşli süre yalnızca {_pct(r.sun_frac)}."))
     if r.comm_frac < c.min_comm_frac:
-        parts.append(f"Earth is below the horizon {1 - r.comm_frac:.0%} of the time, so no direct radio link then.")
-    return " ".join(parts) or "One of the mission requirements is not met."
+        parts.append(T(f"Earth is below the horizon {1 - r.comm_frac:.0%} of the time, so no direct radio link then.",
+                       f"Dünya'nın ufkun altında olduğu süre {_pct(1 - r.comm_frac)}: o sırada doğrudan radyo "
+                       "bağlantısı yok."))
+    return " ".join(parts) or T("One of the mission requirements is not met.",
+                                "Görevin gereksinimlerinden biri karşılanmıyor.")
 
 
 def _tile(icon: str, title: str, value: str, note: str, ok: bool) -> str:
@@ -147,21 +193,22 @@ def _day_strip(v, sl, step: float, link=None) -> str:
     per_day = int(round(24 / step))
     n_days = len(sun) // per_day
     cells = []
-    rows = [("sun", sun, "242,183,5", "☀️ Sun up"), ("earth", earth, "78,168,222", "🌍 Earth up")]
+    rows = [("sun", sun, "242,183,5", T("☀️ Sun up", "☀️ Güneş var")),
+            ("earth", earth, "78,168,222", T("🌍 Earth up", "🌍 Dünya görünüyor"))]
     if link is not None:
-        rows.append(("link", link.astype(float), "52,199,89", "📡 Radio link"))
+        rows.append(("link", link.astype(float), "52,199,89", T("📡 Radio link", "📡 Radyo bağlantısı")))
     for row, vals, rgb, label in rows:
         squares = []
         for d in range(n_days):
             share = float(vals[d * per_day:(d + 1) * per_day].mean())
-            squares.append(f"<div title='Day {d + 1}: {share:.0%} of the hours' style='flex:1;height:26px;"
+            squares.append(f"<div title='{T('Day', 'Gün')} {d + 1}: {_pct(share)}' style='flex:1;height:26px;"
                            f"border-radius:5px;background:rgba({rgb},{0.08 + 0.92 * share:.2f})'></div>")
         cells.append(f"<div style='display:flex;align-items:center;gap:4px'><div style='width:110px;"
                      f"font-size:14px'>{label}</div>{''.join(squares)}</div>")
     days = "".join(f"<div style='flex:1;text-align:center;font-size:12px;opacity:.6'>{d + 1}</div>"
                    for d in range(n_days))
     return ("<div style='display:flex;flex-direction:column;gap:5px'>" + "".join(cells)
-            + f"<div style='display:flex;gap:4px'><div style='width:110px;font-size:12px;opacity:.6'>day</div>"
+            + f"<div style='display:flex;gap:4px'><div style='width:110px;font-size:12px;opacity:.6'>{T('day', 'gün')}</div>"
             f"{days}</div></div>")
 
 
@@ -183,18 +230,20 @@ def _animation(v, sl, step: float, hz: HorizonProfile, start: pd.Timestamp) -> g
 
     def caption(k):
         t = start + pd.Timedelta(hours=k * step)
-        sun = "Sun up" if s_up[k] else "Sun HIDDEN behind the terrain"
-        earth = "Earth in view" if e_up[k] else "Earth hidden"
-        return f"Day {k * step / 24 + 1:.0f}, {t:%d %b %H:%M} UTC: {sun} · {earth}"
+        sun = T("Sun up", "Güneş görünüyor") if s_up[k] else T("Sun HIDDEN behind the terrain",
+                                                                    "Güneş arazinin ARKASINDA")
+        earth = T("Earth in view", "Dünya görünüyor") if e_up[k] else T("Earth hidden", "Dünya gizli")
+        stamp = f"{t:%d.%m %H:%M}" if _tr() else f"{t:%d %b %H:%M}"
+        return f"{T('Day', 'Gün')} {k * step / 24 + 1:.0f}, {stamp} UTC: {sun} · {earth}"
 
     def markers(k):
         return [
-            go.Scatter(x=[s_az[k]], y=[s_alt[k]], mode="markers+text", text=["Sun" if s_up[k] else "Sun (hidden)"],
+            go.Scatter(x=[s_az[k]], y=[s_alt[k]], mode="markers+text", text=[T("Sun", "Güneş") if s_up[k] else T("Sun (hidden)", "Güneş (gizli)")],
                        textposition="top center", textfont=dict(size=15, color=SUN if s_up[k] else GREY),
                        marker=dict(size=30, color=SUN if s_up[k] else GREY, line=dict(width=2, color="#ffffff")),
                        name="Sun"),
             go.Scatter(x=[e_az[k]], y=[e_alt[k]], mode="markers+text",
-                       text=["Earth" if e_up[k] else "Earth (hidden)"], textposition="bottom right",
+                       text=[T("Earth", "Dünya") if e_up[k] else T("Earth (hidden)", "Dünya (gizli)")], textposition="bottom right",
                        textfont=dict(size=15, color=EARTH if e_up[k] else GREY),
                        marker=dict(size=20, color=EARTH if e_up[k] else GREY, line=dict(width=2, color="#ffffff")),
                        name="Earth"),
@@ -217,14 +266,16 @@ def _animation(v, sl, step: float, hz: HorizonProfile, start: pd.Timestamp) -> g
         title=dict(text=caption(0), font=dict(size=18)), height=430, showlegend=False,
         margin=dict(l=40, r=20, t=60, b=40), plot_bgcolor="#0b1020",
         xaxis=dict(range=[0, 360], tickvals=[0, 45, 90, 135, 180, 225, 270, 315, 360],
-                   ticktext=["N", "NE", "E", "SE", "S", "SW", "W", "NW", "N"], title="direction you are facing",
+                   ticktext=(["K", "KD", "D", "GD", "G", "GB", "B", "KB", "K"] if _tr() else
+                             ["N", "NE", "E", "SE", "S", "SW", "W", "NW", "N"]),
+                   title=T("direction you are facing", "baktığınız yön"),
                    showgrid=False),
-        yaxis=dict(range=[y_lo, y_hi], title="height above the horizon (°)", zeroline=False, showgrid=False),
+        yaxis=dict(range=[y_lo, y_hi], title=T("height above the horizon (°)", "ufkun üstündeki yükseklik (°)"), zeroline=False, showgrid=False),
         updatemenus=[dict(type="buttons", x=0.0, y=-0.14, xanchor="left", direction="left", bgcolor="#f2b705",
                           bordercolor="#f2b705", font=dict(color="#111111", size=14), buttons=[
-            dict(label="▶ Play the mission", method="animate",
+            dict(label=T("▶ Play the mission", "▶ Görevi oynat"), method="animate",
                  args=[None, dict(frame=dict(duration=120, redraw=True), fromcurrent=True, transition=dict(duration=0))]),
-            dict(label="⏸ Pause", method="animate",
+            dict(label=T("⏸ Pause", "⏸ Durdur"), method="animate",
                  args=[[None], dict(frame=dict(duration=0, redraw=False), mode="immediate")]),
         ])],
     )
@@ -271,19 +322,19 @@ def _map_picker(lat: float, lon: float):
     fig = go.Figure(go.Heatmap(x=km, y=km, z=relief, colorscale="Greys", showscale=False, hoverinfo="skip"))
     fig.add_scatter(x=PX, y=PY, mode="markers", marker=dict(size=7, color="rgba(255,255,255,0.01)"),
                     customdata=np.c_[plat, plon],
-                    hovertemplate="%{customdata[0]:.2f}°, %{customdata[1]:.2f}°E<extra>click to choose</extra>",
+                    hovertemplate="%{customdata[0]:.2f}°, %{customdata[1]:.2f}°E<extra>" + T("click to choose", "seçmek için tıklayın") + "</extra>",
                     showlegend=False)
     for s_id, label, _ in SPOTS:
         s = next((x for x in _sites() if x.id == s_id), None)
         if s is not None and s.lat < -84:
             sx, sy = (a / 1000.0 for a in polar_xy(s.lat, s.lon))
-            fig.add_scatter(x=[sx], y=[sy], mode="markers+text", text=[label.split(":")[0]],
+            fig.add_scatter(x=[sx], y=[sy], mode="markers+text", text=[_label(s_id).split(":")[0]],
                             textposition="top center", marker=dict(size=8, color=SUN),
                             textfont=dict(color=SUN, size=12), hoverinfo="skip", showlegend=False)
     cx, cy = (a / 1000.0 for a in polar_xy(lat, lon))
     fig.add_scatter(x=[cx], y=[cy], mode="markers", marker=dict(size=16, color="#ff4b4b", symbol="x"),
                     hoverinfo="skip", showlegend=False)
-    fig.add_annotation(x=0, y=140, text="↑ Earth side", showarrow=False, font=dict(color=EARTH, size=13))
+    fig.add_annotation(x=0, y=140, text=T("↑ Earth side", "↑ Dünya tarafı"), showarrow=False, font=dict(color=EARTH, size=13))
     fig.update_layout(height=430, margin=dict(l=0, r=0, t=10, b=0), clickmode="event+select", dragmode="select",
                       xaxis=dict(visible=False, range=[-150, 150]),
                       yaxis=dict(visible=False, range=[-150, 150], scaleanchor="x"))
@@ -308,12 +359,13 @@ def _scene(p, lon: float, sun_az: float, sun_alt: float, earth_az: float, earth_
         x=x, y=y, z=z, surfacecolor=light, cmin=0, cmax=1, showscale=False, hoverinfo="skip",
         colorscale=[[0, "#020205"], [0.3, "#4a4b52"], [1, "#fbf6e6"]],
         lighting=dict(ambient=1.0, diffuse=0.0, specular=0.0, roughness=1.0)))
-    for az, alt, colour, name in ((sun_az, sun_alt, SUN, "to the Sun"), (earth_az, earth_alt, EARTH, "to Earth")):
+    for az, alt, colour, name in ((sun_az, sun_alt, SUN, T("to the Sun", "Güneş'e")),
+                                  (earth_az, earth_alt, EARTH, T("to Earth", "Dünya'ya"))):
         d = sun_vector(lon, az, alt) * 9.0
         fig.add_scatter3d(x=[0, d[0]], y=[0, d[1]], z=[site_z, site_z + d[2] * 1000.0], mode="lines+text",
                           text=["", name], line=dict(color=colour, width=7), textfont=dict(color=colour, size=14),
                           hoverinfo="skip", showlegend=False)
-    fig.add_scatter3d(x=[0], y=[0], z=[site_z + 150], mode="markers+text", text=["lander"],
+    fig.add_scatter3d(x=[0], y=[0], z=[site_z + 150], mode="markers+text", text=[T("lander", "araç")],
                       marker=dict(size=7, color="#ff4b4b"), textfont=dict(color="#ffffff", size=14),
                       hoverinfo="skip", showlegend=False)
     relief = float(z.max() - z.min())
@@ -329,18 +381,21 @@ def _scene(p, lon: float, sun_az: float, sun_alt: float, earth_az: float, earth_
 
 
 def render(c: MissionConstraints, horizons: dict) -> None:
-    st.markdown("## Can a solar lander survive here?")
-    st.markdown("A lander near the Moon's south pole needs **sunlight** for power and **Earth in the sky** to "
-                "talk home. Near the pole the Sun never climbs high: it circles the horizon, so a hill a few "
-                "hundred metres away can hide it for days. Pick a spot and a landing date.")
+    st.markdown(T("## Can a solar lander survive here?", "## Güneş enerjili bir iniş aracı burada yaşayabilir mi?"))
+    st.markdown(T("A lander near the Moon's south pole needs **sunlight** for power and **Earth in the sky** to "
+                  "talk home. Near the pole the Sun never climbs high: it circles the horizon, so a hill a few "
+                  "hundred metres away can hide it for days. Pick a spot and a landing date.",
+                  "Ay'ın güney kutbuna inen bir araç güç için **Güneş'e**, eve haber vermek için **gökyüzünde "
+                  "Dünya'ya** ihtiyaç duyar. Kutupta Güneş hiç yükselmez, ufkun etrafında döner; birkaç yüz metre "
+                  "ötedeki bir tepe onu günlerce gizleyebilir. Bir nokta ve iniş tarihi seçin."))
 
     ids = [s for s, *_ in SPOTS]
     url_site = st.query_params.get("site")
     default = url_site if url_site in ids else DEFAULT_SPOT
-    labels = {s: label for s, label, _ in SPOTS}
-    spot = st.segmented_control("Landing spot", ids, default=default, format_func=labels.get, key="simple_spot")
+    spot = st.segmented_control(T("Landing spot", "İniş noktası"), ids, default=default, format_func=_label,
+                                key="simple_spot")
     spot = spot or default
-    st.caption(next(d for s, _, d in SPOTS if s == spot))
+    st.caption(_desc(spot))
 
     if spot == CUSTOM:
         ev = st.session_state.get("simple_map")
@@ -358,16 +413,20 @@ def render(c: MissionConstraints, horizons: dict) -> None:
         st.session_state.setdefault("simple_lat", float(st.query_params.get("lat", -89.0)))
         st.session_state.setdefault("simple_lon", float(st.query_params.get("lon", -140.0)))
         col_a, col_b = st.columns(2)
-        lat = col_a.number_input("Latitude (°, south is negative)", -89.9, -84.5, step=0.01, format="%.3f",
+        lat = col_a.number_input(T("Latitude (°, south is negative)", "Enlem (°, güney negatif)"), -89.9, -84.5, step=0.01, format="%.3f",
                                  key="simple_lat")
-        lon = col_b.number_input("Longitude (°E)", -180.0, 180.0, step=0.1, format="%.3f", key="simple_lon")
+        lon = col_b.number_input(T("Longitude (°E)", "Boylam (°D)"), -180.0, 180.0, step=0.1, format="%.3f", key="simple_lon")
         st.plotly_chart(_map_picker(lat, lon), width="stretch", key="simple_map", on_select="rerun",
                         selection_mode=("points", "box"))
         v, step, hz_custom, near_id, height = _custom(round(lat, 4), round(lon, 4))
-        st.caption(f"Ground height {height:,.0f} m. Horizon traced from LOLA terrain out to 150 km; Sun and Earth "
-                   "positions rotated from the nearest computed site. Checked against the full-resolution data at "
-                   "27 sites: sunlight within 0.5 points (median, worst 4.1), Earth visibility within 0.0 (median, "
-                   "worst 13.9, on a narrow crest).")
+        st.caption(T(f"Ground height {height:,.0f} m. Horizon traced from LOLA terrain out to 150 km; Sun and Earth "
+                     "positions rotated from the nearest computed site. Checked against the full-resolution data at "
+                     "27 sites: sunlight within 0.5 points (median, worst 4.1), Earth visibility within 0.0 (median, "
+                     "worst 13.9, on a narrow crest).",
+                     f"Zemin yüksekliği {height:.0f} m. Ufuk LOLA arazisinden 150 km'ye kadar hesaplandı; Güneş ve "
+                     "Dünya konumları en yakın hesaplanmış noktadan döndürüldü. Tam çözünürlüklü veriyle 27 noktada "
+                     "karşılaştırıldı: güneşli süre 0,5 puan içinde (medyan, en kötü 4,1), Dünya görünürlüğü 0,0 "
+                     "(medyan, en kötü 13,9; dar bir sırtta)."))
         site_lon = lon
         patch = _patch_at(round(lat, 3), round(lon, 3))
     else:
@@ -381,7 +440,7 @@ def render(c: MissionConstraints, horizons: dict) -> None:
     except ValueError:
         url_day = pd.Timestamp(DEFAULT_DATE)
     span = pd.Timedelta(days=c.duration_days)
-    day = st.date_input("Landing date", value=min(max(url_day, first), last - span).date(),
+    day = st.date_input(T("Landing date", "İniş tarihi"), value=min(max(url_day, first), last - span).date(),
                         min_value=first.date(), max_value=(last - span).date(), key="simple_date")
     start = pd.Timestamp(day)
 
@@ -397,61 +456,82 @@ def render(c: MissionConstraints, horizons: dict) -> None:
         f"<div style='border-radius:16px;padding:18px 24px;background:{colour};color:#ffffff;margin:8px 0 14px'>"
         f"<div style='font-size:52px;font-weight:800;line-height:1'>{word}</div>"
         f"<div style='font-size:19px;margin-top:8px'>{html.escape(_why(r, p, c, step))}</div>"
-        f"<div style='font-size:14px;opacity:.85;margin-top:6px'>{c.duration_days:g}-day mission from "
-        f"{start:%d %B %Y}</div></div>", unsafe_allow_html=True)
+        f"<div style='font-size:14px;opacity:.85;margin-top:6px'>"
+        + T(f"{c.duration_days:g}-day mission from {start:%d %B %Y}",
+            f"{c.duration_days:g} günlük görev, başlangıç {start:%d.%m.%Y}")
+        + "</div></div>", unsafe_allow_html=True)
 
     hour_fail = p.first_failure_index * step if p.first_failure_index is not None else None
-    battery_value = "Lasts" if p.survived else f"Dies after {_hours(hour_fail)}" if hour_fail else "Dies"
-    battery_note = ("no battery needed: the panels cover it" if need == 0 else
-                    f"a {need:,.0f} Wh battery would be enough" if not p.survived else
-                    f"{c.power.battery_wh:,.0f} Wh battery is enough")
+    battery_value = (T("Lasts", "Dayanıyor") if p.survived else
+                     T(f"Dies after {_hours(hour_fail)}", f"{_hours(hour_fail)} sonra bitiyor") if hour_fail
+                     else T("Dies", "Bitiyor"))
+    battery_note = (T("no battery needed: the panels cover it", "batarya gerekmiyor: paneller yetiyor") if need == 0
+                    else T(f"a {need:,.0f} Wh battery would be enough", f"{need:,.0f} Wh batarya yeterdi".replace(",", "."))
+                    if not p.survived else
+                    T(f"{c.power.battery_wh:,.0f} Wh battery is enough", f"{c.power.battery_wh:,.0f} Wh batarya yetiyor".replace(",", ".")))
     dsn = _dsn()
     link = (v.earth_visible[sl] & dsn.any_in_view(v.times_utc[sl])) if dsn else None
-    earth_note = (f"with a NASA dish facing the Moon too: {link.mean():.0%}" if link is not None
-                  else "of the mission")
+    earth_note = (T(f"with a NASA dish facing the Moon too: {link.mean():.0%}",
+                    f"NASA anteni de Ay'a dönükken: {_pct(link.mean())}") if link is not None
+                  else T("of the mission", "görev süresinin"))
     st.markdown(
         "<div style='display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px'>"
-        + _tile("☀️", "Sunlight", f"{r.sun_frac:.0%}", "of the mission", r.sun_frac >= c.min_sun_frac)
-        + _tile("🌍", "Earth in the sky", f"{r.comm_frac:.0%}", earth_note, r.comm_frac >= c.min_comm_frac)
-        + _tile("🔋", "Battery", battery_value, battery_note, p.survived)
+        + _tile("☀️", T("Sunlight", "Güneş ışığı"), _pct(r.sun_frac), T("of the mission", "görev süresinin"),
+                r.sun_frac >= c.min_sun_frac)
+        + _tile("🌍", T("Earth in the sky", "Gökyüzünde Dünya"), _pct(r.comm_frac), earth_note,
+                r.comm_frac >= c.min_comm_frac)
+        + _tile("🔋", T("Battery", "Batarya"), battery_value, battery_note, p.survived)
         + "</div>", unsafe_allow_html=True)
 
-    st.markdown("**Day by day** (brighter = more hours)")
+    st.markdown(T("**Day by day** (brighter = more hours)", "**Gün gün** (daha parlak = daha çok saat)"))
     st.markdown(_day_strip(v, sl, step, link), unsafe_allow_html=True)
     if link is not None:
-        st.caption(f"📡 A radio link needs Earth above the lander's horizon **and** one of NASA's Deep Space Network "
-                   f"dishes (Goldstone, Madrid, Canberra) seeing the Moon at least {DEFAULT_MASK_DEG:.0f}° above "
-                   "its own horizon.")
+        st.caption(T(f"📡 A radio link needs Earth above the lander's horizon **and** one of NASA's Deep Space Network "
+                     f"dishes (Goldstone, Madrid, Canberra) seeing the Moon at least {DEFAULT_MASK_DEG:.0f}° above "
+                     "its own horizon.",
+                     f"📡 Radyo bağlantısı için Dünya'nın aracın ufkunun üstünde olması **ve** NASA'nın Derin Uzay "
+                     f"Ağı (Deep Space Network) antenlerinden birinin (Goldstone, Madrid, Canberra) Ay'ı kendi ufkunun "
+                     f"en az {DEFAULT_MASK_DEG:.0f}° üstünde görmesi gerekir."))
 
-    labels_ = dict((s, label) for s, label, _ in SPOTS)
-    st.markdown("**If the launch slips** (same spot)")
+    labels_ = {s: _label(s) for s, _, _ in SPOTS}
+    st.markdown(T("**If the launch slips** (same spot)", "**Fırlatma gecikirse** (aynı nokta)"))
     st.markdown("<div style='display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px'>" + "".join(
         _chip(name, _verdict(spot, start + pd.Timedelta(days=d), c, (v, step)))
-        for name, d in (("On time", 0), ("1 day late", 1), ("1 week late", 7), ("2 weeks late", 14),
-                        ("1 month late", 30))) + "</div>", unsafe_allow_html=True)
-    st.markdown(f"**Same date, other spots** ({start:%d %B %Y})")
+        for name, d in ((T("On time", "Zamanında"), 0), (T("1 day late", "1 gün gecikme"), 1),
+                        (T("1 week late", "1 hafta gecikme"), 7), (T("2 weeks late", "2 hafta gecikme"), 14),
+                        (T("1 month late", "1 ay gecikme"), 30))) + "</div>", unsafe_allow_html=True)
+    st.markdown(T(f"**Same date, other spots** ({start:%d %B %Y})", f"**Aynı tarih, diğer noktalar** ({start:%d.%m.%Y})"))
     st.markdown("<div style='display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px'>" + "".join(
         _chip(labels_[s], _verdict(s, start, c, (v, step) if s == spot else None))
         for s in labels_ if s != CUSTOM or spot == CUSTOM) + "</div>", unsafe_allow_html=True)
 
-    st.markdown("**What the lander sees** — press ▶ to play the mission")
+    st.markdown(T("**What the lander sees** — press ▶ to play the mission",
+                  "**Aracın gördüğü** — görevi oynatmak için ▶'e basın"))
     hz = hz_custom or horizons.get(spot) or HorizonProfile.flat(spot, 0.0, 0.0)
     st.plotly_chart(_animation(v, sl, step, hz, start), width="stretch", key="simple_anim")
-    st.caption("Grey: the real terrain around the lander, seen in every direction. When the Sun dot drops into "
-               "the grey, it is hidden behind a hill and the panels make no power.")
+    st.caption(T("Grey: the real terrain around the lander, seen in every direction. When the Sun dot drops into "
+                 "the grey, it is hidden behind a hill and the panels make no power.",
+                 "Gri: aracın çevresindeki gerçek arazi, her yönde. Güneş noktası griye girdiğinde bir tepenin "
+                 "arkasında kalır ve paneller güç üretmez."))
 
     if patch is not None and site_lon is not None:
-        st.markdown("**The ground around the lander in 3D** (40 × 40 km of NASA LOLA terrain, heights × 3)")
+        st.markdown(T("**The ground around the lander in 3D** (40 × 40 km of NASA LOLA terrain, heights × 3)",
+                      "**Aracın çevresindeki arazi, 3B** (NASA LOLA verisinden 40 × 40 km, yükseklikler × 3)"))
         n_h = sl.stop - sl.start
-        h = st.slider("Hour of the mission", 0, n_h - 1, 0, key="simple_hour",
-                      help="Move through the mission and watch the shadows the low Sun casts.")
+        h = st.slider(T("Hour of the mission", "Görevin saati"), 0, n_h - 1, 0, key="simple_hour",
+                      help=T("Move through the mission and watch the shadows the low Sun casts.",
+                             "Görev boyunca ilerleyin ve alçak Güneş'in düşürdüğü gölgeleri izleyin."))
         k = sl.start + h
         when = start + pd.Timedelta(hours=h * step)
         up = bool(v.sun_fraction[k] >= 0.5)
-        title = (f"Day {h * step / 24 + 1:.0f}, {when:%d %b %H:%M} UTC · Sun {v.sun_alt[k]:.1f}° up, "
-                 + ("shining on the lander" if up else "hidden from the lander"))
+        title = T(f"Day {h * step / 24 + 1:.0f}, {when:%d %b %H:%M} UTC · Sun {v.sun_alt[k]:.1f}° up, "
+                  + ("shining on the lander" if up else "hidden from the lander"),
+                  f"Gün {h * step / 24 + 1:.0f}, {when:%d.%m %H:%M} UTC · Güneş {v.sun_alt[k]:.1f}° yukarıda, "
+                  + ("araca vuruyor" if up else "araçtan gizli"))
         fig3d = _scene(patch, site_lon, float(v.sun_az[k]), float(v.sun_alt[k]), float(v.earth_az[k]),
                        float(v.earth_alt[k]), up, title)
         st.plotly_chart(fig3d, width="stretch", key="simple_3d")
-        st.caption("Drag to turn the view. Shadows are cast by the terrain in this patch; ridges further away can "
-                   "also hide the Sun, which the verdict above already includes.")
+        st.caption(T("Drag to turn the view. Shadows are cast by the terrain in this patch; ridges further away can "
+                     "also hide the Sun, which the verdict above already includes.",
+                     "Görünümü çevirmek için sürükleyin. Gölgeler bu parçadaki araziden düşer; daha uzaktaki sırtlar "
+                     "da Güneş'i gizleyebilir, yukarıdaki karar bunu zaten hesaba katar."))

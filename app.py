@@ -67,10 +67,14 @@ def until(mask, i, step, verb_on, verb_off):
     return f"does not {verb} before the data ends" if h is None else f"{verb}s in {fmt_hours(h)}"
 
 st.set_page_config(page_title="LunaNav", page_icon="🌘", layout="wide", initial_sidebar_state="collapsed")
-st.title("LunaNav — where and when should we land on the Moon?")
+_lang = st.query_params.get("lang", "en")
+st.session_state.setdefault("lang", "Türkçe" if _lang == "tr" else "English")
+st.segmented_control("Language", simple_view.LANGS, key="lang", label_visibility="collapsed")
+_tr = st.session_state.get("lang") == "Türkçe"
+st.title("LunaNav — Ay'a nereye ve ne zaman inmeli?" if _tr else "LunaNav — where and when should we land on the Moon?")
 simple_box = st.container()   # the judge-first view, filled once the mission settings are known
 st.divider()
-st.header("Planner: every spot × every landing date")
+st.header("Planlayıcı: her nokta × her iniş tarihi (İngilizce)" if _tr else "Planner: every spot × every landing date")
 st.caption("Pick mission constraints. Every site × start date is scored on sunlight, "
            "Earth visibility and battery survival.")
 
