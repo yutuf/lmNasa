@@ -2,9 +2,10 @@
 // ephemeris puts them for the chosen landing date. Terrain: 10 m LOLA site maps where available, else the 200 m polar
 // grid (curvature included). Lighting: the real Sun direction, nearby relief shadows from a shadow map, distant
 // ridges from a horizon ray-march per vertex. Power and radio use the same horizon method as the search engine.
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useTexture } from '@react-three/drei'
 import type { Ephem } from '../engine'
 import { pointLatLon } from '../engine'
 import type { Lang } from '../i18n'
@@ -173,7 +174,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
         <Canvas shadows gl={{ logarithmicDepthBuffer: true, antialias: true }} dpr={[1, 2]}
                 camera={{ fov: 62, near: 0.3, far: 600000, position: [0, 3, 0] }}
                 onCreated={({ gl }) => { gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 1.1 }}>
-          <Scene world={world} sim={sim} eph={eph} start={start} />
+          <Suspense fallback={null}><Scene world={world} sim={sim} eph={eph} start={start} /></Suspense>
         </Canvas>
       )}
       <LookDrag sim={sim} />
@@ -305,7 +306,12 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
   const nearMesh = useRef<THREE.Mesh>(null)
   const farMesh = useRef<THREE.Mesh>(null)
   const chunk = useRef({ cx: NaN, cy: NaN, ox: NaN, oy: NaN, litHour: NaN, litX: NaN, litY: NaN })
-  const tex = useMemo(regolithTexture, [])
+  // regolith PBR texture from NASA's Artemis south-pole simulation kit (USGS Astrogeology, 84S project), 1024 px
+  const [regColor, regNormal] = useTexture([dataUrl('regolith_color.jpg'), dataUrl('regolith_normal.jpg')])
+  useMemo(() => {
+    for (const x of [regColor, regNormal]) { x.wrapS = x.wrapT = THREE.RepeatWrapping; x.anisotropy = 8 }
+    regColor.colorSpace = THREE.SRGBColorSpace
+  }, [regColor, regNormal])
   const glareRef = useRef<THREE.Sprite>(null)
   const landerYaw = useRef(sim.current.heading)
 
@@ -353,7 +359,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
         if (hole && Math.abs(sx - hole.cx) < hole.half - step && Math.abs(sy - hole.cy) < hole.half - step) y -= 60
         const k = i * n + j
         pos.set([dx, y, -dy], k * 3)
-        uv.set([sx / 40, sy / 40], k * 2)
+        uv.set([sx / 12, sy / 12], k * 2)
         col.set([1, 1, 1], k * 3)
       }
     }
@@ -560,7 +566,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
                         shadow-camera-near={10} shadow-camera-far={8000} />
       <mesh ref={nearMesh} receiveShadow castShadow>
         <bufferGeometry />
-        <meshStandardMaterial map={tex.map} bumpMap={tex.bump} bumpScale={0.35} vertexColors roughness={1} metalness={0} color="#b9b4ab" />
+        <meshStandardMaterial map={regColor} normalMap={regNormal} normalScale={[0.8, 0.8]} vertexColors roughness={1} metalness={0} color="#d6d2ca" />
       </mesh>
       <mesh ref={farMesh} receiveShadow>
         <bufferGeometry />
@@ -648,45 +654,6 @@ function readPad(s: Sim) {
   if (edge(5)) s.warp = WARPS[Math.min(WARPS.length - 1, wi + 1)]
   if (edge(4)) s.warp = WARPS[Math.max(0, wi - 1)]
   s.padBtn = gp.buttons.map((b) => b.pressed)
-}
-
-function regolithTexture() {
-  // procedural regolith (our own): speckle + small craters; tiled every 40 m on the near terrain
-  const size = 512
-  const cv = document.createElement('canvas')
-  cv.width = cv.height = size
-  const g = cv.getContext('2d')!
-  const img = g.createImageData(size, size)
-  let seed = 7
-  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
-  const v = new Float32Array(size * size)
-  for (let k = 0; k < v.length; k++) v[k] = 0.5 + (rnd() - 0.5) * 0.25
-  for (let n = 0; n < 160; n++) {
-    const cx = rnd() * size
-    const cy = rnd() * size
-    const r = 2 + rnd() ** 3 * 40
-    for (let y = -r * 1.4; y <= r * 1.4; y++) {
-      for (let x = -r * 1.4; x <= r * 1.4; x++) {
-        const d = Math.hypot(x, y) / r
-        if (d > 1.4) continue
-        const px = ((Math.round(cx + x) % size) + size) % size
-        const py = ((Math.round(cy + y) % size) + size) % size
-        v[py * size + px] += d < 1 ? -0.18 * (1 - d * d) + 0.12 * (x / r) : 0.1 * (1.4 - d)
-      }
-    }
-  }
-  for (let k = 0; k < v.length; k++) {
-    const c = Math.max(0, Math.min(255, v[k] * 255))
-    img.data.set([c, c, c, 255], k * 4)
-  }
-  g.putImageData(img, 0, 0)
-  const map = new THREE.CanvasTexture(cv)
-  map.wrapS = map.wrapT = THREE.RepeatWrapping
-  map.colorSpace = THREE.SRGBColorSpace
-  map.anisotropy = 8
-  const bump = map.clone()
-  bump.colorSpace = THREE.NoColorSpace
-  return { map, bump }
 }
 
 const Lander = ({ ref, dish }: { ref: React.Ref<THREE.Group>; dish: React.Ref<THREE.Group> }) => (
