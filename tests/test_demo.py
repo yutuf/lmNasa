@@ -98,3 +98,15 @@ def test_turkish_simple_view():
     assert ">NO-GO<" in big and "Batarya" in big and "günlük görev" in big
     chips = " ".join(m.value for m in at.markdown if "min-width:150px" in m.value)
     assert "1 hafta gecikme" in chips
+
+
+def test_any_point_anywhere_on_the_moon():
+    """A far-side landed mission picked from the list never sees Earth."""
+    at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=300)
+    at.query_params.update({"site": "apollo_11", "start": "2027-02-12T00:00"})
+    at.run()
+    next(w for w in at.get("button_group") if "Landing spot" in str(w.proto.label)).set_value("custom").run()
+    next(s for s in at.selectbox if s.label.startswith("Jump to")).set_value("Chang'e 4, far side (2019)").run()
+    assert not at.exception, at.exception
+    tiles = next(m.value for m in at.markdown if "min-width:180px" in m.value)
+    assert "Earth in the sky" in tiles and ">0%<" in tiles
