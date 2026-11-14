@@ -86,7 +86,7 @@ export function budget(d: Design): Budget {
     if (d.comms === 'relay') warnings.push({ level: 'ok', text: 'Talks through a relay satellite: works even where Earth never rises.' })
   }
   if (dryKg + propKg > 15000) warnings.push({ level: 'bad', text: 'Heavier than a crewed lander: no current rocket could send this to the Moon.' })
-  return { dryKg, propKg, wetKg: dryKg + propKg, dayW, nightW, minSunPct, maxDarkH, earthPct: d.comms === 'dte' ? 50 : 0, zone, zslope,
+  return { dryKg, propKg, wetKg: dryKg + propKg, dayW, nightW, minSunPct, maxDarkH, earthPct: 50, zone, zslope,
     touchdownMs: d.landing === 'rough' ? 5 : 1, warnings, parts }
 }
 

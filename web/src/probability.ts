@@ -10,6 +10,7 @@
 // A fixed random seed keeps the answer the same every time for the same inputs.
 import { diskFraction, horizonAt, pointTrack, type Atlas, type Ephem, type PointResult } from './engine'
 import { evaluateWindow, type Constraints } from './model'
+import { relayMask } from './relay'
 
 /** Robotic lunar landing attempts 2019 to mid-2025 (Peregrine is left out: it never attempted a landing). */
 export const LANDING_RECORD = {
@@ -26,6 +27,7 @@ export interface ProbabilityInput {
   slopeLimit: number           // the lander's limit (deg)
   zoneM: number                // landing-zone radius (m)
   history: boolean             // include the landing record
+  relay?: boolean              // a relay satellite also counts as contact (relay.ts)
   trials?: number
 }
 
@@ -62,6 +64,7 @@ export function successProbability(inp: ProbabilityInput): Probability {
   const hours = Math.min(inp.eph.n - inp.firstHour - 1, (inp.windowDays - 1) * 24 + len + 10 * 24)
   const tr = pointTrack(inp.atlas, inp.eph, inp.dsn, inp.r.index, inp.firstHour, hours)
   const off = inp.r.index * inp.atlas.nAz
+  const viaRelay = inp.relay ? relayMask(inp.atlas.lat[inp.r.index], inp.atlas.lon[inp.r.index], inp.firstHour, hours) : null
   // horizon error: what we measured for the fast horizon (about 0.5 deg) plus terrain scatter across the zone
   const sigmaHz = 0.5 + 0.6 * (inp.zoneM / 1000)
   const sigmaSlope = Math.max(0.3, inp.zoneSlopeP95 / 1.96)   // half-normal with its 95th percentile at the zone's p95
@@ -90,7 +93,7 @@ export function successProbability(inp: ProbabilityInput): Probability {
       const hz = horizonAt(inp.atlas.horizon, off, inp.atlas.nAz, tr.sunAz[h]) + dh
       sunF[i] = diskFraction(tr.sunAlt[h], hz, inp.eph.sunR[inp.firstHour + h])
       const he = horizonAt(inp.atlas.horizon, off, inp.atlas.nAz, tr.earthAz[h]) + dh
-      earthV[i] = tr.earthAlt[h] > he && (!inp.needDsn || !!inp.dsn[inp.firstHour + h])
+      earthV[i] = (tr.earthAlt[h] > he && (!inp.needDsn || !!inp.dsn[inp.firstHour + h])) || (viaRelay !== null && viaRelay[h] === 1)
     }
     const w = evaluateWindow(sunF, earthV, 1, { ...inp.c, battery_wh: batt })
     sun.push(w.sunFrac * 100); earth.push(w.commFrac * 100); dark.push(w.longestDarkH)

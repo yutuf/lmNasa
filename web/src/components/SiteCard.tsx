@@ -1,5 +1,6 @@
 // A landing site as an F1-style card: region "team colour", the name in two weights, the rank as a big outlined
 // number, and a 3D render of the site's real terrain lit by the Sun of its best landing date.
+import type { EllipseCheck } from '../ellipse'
 import { useEffect, useState } from 'react'
 import type { PointResult } from '../engine'
 import type { Lang } from '../i18n'
@@ -22,6 +23,7 @@ export interface CardSite {
   note?: string          // far side, or the distance to the science target
   prob?: Probability     // Monte Carlo mission success
   targetKm?: number      // distance to the nearest science target
+  ellipse?: EllipseCheck | null   // worst case across the landing ellipse (south pole only)
 }
 
 export function useSiteImage(s: CardSite) {

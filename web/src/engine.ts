@@ -1,6 +1,7 @@
 // The search engine: for every candidate point near the south pole and every landing date in a window, work out
 // the Sun and Earth over that point's real terrain horizon hour by hour, then run the mission models.
 // lunanav/engine.py is the same algorithm in Python; src/engine.test.ts checks the two agree.
+import { relayMask } from './relay'
 import { evaluateWindow, type Constraints } from './model'
 
 export interface Atlas {
@@ -41,6 +42,7 @@ export interface Search {
   zone?: number           // landing-zone radius (m); 0 or absent = no touchdown hazard check
   zoneSlope?: number      // 95 % of the zone must be gentler than this (deg)
   iceKm?: number          // an ice cold trap must lie within this distance (km); 0 or absent = no science check
+  relay?: boolean         // a relay satellite also counts as contact with Earth (relay.ts)
 }
 
 /** Science value (scripts/build_science.py): distance to the nearest ice cold trap, and cold-trap area within 5 km. */
@@ -177,7 +179,7 @@ export function diskFraction(alt: number, hz: number, r: number): number {
 
 /** Hourly sun fraction and Earth visibility at one atlas point over `hours` hours from `firstHour`. */
 export function pointSky(atlas: Atlas, ephem: Ephem, dsn: ArrayLike<boolean>, index: number, firstHour: number,
-                         hours: number, needDsn: boolean) {
+                         hours: number, needDsn: boolean, relay = false) {
   const lat = atlas.lat[index], lon = atlas.lon[index]
   const la = lat * RAD
   const lo = lon * RAD
@@ -186,6 +188,7 @@ export function pointSky(atlas: Atlas, ephem: Ephem, dsn: ArrayLike<boolean>, in
   const u = [Math.cos(la) * Math.cos(lo), Math.cos(la) * Math.sin(lo), Math.sin(la)]
   const p = [R_KM * u[0], R_KM * u[1], R_KM * u[2]]
   const off = index * atlas.nAz
+  const viaRelay = relay ? relayMask(lat, lon, firstHour, hours) : null
   const sunFraction = new Float64Array(hours)
   const earthVisible: boolean[] = new Array(hours)
   const [sx, sy, sz] = ephem.sun
@@ -202,7 +205,7 @@ export function pointSky(atlas: Atlas, ephem: Ephem, dsn: ArrayLike<boolean>, in
     const eu = (d0 * u[0] + d1 * u[1] + d2 * u[2]) / len
     const eAlt = Math.asin(Math.min(Math.max(eu, -1), 1)) / RAD
     const eAz = Math.atan2(d0 * e[0] + d1 * e[1] + d2 * e[2], d0 * nn[0] + d1 * nn[1] + d2 * nn[2]) / RAD
-    earthVisible[k] = eAlt > horizonAt(atlas.horizon, off, atlas.nAz, eAz) && (!needDsn || dsn[h])
+    earthVisible[k] = (eAlt > horizonAt(atlas.horizon, off, atlas.nAz, eAz) && (!needDsn || !!dsn[h])) || (viaRelay !== null && viaRelay[k] === 1)
   }
   return { lat, lon, sunFraction, earthVisible }
 }
@@ -211,7 +214,7 @@ export function pointSky(atlas: Atlas, ephem: Ephem, dsn: ArrayLike<boolean>, in
 export function searchPoint(atlas: Atlas, ephem: Ephem, dsn: ArrayLike<boolean>, index: number, q: Search,
                             c: Constraints): PointResult {
   const hours = (q.nStarts - 1) * q.strideH + q.durationH
-  const sky = pointSky(atlas, ephem, dsn, index, q.firstHour, hours, q.needDsn)
+  const sky = pointSky(atlas, ephem, dsn, index, q.firstHour, hours, q.needDsn, !!q.relay)
   let goCount = 0
   let best = { score: -1, start: 0, go: false, sun: 0, comm: 0, dark: 0 }
   for (let s = 0; s < q.nStarts; s++) {

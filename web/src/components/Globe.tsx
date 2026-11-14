@@ -154,7 +154,7 @@ function Orbiter() {
       <primitive object={ring} />
       <group ref={g}>
         <Suspense fallback={null}><NasaModel file="lro.glb" size={0.06} shadows={false} /></Suspense>
-        <Html center className="tag" style={{ transform: 'translateY(-18px)' }}>LRO</Html>
+        <Html center zIndexRange={[40, 0]} className="tag" style={{ transform: 'translateY(-18px)' }}>LRO</Html>
       </group>
     </>
   )
@@ -331,7 +331,7 @@ function Flight({ lat, lon, approach, earthDir, labels, view, start = 0, showLab
               <NasaModel file="lander.glb" size={view === 'site' ? 0.004 : 0.003} shadows={false} />
             </Suspense>
           : <mesh><sphereGeometry args={[0.012, 12, 12]} /><meshBasicMaterial color="#fde68a" /></mesh>}
-        {showLabel && <Html center className="tag tag-craft"><div ref={label} /></Html>}
+        {showLabel && <Html center zIndexRange={[40, 0]} className="tag tag-craft"><div ref={label} /></Html>}
         <sprite ref={plume} visible={false}><spriteMaterial map={plumeTex} transparent depthWrite={false} blending={THREE.AdditiveBlending} /></sprite>
       </group>
     </>
@@ -363,7 +363,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
       {overlay && !closeUp && <OverlayCap overlay={overlay} />}
       <group position={earth.clone().multiplyScalar(5.2)}>
         <Suspense fallback={null}><EarthBall /></Suspense>
-        {labels && <Html center className="tag tag-earth">{earthLabel}</Html>}
+        {labels && <Html center zIndexRange={[40, 0]} className="tag tag-earth">{earthLabel}</Html>}
       </group>
       {!closeUp && targets?.map((t) => (
         <group key={t.id} position={surfacePoint(t.lat, t.lon, 1.004)}>
@@ -371,7 +371,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
             <octahedronGeometry args={[t.selected ? 0.016 : 0.01, 0]} />
             <meshBasicMaterial color={t.colour} />
           </mesh>
-          <Html center className={`sci-tag ${t.selected ? 'on' : ''}`} style={{ ['--k' as string]: t.colour }}>
+          <Html center zIndexRange={[40, 0]} className={`sci-tag ${t.selected ? 'on' : ''}`} style={{ ['--k' as string]: t.colour }}>
             <span onClick={() => onTarget?.(t.id)}>{t.name}</span>
           </Html>
         </group>
@@ -382,7 +382,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
             <sphereGeometry args={[0.009, 12, 12]} />
             <meshBasicMaterial color={p.good ? '#4ade80' : '#ff6b6b'} />
           </mesh>
-          <Html center className={`pin-num ${p.good ? 'good' : 'bad'}`}>
+          <Html center zIndexRange={[40, 0]} className={`pin-num ${p.good ? 'good' : 'bad'}`}>
             <span onClick={() => onPick?.(k)}>{p.label}</span>
           </Html>
         </group>
@@ -393,7 +393,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
             <sphereGeometry args={[0.014, 16, 16]} />
             <meshBasicMaterial color="#ffffff" />
           </mesh>
-          <Html center className="tag tag-spot">{selected.label}</Html>
+          <Html center zIndexRange={[40, 0]} className="tag tag-spot">{selected.label}</Html>
         </group>
       )}
       {flight ? <Flight {...flight} earthDir={earth} showLabel={labels} /> : <Orbiter />}

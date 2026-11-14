@@ -13,7 +13,7 @@ import YearView from './components/YearView'
 import { download, reportHtml, siteRow, toCsv, type SiteRow } from './report'
 import HorizonView from './components/HorizonView'
 import Luna, { type LunaAction } from './components/Luna'
-import { AlertTriangle, ArrowLeftRight, CheckCircle2, Footprints, Sparkles, Wrench, MoonStar as NightIcon, Snowflake, Timer, Users, Hourglass, Satellite, Droplets, FlaskConical, Rocket, X, Mountain, Link2, MapPin, Pause, Play, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Printer, Scale, Sun } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, CheckCircle2, Footprints, Sparkles, Wrench, MoonStar as NightIcon, Snowflake, Timer, Users, Hourglass, Satellite, Droplets, FlaskConical, Rocket, X, Mountain, Link2, MapPin, Pause, Play, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Printer, QrCode, Scale, Sun } from 'lucide-react'
 import type { FlightView, Overlay, Pin, Target } from './components/Globe'
 import type { DriveMode, DriveStart } from './components/Drive'
 
@@ -29,6 +29,7 @@ import MissionStory from './components/MissionStory'
 import MissionFilm from './components/MissionFilm'
 import Workshop from './components/Workshop'
 import DecisionLab from './components/DecisionLab'
+import { ellipseCheck } from './ellipse'
 import type { Budget, Design } from './workshop'
 import { successProbability } from './probability'
 import ProbabilityPanel from './components/ProbabilityPanel'
@@ -124,6 +125,7 @@ const S = {
   zoneHint: { en: 'LOLA 40 m slopes inside the circle the lander may touch down in. 100 m ≈ precision landing, 1 km ≈ a typical robotic lander.', tr: 'İniş aracının konabileceği daire içindeki LOLA 40 m eğimleri. 100 m ≈ hassas iniş, 1 km ≈ tipik robotik iniş aracı.' },
   colZone: { en: 'Zone slope', tr: 'Alan eğimi' },
   dsn: { en: 'Earth contact needs a NASA DSN dish too', tr: 'Dünya bağlantısı NASA DSN anteni de gerektirsin' },
+  relay: { en: 'A relay satellite (ELFO) also counts as contact: needed on the far side and in deep shadow', tr: 'Röle uydusu (ELFO) da bağlantı sayılsın: uzak yüzde ve derin gölgede gerekli' },
   search: { en: 'Run search', tr: 'Aramayı çalıştır' },
   searching: { en: 'Searching', tr: 'Aranıyor' },
   results: { en: 'Best landing sites', tr: 'En iyi iniş yerleri' },
@@ -178,7 +180,7 @@ const STEPS: Record<Lang, string[][]> = {
   }
 
 
-interface Params { start: string; windowDays: number; days: number; sun: number; earth: number; shadow: number; batt: number; slope: number; zone: number; zslope: number; ice: number; dsn: boolean; lander: string; rover: string; scope: 'pole' | 'moon'; target: string; landing: 'soft' | 'rough' }
+interface Params { start: string; windowDays: number; days: number; sun: number; earth: number; shadow: number; batt: number; slope: number; zone: number; zslope: number; ice: number; dsn: boolean; relay: boolean; lander: string; rover: string; scope: 'pole' | 'moon'; target: string; landing: 'soft' | 'rough' }
 
 const DEF = SCENARIOS[0]
 
@@ -191,7 +193,7 @@ function readHash(): { ui: 'simple' | 'advanced'; lang: Lang; p: Params } {
     p: { start: [q.get('start') ?? '2027-09-01'].map((s) => (/^\d{4}-\d{2}-\d{2}$/.test(s) && s >= FIRST_DATE && s <= LAST_DATE ? s : '2027-09-01'))[0], windowDays: num('window', 30), days: num('days', DEF.days), sun: num('sun', DEF.sun),
       earth: num('earth', DEF.earth), shadow: num('shadow', DEF.shadow), batt: num('batt', DEF.batt), slope: num('slope', 8),
       zone: [num('zone', DEF.zone)].map((z) => ([0, 100, 250, 500, 1000].includes(z) ? z : DEF.zone))[0], zslope: num('zslope', DEF.zslope),
-      ice: [num('ice', DEF.ice)].map((v) => ([0, 2, 5, 10].includes(v) ? v : 0))[0], dsn: q.get('dsn') !== '0',
+      ice: [num('ice', DEF.ice)].map((v) => ([0, 2, 5, 10].includes(v) ? v : 0))[0], dsn: q.get('dsn') !== '0', relay: q.get('relay') === '1',
       lander: landerById(q.get('lander') ?? 'nova').id, rover: ROVERS.find((r) => r.id === q.get('rover'))?.id ?? 'viper',
       landing: q.get('landing') === 'rough' ? 'rough' : 'soft',
       scope: q.get('scope') === 'moon' ? 'moon' : 'pole', target: targetSites(q.get('target') ?? '').length ? q.get('target')! : '' },
@@ -204,7 +206,7 @@ export default function App() {
   const [ui, setUi] = useState<'simple' | 'advanced'>(init.ui)
   const [profile, setProfile] = useState<CardSite | null>(null)
   const [story, setStory] = useState(false)
-  const [film, setFilm] = useState(false)
+  const [film, setFilm] = useState(() => /(^|[#&])film=1/.test(location.hash))
   const [workshop, setWorkshop] = useState(false)
   const [lab, setLab] = useState(false)
   const [customName, setCustomName] = useState<string | null>(null)
@@ -260,7 +262,7 @@ export default function App() {
   }, [])
   useEffect(() => {
     history.replaceState(null, '', `#ui=${ui}&lang=${lang}&start=${p.start}&window=${p.windowDays}&days=${p.days}&sun=${p.sun}` +
-      `&earth=${p.earth}&shadow=${p.shadow}&batt=${p.batt}&slope=${p.slope}&zone=${p.zone}&zslope=${p.zslope}&ice=${p.ice}&lander=${p.lander}&rover=${p.rover}&scope=${p.scope}&target=${p.target}&landing=${p.landing}&dsn=${p.dsn ? 1 : 0}` +
+      `&earth=${p.earth}&shadow=${p.shadow}&batt=${p.batt}&slope=${p.slope}&zone=${p.zone}&zslope=${p.zslope}&ice=${p.ice}&lander=${p.lander}&rover=${p.rover}&scope=${p.scope}&target=${p.target}&landing=${p.landing}&dsn=${p.dsn ? 1 : 0}${p.relay ? '&relay=1' : ''}` +
       (siteIndex !== null ? `&site=${siteIndex}` : ''))
   }, [ui, lang, p, siteIndex])  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -293,7 +295,7 @@ export default function App() {
     const t0 = performance.now()
     // the touchdown-zone and ice layers exist on the south-pole grid only
     const res = await rn.run(at.n, { firstHour: fh, nStarts, strideH: 24, durationH: q.days * 24,
-      maxSlope: moon ? Math.max(q.slope, 12) : q.slope, needDsn: q.dsn, zone: moon ? 0 : q.zone, zoneSlope: q.zslope, iceKm: moon ? 0 : q.ice }, c, setProgress)
+      maxSlope: moon ? Math.max(q.slope, 12) : q.slope, needDsn: q.dsn, relay: q.relay, zone: moon ? 0 : q.zone, zoneSlope: q.zslope, iceKm: moon ? 0 : q.ice }, c, setProgress)
     setRan({ q: { ...q, windowDays: nStarts }, asked: q, ms: performance.now() - t0, hoursChecked: res.length * ((nStarts - 1) * 24 + q.days * 24) })
     setResults(res)
     setSel(0)
@@ -315,7 +317,7 @@ export default function App() {
       const nStarts = Math.max(1, Math.min(q.windowDays, Math.floor((m.n - fh - q.days * 24) / 24) + 1))
       const t0 = performance.now()
       const res = await runner.current.run(atlas.n, { firstHour: fh, nStarts, strideH: 24, durationH: q.days * 24,
-        maxSlope: q.slope, needDsn: q.dsn, zone: q.zone, zoneSlope: q.zslope, iceKm: q.ice }, c, (f) => setProgress((k + f) / SCENARIOS.length))
+        maxSlope: q.slope, needDsn: q.dsn, relay: q.relay, zone: q.zone, zoneSlope: q.zslope, iceKm: q.ice }, c, (f) => setProgress((k + f) / SCENARIOS.length))
       out.push(summarise(sc.id, res, atlas, performance.now() - t0, nStarts))
     }
     setProgress(null)
@@ -392,7 +394,7 @@ export default function App() {
   const artemis = useMemo(() => {
     if (!results || !ran || !atlas || !eph || !dsn || !m?.regions) return null
     const q = { firstHour: firstHour(ran.q), nStarts: ran.q.windowDays, strideH: 24, durationH: ran.q.days * 24, maxSlope: ran.q.slope,
-      needDsn: ran.q.dsn, zone: ran.q.zone, zoneSlope: ran.q.zslope, iceKm: ran.q.ice }
+      needDsn: ran.q.dsn, relay: ran.q.relay, zone: ran.q.zone, zoneSlope: ran.q.zslope, iceKm: ran.q.ice }
     const c = constraints(ran.q)!
     return artemisRows(m.regions, atlas, results, (i) => searchPoint(atlas, eph, dsn, i, q, c),
       (i) => (atlas.slope[i] > q.maxSlope ? 'slope' : !passesTerrain(atlas, hazard, i, q) ? 'zone' : !passesIce(ice, i, q) ? 'ice' : null))
@@ -421,14 +423,15 @@ export default function App() {
       const sky = localSky(eph, atlas.xKm[r.index] * 1000, atlas.yKm[r.index] * 1000, fh + r.bestStart * 24 + 12)
       const best = new Date(Date.parse(ran.q.start + 'T00:00:00Z') + r.bestStart * 86400e3)
       const nt = nearestTarget(r)
-      const note = farSide(r.lat, r.lon) ? (tr ? 'Uzak yüz: Dünya hiç doğmaz' : 'Far side: Earth never rises')
+      const note = farSide(r.lat, r.lon) ? (ran.q.relay ? (tr ? 'Uzak yüz: röle uydusuyla konuşur' : 'Far side: talks via the relay') : (tr ? 'Uzak yüz: Dünya hiç doğmaz' : 'Far side: Earth never rises'))
         : nt ? `${nt.d.toFixed(0)} km ${tr ? '→' : 'to'} ${nt.s.name}` : undefined
       const lim = ran.q.zone > 0 && atlas.kind === 'pole' ? ran.q.zslope : landerById(ran.q.lander).zslope
-      const prob = successProbability({ atlas, eph, dsn: dsn!, r, firstHour: fh, days: ran.q.days, windowDays: ran.q.windowDays, needDsn: ran.q.dsn,
+      const prob = successProbability({ atlas, eph, dsn: dsn!, r, firstHour: fh, days: ran.q.days, windowDays: ran.q.windowDays, needDsn: ran.q.dsn, relay: ran.q.relay,
         c: constraints(ran.q)!, zoneSlopeP95: listRows[k]?.zoneSlopeDeg ?? atlas.slope[r.index] * 1.6,
         slopeLimit: lim - (ran.q.landing === 'rough' ? 3 : 0), zoneM: ran.q.zone || 1000, history: withRecord, trials: 300 })
       return { r, row: listRows[k], rank: k + 1, name, region: reg, colour: regionColour(reg), xKm: atlas.xKm[r.index], yKm: atlas.yKm[r.index],
         sun: { az: sky.sun.az, alt: sky.sun.alt }, note, prob, targetKm: nt?.d,
+        ellipse: ellipseCheck(atlas, eph, dsn!, r.index, fh, r.bestStart, ran.q.days, ran.q.dsn, constraints(ran.q)!, 2.1, ran.q.relay),
         bestDate: best.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) }
     }).filter((c) => c.row)
   }
@@ -494,7 +497,7 @@ export default function App() {
     if (a.type === 'select') { if (a.rank >= 1 && a.rank <= top.length) setSel(a.rank - 1); return }
     const q = a.params
     const start = typeof q.start === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(q.start) && q.start >= FIRST_DATE && q.start <= LAST_DATE ? q.start : p.start
-    const next: Params = { lander: p.lander, rover: p.rover, scope: p.scope, target: p.target, landing: p.landing, start, windowDays: clamp(q.windowDays, 5, 90, p.windowDays), days: clamp(q.days, 1, 30, p.days),
+    const next: Params = { lander: p.lander, rover: p.rover, scope: p.scope, target: p.target, landing: p.landing, relay: p.relay, start, windowDays: clamp(q.windowDays, 5, 90, p.windowDays), days: clamp(q.days, 1, 30, p.days),
       sun: clamp(q.sun, 0, 100, p.sun), earth: clamp(q.earth, 0, 100, p.earth), shadow: clamp(q.shadow, 0, 240, p.shadow),
       batt: clamp(q.batt, 500, 20000, p.batt), slope: clamp(q.slope, 2, 20, p.slope),
       zone: [0, 100, 250, 500, 1000].includes(q.zone as number) ? (q.zone as number) : p.zone, zslope: clamp(q.zslope, 2, 30, p.zslope),
@@ -649,8 +652,9 @@ export default function App() {
           <a href="#site">{S.navSite[lang]}</a>
           <a href="#method">{S.navMethod[lang]}</a>
         </nav>}
-        <button className="nav-ws" onClick={() => setLab(true)}><Scale size={14} /> {lang === 'tr' ? 'Karar' : 'Decide'}</button>
-        <button className="nav-ws" onClick={() => setWorkshop(true)}><Wrench size={14} /> {lang === 'tr' ? 'Atölye' : 'Workshop'}</button>
+        {ui === 'advanced' && <button className="nav-ws" onClick={() => setLab(true)}><Scale size={14} /> {lang === 'tr' ? 'Karar' : 'Decide'}</button>}
+        {ui === 'advanced' && <button className="nav-ws" onClick={() => setWorkshop(true)}><Wrench size={14} /> {lang === 'tr' ? 'Atölye' : 'Workshop'}</button>}
+        <button className="nav-ws nav-qr" onClick={() => { location.hash = `judges&lang=${lang}` }} title={lang === 'tr' ? 'Jüri sayfası ve QR kodu' : 'Judges page and QR code'} aria-label="QR"><QrCode size={15} /></button>
         <button className="nav-story" onClick={() => setFilm(true)}><Sparkles size={14} /> {lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}</button>
         <div className="nav-r">
           <div className="seg" role="group" aria-label="Language">
@@ -688,7 +692,8 @@ export default function App() {
               onRover={(id) => set('rover', id)}
               onScenario={(sc) => { const next = applyScenario(sc); setCustomName(null); setP(next); run(next) }}
               onStart={(d) => set('start', d)} onRun={() => run(p)} onOpen={setProfile}
-              onAdvanced={() => { setUi('advanced'); scrollTo({ top: 0 }) }} onStory={() => setFilm(true)} />
+              onAdvanced={() => { setUi('advanced'); scrollTo({ top: 0 }) }} onStory={() => setFilm(true)}
+              onDecide={() => setLab(true)} onWorkshop={() => setWorkshop(true)} />
             {globeCard}
           </main>
         </div>
@@ -730,6 +735,7 @@ export default function App() {
             <Field label={S.battery[lang]} v={p.batt} min={500} max={20000} step={500} on={(v) => set('batt', v)} unit="Wh" />
             <Field label={S.slope[lang]} v={p.slope} min={2} max={20} on={(v) => set('slope', v)} unit="°" />
             <label className="checkbox"><input type="checkbox" checked={p.dsn} onChange={(e) => set('dsn', e.target.checked)} /><span>{S.dsn[lang]}</span></label>
+            <label className="checkbox"><input type="checkbox" checked={p.relay} onChange={(e) => set('relay', e.target.checked)} /><span>{S.relay[lang]}</span></label>
           </div>
           {hazard && (
             <div className="group">
@@ -1087,7 +1093,7 @@ export default function App() {
           const snap = (z: number) => [100, 250, 500, 1000].reduce((best, v) => (Math.abs(v - z) < Math.abs(best - z) ? v : best), 1000)
           const goalSites = d.goal ? SCIENCE_SITES.filter((s) => s.kind === d.goal) : []
           const next: Params = { ...p, batt: Math.min(20000, d.batteryWh), days: d.days, sun: b.minSunPct, earth: b.earthPct, shadow: Math.min(240, b.maxDarkH),
-            zone: snap(b.zone), zslope: b.zslope, dsn: d.comms === 'dte', landing: d.landing, rover: d.type === 'rover' ? d.rover : p.rover,
+            zone: snap(b.zone), zslope: b.zslope, dsn: d.comms === 'dte', relay: d.comms === 'relay', landing: d.landing, rover: d.type === 'rover' ? d.rover : p.rover,
             target: d.goal ? `kind:${d.goal}` : '', scope: d.goal ? (goalSites.every(inPoleGrid) ? 'pole' : 'moon') : p.scope }
           setCustomName(d.name); setP(next); run(next); setWorkshop(false)
           setTimeout(() => document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' }), 400)

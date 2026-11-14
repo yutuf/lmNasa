@@ -56,14 +56,24 @@ function build(height: (e: number, n: number) => number, mPerUnit: number, exag:
   ring.rotateX(-Math.PI / 2)                           // plane in x (east-ish) / z, y up
   const pos = ring.attributes.position as THREE.BufferAttribute
   const col = new Float32Array(pos.count * 3)
+  const zs = new Float64Array(pos.count)
+  for (let i = 0; i < pos.count; i++) {
+    const z = height(pos.getX(i) * mPerUnit, -pos.getZ(i) * mPerUnit)
+    zs[i] = Number.isNaN(z) ? base : z
+  }
+  // the cut-out's side drops a fixed depth below the ground along the edge, so a crater does not stand on a tall wall
+  let lowY = Infinity
+  for (let i = 0; i < pos.count; i++) {
+    const r = Math.hypot(pos.getX(i), pos.getZ(i)) / HALF_M
+    if (r > 0.85 && r <= 0.95) lowY = Math.min(lowY, ((zs[i] - base) / mPerUnit) * exag)   // the ground along the edge
+  }
   for (let i = 0; i < pos.count; i++) {
     const px = pos.getX(i), pz = pos.getZ(i)
-    let z = height(px * mPerUnit, -pz * mPerUnit)
-    if (Number.isNaN(z)) z = base
+    const z = zs[i]
     const r = Math.hypot(px, pz) / HALF_M
     // a round cut-out that sinks away at the edge, like a core sample
     const rim = r > 0.95
-    pos.setY(i, rim ? -2600 : ((z - base) / mPerUnit) * exag)
+    pos.setY(i, rim ? (Number.isFinite(lowY) ? lowY - 1800 : -2600) : ((z - base) / mPerUnit) * exag)
     // neutral grey regolith, a little lighter on high ground; the cut-out's side is dark rock
     const shade = rim ? 0.16 : 0.5 + 0.22 * Math.min(1, Math.max(0, (z - base + 1500 * mPerUnit) / (3000 * mPerUnit)))
     col[3 * i] = shade; col[3 * i + 1] = shade * 0.985; col[3 * i + 2] = shade * 0.96
@@ -77,7 +87,7 @@ function build(height: (e: number, n: number) => number, mPerUnit: number, exag:
 }
 
 /** A transparent PNG data URL of the terrain around (xKm, yKm), lit by the Sun at (sunAzDeg, sunAltDeg). */
-export function renderSite(key: string, xKm: number, yKm: number, lonDeg: number, sunAzDeg: number, sunAltDeg: number, latDeg = -90): Promise<string> {
+export function renderSite(key: string, xKm: number, yKm: number, lonDeg: number, sunAzDeg: number, sunAltDeg: number, latDeg = -90, radiusKm?: number): Promise<string> {
   if (cache.has(key)) return cache.get(key)!
   const job = queue.then(async () => {
     const dem = await loadDem()
@@ -90,13 +100,13 @@ export function renderSite(key: string, xKm: number, yKm: number, lonDeg: number
     if (polar) {
       // stereographic plane: east-ish = +x, north-ish = +y around the site
       const pd = (e: number, n: number) => heightAt(dem, xKm * 1000 + e, yKm * 1000 + n)
-      mesh = build(pd, 1, EXAG)
+      mesh = build(pd, radiusKm ? (radiusKm * 1000) / HALF_M : 1, EXAG)
       sunPlane = planeDir(lonDeg, sunAzDeg)
     } else {
       const g = await loadGlobal()
       const R = 1737400, la = (latDeg * Math.PI) / 180
       const gd = (e: number, n: number) => globalHeight(g, latDeg + (n / R) * (180 / Math.PI), lonDeg + (e / (R * Math.max(0.05, Math.cos(la)))) * (180 / Math.PI))
-      mesh = build(gd, 60000 / HALF_M, 3.2)
+      mesh = build(gd, ((radiusKm ?? 60) * 1000) / HALF_M, 3.2)
       const a = (sunAzDeg * Math.PI) / 180
       sunPlane = [Math.sin(a), Math.cos(a)]          // local east, north
     }

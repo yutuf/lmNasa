@@ -25,18 +25,6 @@ function Legs({ n = 4, r = 2, h = 1.6, foot = 0.35, color = SILVER }: { n?: numb
   )
 }
 
-function Starship() {
-  return (
-    <group>
-      <mesh position={[0, 24, 0]} castShadow><cylinderGeometry args={[4.5, 4.5, 40, 48]} /><meshStandardMaterial color="#d9dde3" metalness={0.85} roughness={0.25} /></mesh>
-      <mesh position={[0, 48.5, 0]} castShadow><coneGeometry args={[4.5, 9, 48]} /><meshStandardMaterial color="#d9dde3" metalness={0.85} roughness={0.25} /></mesh>
-      {/* crew windows and the airlock band, solar arrays around the top */}
-      <mesh position={[4.45, 38, 0]}><boxGeometry args={[0.2, 1.2, 5]} /><meshStandardMaterial color="#111" /></mesh>
-      <mesh position={[0, 41, 0]}><cylinderGeometry args={[4.62, 4.62, 2.2, 48, 1, true]} /><meshStandardMaterial color={PANEL} metalness={0.3} roughness={0.5} /></mesh>
-      <Legs n={6} r={6} h={4} foot={0.9} />
-    </group>
-  )
-}
 
 function BlueMoon() {
   return (
@@ -77,16 +65,6 @@ function BlueGhost() {
   )
 }
 
-function Vikram() {
-  return (
-    <group>
-      <mesh position={[0, 1.35, 0]} castShadow><boxGeometry args={[2, 1.3, 2]} /><meshStandardMaterial color={FOIL} metalness={0.7} roughness={0.35} /></mesh>
-      <mesh position={[0, 1.4, 1.05]}><boxGeometry args={[1.8, 1.1, 0.05]} /><meshStandardMaterial color={PANEL} /></mesh>
-      <mesh position={[0, 2.1, 0]}><cylinderGeometry args={[0.25, 0.25, 0.2, 16]} /><meshStandardMaterial color={SILVER} /></mesh>
-      <Legs n={4} r={1.6} h={0.9} foot={0.3} />
-    </group>
-  )
-}
 
 function Wheels({ n, len, width, r, color = DARK }: { n: number; len: number; width: number; r: number; color?: string }) {
   return (
@@ -114,44 +92,24 @@ function LRV() {
   )
 }
 
-function Yutu() {
-  return (
-    <group>
-      <mesh position={[0, 0.75, 0]} castShadow><boxGeometry args={[1.4, 0.6, 1.0]} /><meshStandardMaterial color={FOIL} metalness={0.7} roughness={0.35} /></mesh>
-      {[-1, 1].map((s) => (
-        <mesh key={s} position={[0, 1.1, s * 0.95]} rotation={[s * 0.5, 0, 0]}><boxGeometry args={[1.3, 0.04, 0.9]} /><meshStandardMaterial color={PANEL} /></mesh>
-      ))}
-      <mesh position={[0.5, 1.4, 0]}><boxGeometry args={[0.2, 0.25, 0.4]} /><meshStandardMaterial color={SILVER} /></mesh>
-      <Wheels n={3} len={1.1} width={1.1} r={0.15} />
-    </group>
-  )
-}
 
-function Pragyan() {
-  return (
-    <group>
-      <mesh position={[0, 0.42, 0]} castShadow><boxGeometry args={[0.9, 0.35, 0.75]} /><meshStandardMaterial color={FOIL} metalness={0.7} roughness={0.35} /></mesh>
-      <mesh position={[-0.1, 0.75, 0]} rotation={[0, 0, 0.45]}><boxGeometry args={[0.7, 0.03, 0.7]} /><meshStandardMaterial color={PANEL} /></mesh>
-      <mesh position={[0.4, 0.75, 0]}><boxGeometry args={[0.1, 0.12, 0.25]} /><meshStandardMaterial color={SILVER} /></mesh>
-      <Wheels n={3} len={0.7} width={0.85} r={0.1} />
-    </group>
-  )
-}
 
 export function LanderBody({ id }: { id: string }) {
-  if (id === 'hls') return <Starship />
+  // real models (Sketchfab, CC-BY 4.0; see public/models/CREDITS.md)
+  if (id === 'hls') return <Suspense fallback={null}><NasaModel file="starship.glb" size={50} fit="height" /></Suspense>
+  if (id === 'vikram') return <Suspense fallback={null}><NasaModel file="vikram.glb" size={2} fit="height" /></Suspense>
+  // no public model exists for these yet: simplified shapes
   if (id === 'bluemoon') return <BlueMoon />
   if (id === 'nova') return <NovaC />
   if (id === 'ghost') return <BlueGhost />
-  if (id === 'vikram') return <Vikram />
   // NASA 3D Resources: Apollo Lunar Module (about 7 m tall)
   return <Suspense fallback={null}><NasaModel file="lander.glb" size={7} fit="height" /></Suspense>
 }
 
 export function RoverBody({ id }: { id: string }) {
   if (id === 'lrv') return <LRV />
-  if (id === 'yutu') return <Yutu />
-  if (id === 'pragyan') return <Pragyan />
+  if (id === 'yutu') return <Suspense fallback={null}><NasaModel file="yutu.glb" size={1.5} fit="length" /></Suspense>
+  if (id === 'pragyan') return <Suspense fallback={null}><NasaModel file="pragyan.glb" size={0.92} fit="length" /></Suspense>
   // NASA 3D Resources: Mars 2020 Perseverance (3 m long), standing in for VIPER
   return <Suspense fallback={null}><NasaModel file="rover.glb" size={3} fit="length" /></Suspense>
 }
