@@ -17,7 +17,8 @@ describe('phone link', () => {
   })
 
   it('accepts look and mission messages and drops junk', () => {
-    expect(parsePhoneToDesk({ t: 'ori', heading: 10, alt: 2, roll: -4 })).toEqual({ t: 'ori', heading: 10, alt: 2, roll: -4 })
+    expect(parsePhoneToDesk({ t: 'ori', heading: 10, alt: 2, roll: -4 })).toEqual({ t: 'ori', heading: 10, alt: 2, roll: -4, aimX: 0, aimY: 0 })
+    expect(parsePhoneToDesk({ t: 'ori', heading: 1, alt: 2, roll: 0, aimX: 3, aimY: -4 })).toMatchObject({ aimX: 3, aimY: -4 })
     expect(parsePhoneToDesk({ t: 'cmd', name: 'find' })).toEqual({ t: 'cmd', name: 'find' })
     expect(parsePhoneToDesk({ t: 'cmd', name: 'nope' })).toBeNull()
     expect(parseDeskToPhone({ t: 'site', name: 'Shoemaker', lat: -88, lon: 20 })).toEqual({ t: 'site', name: 'Shoemaker', lat: -88, lon: 20 })
