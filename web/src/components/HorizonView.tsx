@@ -57,27 +57,27 @@ export default function HorizonView({ horizon, series, i0, len, stepH, startMs, 
       <div className="card-head">
         <h3>{T.sees[lang]}</h3>
         <button className="btn" onClick={() => { if (k + 2 >= len) setK(0); setPlaying(!playing) }}>
-          {playing ? `⏸ ${T.pause[lang]}` : `▶ ${T.play[lang]}`}
+          {playing ? T.pause[lang] : T.play[lang]}
         </button>
       </div>
       <div className="moment">
         <b>{T.day[lang]} {Math.floor((k * stepH) / 24) + 1}</b> · {stamp} UTC ·{' '}
-        <span style={{ color: sunUp ? 'var(--sun)' : 'var(--muted)' }}>☀ {T.sunWord[lang]} {sunUp ? T.inView[lang] : T.hidden[lang]}</span> ·{' '}
-        <span style={{ color: earthUp ? 'var(--earth)' : 'var(--muted)' }}>🌍 {T.earthWord[lang]} {earthUp ? T.inView[lang] : T.hidden[lang]}</span>
+        <span style={{ color: sunUp ? 'var(--sun)' : 'var(--text-3)' }}>{T.sunWord[lang]} {sunUp ? T.inView[lang] : T.hidden[lang]}</span> ·{' '}
+        <span style={{ color: earthUp ? 'var(--earth)' : 'var(--text-3)' }}>{T.earthWord[lang]} {earthUp ? T.inView[lang] : T.hidden[lang]}</span>
       </div>
       <svg viewBox={`0 0 ${W} ${H + 24}`} className="horizon">
         <defs>
           <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#8d93a3" />
-            <stop offset="1" stopColor="#2a2f3b" />
+            <stop offset="0" stopColor="#71717a" />
+            <stop offset="1" stopColor="#27272a" />
           </linearGradient>
         </defs>
-        <rect x="0" y="0" width={W} height={H} fill="#060914" />
+        <rect x="0" y="0" width={W} height={H} fill="#050506" />
         <path d={path(sAz, sAlt)} stroke="var(--sun)" strokeOpacity="0.45" strokeWidth="2" fill="none" />
         <path d={path(eAz, eAlt)} stroke="var(--earth)" strokeOpacity="0.45" strokeWidth="2" fill="none" />
         <path d={terrain} fill="url(#ground)" />
-        <circle cx={x(sAz[k])} cy={y(sAlt[k])} r="11" fill={sunUp ? 'var(--sun)' : '#6b7280'} stroke="#fff" strokeWidth="2" />
-        <circle cx={x(eAz[k])} cy={y(eAlt[k])} r="8" fill={earthUp ? 'var(--earth)' : '#6b7280'} stroke="#fff" strokeWidth="2" />
+        <circle cx={x(sAz[k])} cy={y(sAlt[k])} r="11" fill={sunUp ? 'var(--sun)' : '#6b7280'} stroke="#09090b" strokeWidth="2" />
+        <circle cx={x(eAz[k])} cy={y(eAlt[k])} r="8" fill={earthUp ? 'var(--earth)' : '#6b7280'} stroke="#09090b" strokeWidth="2" />
         {dirs.map((d, i) => (
           <text key={i} x={Math.min(Math.max(i * W / 8, 10), W - 10)} y={H + 18} fill="var(--muted)" fontSize="14" textAnchor="middle">{d}</text>
         ))}

@@ -9,6 +9,7 @@ import { listEclipses } from './eclipse'
 import { download, reportHtml, siteRow, toCsv, type SiteRow } from './report'
 import HorizonView from './components/HorizonView'
 import Luna, { type LunaAction } from './components/Luna'
+import { AlertTriangle, ArrowLeftRight, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Printer, Sun } from 'lucide-react'
 import type { Overlay, Pin } from './components/Globe'
 import type { DriveMode, DriveStart } from './components/Drive'
 
@@ -20,12 +21,12 @@ const REPO_URL = 'https://github.com/yutuf/lmNasa'
 
 type Text = Record<Lang, string>
 const S = {
-  hero: { en: 'Where can we land on the Moon?', tr: "Ay'da nereye inebiliriz?" },
+  hero: { en: 'Landing site search', tr: 'İniş yeri arama' },
   sub: {
     en: 'Describe your mission. LunaNav searches 21,856 points near the lunar south pole, hour by hour, over the real terrain, and shows where and when a solar lander survives.',
     tr: "Görevinizi tarif edin. LunaNav Ay'ın güney kutbu çevresindeki 21.856 noktayı, gerçek arazi üzerinde saat saat tarar ve güneş enerjili bir aracın nerede ve ne zaman yaşayabileceğini gösterir.",
   },
-  mission: { en: 'Mission', tr: 'Görev' },
+  mission: { en: 'Mission profile', tr: 'Görev profili' },
   window: { en: 'Landing window', tr: 'İniş penceresi' },
   from: { en: 'from', tr: 'başlangıç' },
   days: { en: 'days', tr: 'gün' },
@@ -36,7 +37,7 @@ const S = {
   battery: { en: 'Battery', tr: 'Batarya' },
   slope: { en: 'Steepest ground', tr: 'En dik zemin' },
   dsn: { en: 'Earth contact needs a NASA DSN dish too', tr: 'Dünya bağlantısı NASA DSN anteni de gerektirsin' },
-  search: { en: 'Find landing sites', tr: 'İniş yerlerini bul' },
+  search: { en: 'Run search', tr: 'Aramayı çalıştır' },
   searching: { en: 'Searching', tr: 'Aranıyor' },
   results: { en: 'Best landing sites', tr: 'En iyi iniş yerleri' },
   goDays: { en: 'GO on', tr: 'Uygun' },
@@ -54,18 +55,45 @@ const S = {
   standHere: { en: 'Stand on the lander', tr: 'İniş aracında dur' },
   driveHere: { en: 'Drive a rover here', tr: 'Burada gezgin sür' },
   compare: { en: 'Compare', tr: 'Karşılaştır' },
+  navResults: { en: 'Results', tr: 'Sonuçlar' },
+  navSite: { en: 'Site', tr: 'Nokta' },
+  navMethod: { en: 'Method & data', tr: 'Yöntem ve veri' },
+  requirements: { en: 'Requirements', tr: 'Gereksinimler' },
+  resultsSub: { en: 'Ranked by the number of landing dates that pass, then by score. Picks are at least 6 km apart.', tr: 'Uygun iniş tarihi sayısına, sonra puana göre sıralı. Seçimler en az 6 km aralıklı.' },
+  colSite: { en: 'Site', tr: 'Nokta' },
+  colGo: { en: 'GO dates', tr: 'Uygun tarih' },
+  colEarth: { en: 'Earth contact', tr: 'Dünya bağlantısı' },
+  colSlope: { en: 'Slope', tr: 'Eğim' },
+  siteN: { en: 'Site', tr: 'Nokta' },
+  longestDark: { en: 'Longest darkness', tr: 'En uzun karanlık' },
+  otherDatesSub: { en: 'Each square is a landing date in the window; outlined = best.', tr: 'Her kare penceredeki bir iniş tarihi; çerçeveli = en iyi.' },
+  legGo: { en: 'GO on some dates', tr: 'Bazı tarihlerde uygun' },
+  legNo: { en: 'Never GO', tr: 'Hiç uygun değil' },
+  legSteep: { en: 'Too steep (not searched)', tr: 'Çok dik (taranmadı)' },
+
   compareTitle: { en: 'Side by side', tr: 'Yan yana' },
-  compareHint: { en: 'Tick ⇄ on two to four results to compare them here.', tr: 'Karşılaştırmak için iki ile dört sonuçta ⇄ işaretleyin.' },
+  compareHint: { en: 'Tick two to four rows to compare them side by side.', tr: 'Yan yana karşılaştırmak için iki ile dört satır işaretleyin.' },
   csv: { en: 'CSV', tr: 'CSV' },
   report: { en: 'Report', tr: 'Rapor' },
   clear: { en: 'Clear', tr: 'Temizle' },
   beThere: { en: 'Be there: see what the lander sees on the best landing date, or drive a rover over the real terrain.', tr: 'Oradaymış gibi: en iyi iniş tarihinde iniş aracının gördüğünü görün ya da gerçek arazide gezgin sürün.' },
 } satisfies Record<string, Text>
 
+const STEPS: Record<Lang, string[][]> = {
+    en: [['Terrain', 'Horizons ray-marched in 180 directions over NASA LOLA elevation maps for 21,856 points around the south pole.'],
+      ['Sky', 'Sun and Earth positions every hour from JPL DE440, with Earth parallax for each point.'],
+      ['Mission check', 'For every landing date: sunlight share, Earth contact (optionally needing a free NASA DSN dish), longest darkness and a battery simulation.'],
+      ['Ranking', 'Points that pass on the most landing dates come first; the detail shows why each one passes or fails.']],
+    tr: [['Arazi', 'Güney kutbu çevresindeki 21.856 nokta için NASA LOLA yükseklik haritaları üzerinde 180 yönde ufuk hesaplandı.'],
+      ['Gökyüzü', 'Güneş ve Dünya konumları JPL DE440 ile saat saat, her nokta için Dünya paralaksı dahil.'],
+      ['Görev kontrolü', 'Her iniş tarihi için güneş payı, Dünya bağlantısı (isteğe bağlı boş bir NASA DSN anteni), en uzun karanlık ve batarya simülasyonu.'],
+      ['Sıralama', 'En çok iniş tarihinde geçen noktalar önce gelir; ayrıntı her birinin neden geçtiğini ya da kaldığını gösterir.']],
+  }
+
 const PRESETS = [
-  { id: 'lander', name: { en: 'Solar lander · 14 days', tr: 'Güneş enerjili iniş aracı · 14 gün' }, days: 14, sun: 70, earth: 50, shadow: 48, batt: 2000 },
-  { id: 'long', name: { en: 'Long stay · 28 days', tr: 'Uzun kalış · 28 gün' }, days: 28, sun: 60, earth: 50, shadow: 72, batt: 6000 },
-  { id: 'sprint', name: { en: 'Short sprint · 5 days', tr: 'Kısa görev · 5 gün' }, days: 5, sun: 80, earth: 70, shadow: 24, batt: 1000 },
+  { id: 'lander', short: { en: 'Lander', tr: 'İniş aracı' }, name: { en: 'Solar lander · 14 days', tr: 'Güneş enerjili iniş aracı · 14 gün' }, days: 14, sun: 70, earth: 50, shadow: 48, batt: 2000 },
+  { id: 'long', short: { en: 'Long stay', tr: 'Uzun kalış' }, name: { en: 'Long stay · 28 days', tr: 'Uzun kalış · 28 gün' }, days: 28, sun: 60, earth: 50, shadow: 72, batt: 6000 },
+  { id: 'sprint', short: { en: 'Sprint', tr: 'Kısa görev' }, name: { en: 'Short sprint · 5 days', tr: 'Kısa görev · 5 gün' }, days: 5, sun: 80, earth: 70, shadow: 24, batt: 1000 },
 ]
 
 interface Params { start: string; windowDays: number; days: number; sun: number; earth: number; shadow: number; batt: number; slope: number; dsn: boolean }
@@ -234,6 +262,10 @@ export default function App() {
       label: `#${sel + 1} · ${region(pick) ?? `${pick.lat.toFixed(2)}°, ${pick.lon.toFixed(2)}°E`} · ${fmtDate(startDate(pick.bestStart))}` } })
   }
 
+  const loc = lang === 'tr' ? 'tr-TR' : 'en-US'
+  const siteName = (r: PointResult) => region(r) ?? `${r.lat.toFixed(2)}°, ${(((r.lon % 360) + 360) % 360).toFixed(1)}°E`
+  const preset = PRESETS.find((pr) => p.days === pr.days && p.sun === pr.sun && p.batt === pr.batt)?.id ?? 'custom'
+
   return (
     <div className={`app ${drive ? 'driving' : ''}`}>
       {drive && eph && dsn && (
@@ -241,153 +273,218 @@ export default function App() {
           <Drive start={drive.start} eph={eph} dsn={dsn} lang={lang} initialMode={drive.mode} onExit={() => setDrive(null)} />
         </Suspense>
       )}
-      <section className="hero">
-        <div className="globe-wrap">
-          <Suspense fallback={null}>
-            <Globe poleCap={m.pole_cap} overlay={overlay} pins={pins} earthLabel={lang === 'tr' ? 'Dünya' : 'Earth'}
-                   selected={pick ? { lat: pick.lat, lon: pick.lon, label: `#${sel + 1}` } : null}
-                   sunDir={sunDir} earthDir={earthDir} onPick={setSel} />
-          </Suspense>
-          <div className="legend">{S.legend[lang]}</div>
-        </div>
-        <header className="topbar">
-          <div className="brand">Luna<span>Nav</span></div>
-          <div className="lang">
+      <header className="nav">
+        <a className="logo" href="#top"><MoonStar size={18} strokeWidth={2} /> LunaNav</a>
+        <nav className="nav-links">
+          <a href="#results">{S.navResults[lang]}</a>
+          <a href="#site">{S.navSite[lang]}</a>
+          <a href="#method">{S.navMethod[lang]}</a>
+        </nav>
+        <div className="nav-r">
+          <div className="seg" role="group" aria-label="Language">
             {(['en', 'tr'] as Lang[]).map((l) => (
-              <button key={l} className={l === lang ? 'on' : ''} onClick={() => setLang(l)}>{l === 'en' ? 'English' : 'Türkçe'}</button>
+              <button key={l} className={l === lang ? 'on' : ''} onClick={() => setLang(l)}>{l.toUpperCase()}</button>
             ))}
           </div>
-        </header>
-        <Luna lang={lang} context={lunaContext} onAction={onLuna} />
-        <aside className="panel">
-          <h1>{S.hero[lang]}</h1>
-          <p className="intro">{S.sub[lang]}</p>
-          <div className="presets">
-            {PRESETS.map((pr) => (
-              <button key={pr.id} className={p.days === pr.days && p.sun === pr.sun && p.batt === pr.batt ? 'on' : ''}
-                      onClick={() => setP((o) => ({ ...o, days: pr.days, sun: pr.sun, earth: pr.earth, shadow: pr.shadow, batt: pr.batt }))}>
-                {pr.name[lang]}
-              </button>
-            ))}
-          </div>
-          <div className="form">
-            <label>{S.window[lang]}
-              <span className="row">
-                <input type="date" value={p.start} min="2026-11-01" max="2028-11-30" onChange={(e) => e.target.value && set('start', e.target.value)} />
-                <Slider v={p.windowDays} min={5} max={90} step={5} on={(v) => set('windowDays', v)} unit={` ${S.days[lang]}`} />
-              </span>
-            </label>
-            <label>{S.stay[lang]}<Slider v={p.days} min={1} max={30} on={(v) => set('days', v)} unit={` ${S.days[lang]}`} /></label>
-            <label>{S.needSun[lang]}<Slider v={p.sun} min={0} max={100} step={5} on={(v) => set('sun', v)} unit="%" /></label>
-            <label>{S.needEarth[lang]}<Slider v={p.earth} min={0} max={100} step={5} on={(v) => set('earth', v)} unit="%" /></label>
-            <label>{S.maxShadow[lang]}<Slider v={p.shadow} min={0} max={240} step={6} on={(v) => set('shadow', v)} unit=" h" /></label>
-            <label>{S.battery[lang]}<Slider v={p.batt} min={500} max={20000} step={500} on={(v) => set('batt', v)} unit=" Wh" /></label>
-            <label>{S.slope[lang]}<Slider v={p.slope} min={2} max={20} on={(v) => set('slope', v)} unit="°" /></label>
-            <label className="check"><input type="checkbox" checked={p.dsn} onChange={(e) => set('dsn', e.target.checked)} /> {S.dsn[lang]}</label>
-          </div>
-          <button className="go-btn" disabled={progress !== null} onClick={() => run(p)}>
-            {progress !== null ? `${S.searching[lang]} ${Math.round(progress * 100)}%` : S.search[lang]}
-            {progress !== null && <i style={{ width: `${progress * 100}%` }} />}
-          </button>
-          {ran && (
-            <p className="stats">{atlas.n.toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')} {S.stats[lang]} ·{' '}
-              {(ran.hoursChecked / 1e6).toFixed(1)} M {S.hoursChecked[lang]} · {(ran.ms / 1000).toFixed(1)} {S.seconds[lang]}</p>
-          )}
-          {results && ran && (
-            <div className="results">
-              <div className="results-head">
-                <h3>{S.results[lang]}</h3>
-                <span>
-                  <button className="mini" onClick={() => download(`lunanav-${ran.q.start}.csv`, toCsv(rows))}>⬇ {S.csv[lang]}</button>
-                  <button className="mini" onClick={() => {
-                    const w = window.open('', '_blank')
-                    if (w) { w.document.write(reportHtml(cmpRows.length >= 2 ? cmpRows : rows, ran.q, constraints(ran.q)!, m.sources, lang)); w.document.close() }
-                  }}>🖨 {S.report[lang]}</button>
-                </span>
-              </div>
-              {top.length === 0 || top[0].goCount === 0 ? <p className="note">{S.nothing[lang]}</p> : null}
-              <ol>
-                {top.map((r, k) => (
-                  <li key={r.index} className={k === sel ? 'on' : ''} onClick={() => setSel(k)}>
-                    <b className={r.goCount > 0 ? 'g' : 'r'}>{k + 1}</b>
-                    <button className={`cmp-tog ${cmp.includes(r.index) ? 'on' : ''}`} title={S.compare[lang]}
-                            onClick={(e) => { e.stopPropagation(); setCmp((c) => c.includes(r.index) ? c.filter((x) => x !== r.index) : [...c, r.index].slice(-4)) }}>⇄</button>
-                    <span>
-                      <em>{r.lat.toFixed(2)}°, {r.lon.toFixed(2)}°E{region(r) ? ` · ${region(r)}` : ''}</em>
-                      {S.goDays[lang]} {r.goCount} {S.of[lang]} {ran.q.windowDays} {S.landingDates[lang]} · {S.bestDate[lang]} {fmtDate(startDate(r.bestStart))}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-        </aside>
-      </section>
+          <a className="icon-btn" href={REPO_URL} target="_blank" rel="noreferrer" aria-label="GitHub"><Github size={16} /></a>
+        </div>
+      </header>
 
-      {detail && ran && pick && (
-        <main className="content">
-          <div className="card site-head">
-            <div>
-              <h3>#{sel + 1} · {pick.lat.toFixed(3)}°, {pick.lon.toFixed(3)}°E {region(pick) ? `· ${S.inRegion[lang]} ${region(pick)}` : ''}</h3>
-              <p className="muted">{S.bestDate[lang]}: {fmtDate(startDate(pick.bestStart))} · {ran.q.days} {S.days[lang]} · {lang === 'tr' ? 'eğim' : 'slope'} {atlas.slope[pick.index].toFixed(1)}° · {lang === 'tr' ? 'yükseklik' : 'height'} {atlas.height[pick.index]} m</p>
-            </div>
-            <div className={`verdict small ${detail.w.go ? 'go' : 'nogo'}`}>
-              <div className="word">{detail.w.go ? 'GO' : 'NO-GO'}</div>
-              <div className="why">{why(detail.w, 1, detail.c, lang)}</div>
-            </div>
-            <div className="tiles">
-              <Tile icon="☀️" title={T.sunlight[lang]} value={fmtPct(detail.w.sunFrac, lang)} note={T.ofMission[lang]} ok={detail.w.sunFrac >= detail.c.min_sun_frac} />
-              <Tile icon="🌍" title={T.earth[lang]} value={fmtPct(detail.w.commFrac, lang)} note={ran.q.dsn ? '📡 + NASA DSN' : T.ofMission[lang]} ok={detail.w.commFrac >= detail.c.min_comm_frac} />
-              <Tile icon="🔋" title={T.battery[lang]} ok={detail.w.survived}
-                    value={detail.w.survived ? T.lasts[lang] : `✕ ${hours(detail.w.power.firstFailure ?? 0, lang)}`}
-                    note={detail.need === 0 ? '—' : `${Math.round(detail.need).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')} Wh`} />
-            </div>
+      <div className="shell" id="top">
+        <aside className="side">
+          <div className="side-head">
+            <h1>{S.hero[lang]}</h1>
+            <p>{S.sub[lang]}</p>
           </div>
-          {cmpRows.length >= 2 ? <Compare rows={cmpRows} lang={lang} onClear={() => setCmp([])} />
-            : <p className="note cmp-hint">⇄ {S.compareHint[lang]}</p>}
-          <div className="card be-there">
-            <p>{S.beThere[lang]}</p>
-            <div className="be-btns">
-              <button className="big" onClick={() => enter('lander')}>🛬 {S.standHere[lang]}</button>
-              <button className="big" onClick={() => enter('rover')}>🚙 {S.driveHere[lang]}</button>
-            </div>
-          </div>
-          <div className="card">
-            <h3>{S.otherDates[lang]}</h3>
-            <div className="calendar">
-              {detail.perStart.map((go, s) => (
-                <span key={s} className={`${go ? 'go' : 'nogo'} ${s === pick.bestStart ? 'best' : ''}`} title={fmtDate(startDate(s))}>
-                  {startDate(s).getUTCDate()}
-                </span>
+          <div className="group">
+            <div className="group-label">{S.mission[lang]}</div>
+            <div className="seg full">
+              {PRESETS.map((pr) => (
+                <button key={pr.id} title={pr.name[lang]} className={preset === pr.id ? 'on' : ''}
+                        onClick={() => setP((o) => ({ ...o, days: pr.days, sun: pr.sun, earth: pr.earth, shadow: pr.shadow, batt: pr.batt }))}>
+                  {pr.short[lang]}
+                </button>
               ))}
             </div>
-            <h3 style={{ marginTop: 16 }}>{T.dayByDay[lang]}</h3>
-            <DayStrip sun={Array.from({ length: detail.len }, (_, j) => detail.series.sunFraction[detail.a + j] >= 0.5)}
-                      earth={Array.from({ length: detail.len }, (_, j) => detail.series.earthVisible[detail.a + j])}
-                      link={Array.from({ length: detail.len }, (_, j) => detail.tr.link[detail.a + j])} lang={lang} />
-            {eclipses.filter((e) => e.endH >= detail.fh + detail.a && e.startH <= detail.fh + detail.a + detail.len).map((e) => {
-              const when = new Date((m.start_unix + e.peakH * 3600) * 1000)
-              return (
-                <p key={e.startH} className="note eclipse">🌘 {lang === 'tr'
-                  ? `Tutulma ${fmtDate(when)}: Dünya Güneş'in %${Math.round(e.peak * 100)}'ini kapatıyor, ${(e.endH - e.startH).toFixed(1).replace('.', ',')} saat${e.totalH > 0 ? ` (${e.totalH.toFixed(1).replace('.', ',')} saat tam karanlık)` : ''}. Arama motoru bunu hesaba katmaz; bataryayı buna göre seçin.`
-                  : `Eclipse on ${fmtDate(when)}: Earth covers ${Math.round(e.peak * 100)}% of the Sun for ${(e.endH - e.startH).toFixed(1)} h${e.totalH > 0 ? ` (${e.totalH.toFixed(1)} h of total darkness)` : ''}. The search does not include eclipses; size the battery for it.`}</p>
-              )
-            })}
-            <p className="note">📡 {T.dsnNote[lang]}</p>
           </div>
-          <HorizonView horizon={detail.tr.horizon} series={detail.series} i0={detail.a} len={detail.len} stepH={1}
-                       startMs={startDate(pick.bestStart).getTime()} lang={lang} />
-          <footer className="foot">
-            <a href={PLANNER_URL} target="_blank" rel="noreferrer">{T.planner[lang]} ↗</a>
-            <a href={REPO_URL} target="_blank" rel="noreferrer">{T.source[lang]} · GitHub ↗</a>
-            <span>{m.sources.join(' · ')}</span>
-          </footer>
+          <div className="group">
+            <div className="group-label">{S.window[lang]}</div>
+            <div className="pair">
+              <input className="input" type="date" value={p.start} min="2026-11-01" max="2028-11-30" onChange={(e) => e.target.value && set('start', e.target.value)} />
+              <NumberInput v={p.windowDays} min={5} max={90} step={5} on={(v) => set('windowDays', v)} unit={S.days[lang]} />
+            </div>
+          </div>
+          <div className="group">
+            <div className="group-label">{S.requirements[lang]}</div>
+            <Field label={S.stay[lang]} v={p.days} min={1} max={30} on={(v) => set('days', v)} unit={S.days[lang]} />
+            <Field label={S.needSun[lang]} v={p.sun} min={0} max={100} step={5} on={(v) => set('sun', v)} unit="%" />
+            <Field label={S.needEarth[lang]} v={p.earth} min={0} max={100} step={5} on={(v) => set('earth', v)} unit="%" />
+            <Field label={S.maxShadow[lang]} v={p.shadow} min={0} max={240} step={6} on={(v) => set('shadow', v)} unit="h" />
+            <Field label={S.battery[lang]} v={p.batt} min={500} max={20000} step={500} on={(v) => set('batt', v)} unit="Wh" />
+            <Field label={S.slope[lang]} v={p.slope} min={2} max={20} on={(v) => set('slope', v)} unit="°" />
+            <label className="checkbox"><input type="checkbox" checked={p.dsn} onChange={(e) => set('dsn', e.target.checked)} /><span>{S.dsn[lang]}</span></label>
+          </div>
+          <div className="side-foot">
+            <button className="btn primary block" disabled={progress !== null} onClick={() => run(p)}>
+              {progress !== null ? `${S.searching[lang]} ${Math.round(progress * 100)}%` : S.search[lang]}
+            </button>
+            {progress !== null && <div className="progress"><i style={{ width: `${progress * 100}%` }} /></div>}
+            {ran && progress === null && (
+              <p className="meta">{atlas.n.toLocaleString(loc)} {S.stats[lang]} · {(ran.hoursChecked / 1e6).toFixed(1)} M {S.hoursChecked[lang]} · {(ran.ms / 1000).toFixed(1)} {S.seconds[lang]}</p>
+            )}
+          </div>
+        </aside>
+
+        <main className="main">
+          <section className="card map-card">
+            <div className="map">
+              <Suspense fallback={null}>
+                <Globe poleCap={m.pole_cap} overlay={overlay} pins={pins} earthLabel={lang === 'tr' ? 'Dünya' : 'Earth'}
+                       selected={pick ? { lat: pick.lat, lon: pick.lon, label: `#${sel + 1}` } : null}
+                       sunDir={sunDir} earthDir={earthDir} onPick={setSel} />
+              </Suspense>
+              <div className="map-legend">
+                <span><i className="sw go" />{S.legGo[lang]}</span>
+                <span><i className="sw nogo" />{S.legNo[lang]}</span>
+                <span><i className="sw none" />{S.legSteep[lang]}</span>
+              </div>
+            </div>
+          </section>
+
+          {results && ran && (
+            <section className="card" id="results">
+              <div className="card-head">
+                <div>
+                  <h2>{S.results[lang]}</h2>
+                  <p className="sub">{S.resultsSub[lang]}</p>
+                </div>
+                <div className="actions">
+                  <button className="btn" onClick={() => download(`lunanav-${ran.q.start}.csv`, toCsv(rows))}><Download size={14} /> CSV</button>
+                  <button className="btn" onClick={() => {
+                    const w = window.open('', '_blank')
+                    if (w) { w.document.write(reportHtml(cmpRows.length >= 2 ? cmpRows : rows, ran.q, constraints(ran.q)!, m.sources, lang)); w.document.close() }
+                  }}><Printer size={14} /> {S.report[lang]}</button>
+                </div>
+              </div>
+              {top.length === 0 || top[0].goCount === 0 ? <div className="empty">{S.nothing[lang]}</div> : null}
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th className="c-cmp" title={S.compare[lang]}><ArrowLeftRight size={13} /></th>
+                      <th>#</th><th>{S.colSite[lang]}</th><th>{S.colGo[lang]}</th><th>{S.bestDate[lang]}</th>
+                      <th className="num">{T.sunlight[lang]}</th><th className="num">{S.colEarth[lang]}</th><th className="num">{S.colSlope[lang]}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {top.map((r, k) => (
+                      <tr key={r.index} className={k === sel ? 'sel' : ''} onClick={() => setSel(k)}>
+                        <td className="c-cmp" onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" checked={cmp.includes(r.index)} aria-label={S.compare[lang]}
+                                 onChange={() => setCmp((c) => c.includes(r.index) ? c.filter((x) => x !== r.index) : [...c, r.index].slice(-4))} />
+                        </td>
+                        <td className="rank">{k + 1}</td>
+                        <td><div className="site">{siteName(r)}</div>{region(r) && <div className="sub">{r.lat.toFixed(2)}°, {(((r.lon % 360) + 360) % 360).toFixed(1)}°E</div>}</td>
+                        <td>
+                          <div className="go-cell">
+                            <span className="meter"><i className={r.goCount > 0 ? 'go' : 'nogo'} style={{ width: `${Math.max(4, (r.goCount / ran.q.windowDays) * 100)}%` }} /></span>
+                            <span className="num">{r.goCount}/{ran.q.windowDays}</span>
+                          </div>
+                        </td>
+                        <td>{fmtDate(startDate(r.bestStart))}</td>
+                        <td className="num">{Math.round(r.sunFrac * 100)}%</td>
+                        <td className="num">{Math.round(r.commFrac * 100)}%</td>
+                        <td className="num">{atlas.slope[r.index].toFixed(1)}°</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {cmpRows.length < 2 && <p className="hint">{S.compareHint[lang]}</p>}
+            </section>
+          )}
+
+          {cmpRows.length >= 2 && <Compare rows={cmpRows} lang={lang} onClear={() => setCmp([])} />}
+
+          {detail && ran && pick && (
+            <>
+              <section className="card" id="site">
+                <div className="card-head">
+                  <div>
+                    <div className="eyebrow">{S.siteN[lang]} {sel + 1}{region(pick) ? ` · ${S.inRegion[lang]}` : ''}</div>
+                    <h2>{siteName(pick)}</h2>
+                    <p className="sub">{pick.lat.toFixed(3)}°, {(((pick.lon % 360) + 360) % 360).toFixed(3)}°E · {S.bestDate[lang]} {fmtDate(startDate(pick.bestStart))} · {ran.q.days} {S.days[lang]} ·{' '}
+                      {lang === 'tr' ? 'eğim' : 'slope'} {atlas.slope[pick.index].toFixed(1)}° · {lang === 'tr' ? 'yükseklik' : 'height'} {atlas.height[pick.index].toLocaleString(loc)} m</p>
+                  </div>
+                  <div className="actions">
+                    <button className="btn" onClick={() => enter('lander')}><PlaneLanding size={14} /> {S.standHere[lang]}</button>
+                    <button className="btn" onClick={() => enter('rover')}><Car size={14} /> {S.driveHere[lang]}</button>
+                  </div>
+                </div>
+                <div className={`verdict-row ${detail.w.go ? 'go' : 'nogo'}`}>
+                  <span className={`badge ${detail.w.go ? 'go' : 'nogo'}`}>{detail.w.go ? 'GO' : 'NO-GO'}</span>
+                  <p>{why(detail.w, 1, detail.c, lang)}</p>
+                </div>
+                <div className="stats">
+                  <Stat icon={<Sun size={14} />} label={T.sunlight[lang]} value={fmtPct(detail.w.sunFrac, lang)} need={`≥ ${ran.q.sun}%`}
+                        frac={detail.w.sunFrac} ok={detail.w.sunFrac >= detail.c.min_sun_frac} />
+                  <Stat icon={<Earth size={14} />} label={S.colEarth[lang]} value={fmtPct(detail.w.commFrac, lang)} need={`≥ ${ran.q.earth}%${ran.q.dsn ? ' · DSN' : ''}`}
+                        frac={detail.w.commFrac} ok={detail.w.commFrac >= detail.c.min_comm_frac} />
+                  <Stat icon={<MoonStar size={14} />} label={S.longestDark[lang]} value={hours(detail.w.longestDarkH, lang)} need={`≤ ${ran.q.shadow} h`}
+                        frac={Math.min(1, detail.w.longestDarkH / Math.max(1, ran.q.shadow))} ok={detail.w.longestDarkH <= detail.c.max_dark_hours} invert />
+                  <Stat icon={<BatteryMedium size={14} />} label={T.battery[lang]} ok={detail.w.survived}
+                        value={detail.w.survived ? T.lasts[lang] : `${lang === 'tr' ? 'Biter' : 'Empty at'} ${hours(detail.w.power.firstFailure ?? 0, lang)}`}
+                        need={detail.need === 0 ? (lang === 'tr' ? 'gece yok' : 'no night to bridge') : `${Math.round(detail.need).toLocaleString(loc)} Wh ${lang === 'tr' ? 'gerekli' : 'needed'}`}
+                        frac={detail.need === 0 ? 0 : Math.min(1, detail.need / ran.q.batt)} invert />
+                </div>
+              </section>
+
+              <section className="card">
+                <div className="card-head"><div><h2>{S.otherDates[lang]}</h2><p className="sub">{S.otherDatesSub[lang]}</p></div></div>
+                <div className="calendar">
+                  {detail.perStart.map((go, s) => (
+                    <span key={s} className={`${go ? 'go' : 'nogo'} ${s === pick.bestStart ? 'best' : ''}`} title={fmtDate(startDate(s))}>
+                      {startDate(s).getUTCDate()}
+                    </span>
+                  ))}
+                </div>
+                <h3 className="sec">{T.dayByDay[lang]}</h3>
+                <DayStrip sun={Array.from({ length: detail.len }, (_, j) => detail.series.sunFraction[detail.a + j] >= 0.5)}
+                          earth={Array.from({ length: detail.len }, (_, j) => detail.series.earthVisible[detail.a + j])}
+                          link={Array.from({ length: detail.len }, (_, j) => detail.tr.link[detail.a + j])} lang={lang} />
+                {eclipses.filter((e) => e.endH >= detail.fh + detail.a && e.startH <= detail.fh + detail.a + detail.len).map((e) => {
+                  const when = new Date((m.start_unix + e.peakH * 3600) * 1000)
+                  return (
+                    <div key={e.startH} className="alert"><AlertTriangle size={15} /><span>{lang === 'tr'
+                      ? `Tutulma ${fmtDate(when)}: Dünya Güneş'in %${Math.round(e.peak * 100)}'ini kapatıyor, ${(e.endH - e.startH).toFixed(1).replace('.', ',')} saat${e.totalH > 0 ? ` (${e.totalH.toFixed(1).replace('.', ',')} saat tam karanlık)` : ''}. Arama motoru bunu hesaba katmaz; bataryayı buna göre seçin.`
+                      : `Eclipse on ${fmtDate(when)}: Earth covers ${Math.round(e.peak * 100)}% of the Sun for ${(e.endH - e.startH).toFixed(1)} h${e.totalH > 0 ? ` (${e.totalH.toFixed(1)} h of total darkness)` : ''}. The search does not include eclipses; size the battery for it.`}</span></div>
+                  )
+                })}
+                <p className="hint">{T.dsnNote[lang]}</p>
+              </section>
+
+              <HorizonView horizon={detail.tr.horizon} series={detail.series} i0={detail.a} len={detail.len} stepH={1}
+                           startMs={startDate(pick.bestStart).getTime()} lang={lang} />
+            </>
+          )}
+
+          <section className="card" id="method">
+            <div className="card-head"><div><h2>{S.navMethod[lang]}</h2></div></div>
+            <ol className="steps">
+              {STEPS[lang].map((s, k) => <li key={k}><b>{s[0]}</b><span>{s[1]}</span></li>)}
+            </ol>
+            <p className="hint">{m.sources.join(' · ')}</p>
+            <div className="links">
+              <a href={REPO_URL} target="_blank" rel="noreferrer">{T.source[lang]} · GitHub ↗</a>
+              <a href={PLANNER_URL} target="_blank" rel="noreferrer">{T.planner[lang]} ↗</a>
+            </div>
+          </section>
         </main>
-      )}
+      </div>
+      <Luna lang={lang} context={lunaContext} onAction={onLuna} />
     </div>
   )
 }
-
 
 function Compare({ rows, lang, onClear }: { rows: SiteRow[]; lang: Lang; onClear: () => void }) {
   const tr = lang === 'tr'
@@ -403,9 +500,9 @@ function Compare({ rows, lang, onClear }: { rows: SiteRow[]; lang: Lang; onClear
     [tr ? 'Yükseklik' : 'Height', (r) => `${r.heightM} m`, null, true],
   ]
   return (
-    <div className="card compare">
-      <div className="results-head"><h3>⇄ {S.compareTitle[lang]}</h3><button className="mini" onClick={onClear}>{S.clear[lang]}</button></div>
-      <table>
+    <section className="card compare">
+      <div className="card-head"><div><h2>{S.compareTitle[lang]}</h2></div><div className="actions"><button className="btn" onClick={onClear}>{S.clear[lang]}</button></div></div>
+      <div className="table-wrap"><table className="table">
         <thead><tr><th />{rows.map((r) => <th key={r.index}>#{r.rank}<small>{r.region ?? `${r.lat.toFixed(2)}°, ${r.lon.toFixed(1)}°E`}</small></th>)}</tr></thead>
         <tbody>
           {lines.map(([name, show, score, up]) => {
@@ -417,33 +514,48 @@ function Compare({ rows, lang, onClear }: { rows: SiteRow[]; lang: Lang; onClear
               </tr>
             )
           })}
-          <tr><td>☀ {tr ? 'Gün gün güneş' : 'Sun, day by day'}</td>
+          <tr><td>{tr ? 'Gün gün güneş' : 'Sun, day by day'}</td>
             {rows.map((r) => <td key={r.index}><span className="spark">{r.sunDaily.map((v, d) => <i key={d} style={{ background: `rgba(242,183,5,${0.1 + 0.9 * v})` }} />)}</span></td>)}</tr>
-          <tr><td>📡 {tr ? 'Gün gün bağlantı' : 'Link, day by day'}</td>
+          <tr><td>{tr ? 'Gün gün bağlantı' : 'Link, day by day'}</td>
             {rows.map((r) => <td key={r.index}><span className="spark">{r.earthDaily.map((v, d) => <i key={d} style={{ background: `rgba(78,168,222,${0.1 + 0.9 * v})` }} />)}</span></td>)}</tr>
           <tr><td>{tr ? 'Tarih takvimi' : 'Landing dates'}</td>
             {rows.map((r) => <td key={r.index}><span className="spark">{r.perStart.map((g, d) => <i key={d} className={g ? 'g' : 'r'} />)}</span></td>)}</tr>
         </tbody>
-      </table>
-    </div>
+      </table></div>
+    </section>
   )
 }
 
-function Slider({ v, min, max, step = 1, on, unit }: { v: number; min: number; max: number; step?: number; on: (v: number) => void; unit: string }) {
+function NumberInput({ v, min, max, step = 1, on, unit }: { v: number; min: number; max: number; step?: number; on: (v: number) => void; unit: string }) {
+  const [txt, setTxt] = useState(String(v))
+  useEffect(() => setTxt(String(v)), [v])
+  const commit = () => { const n = Number(txt); if (Number.isFinite(n)) on(Math.min(max, Math.max(min, Math.round(n / step) * step))); else setTxt(String(v)) }
   return (
-    <span className="slider">
-      <input type="range" min={min} max={max} step={step} value={v} onChange={(e) => on(+e.target.value)} />
-      <output>{v.toLocaleString()}{unit}</output>
+    <span className="num-input">
+      <input inputMode="numeric" value={txt} onChange={(e) => setTxt(e.target.value)} onBlur={commit}
+             onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); on(Math.min(max, Math.max(min, v + (e.key === 'ArrowUp' ? step : -step)))) } }} />
+      <em>{unit}</em>
     </span>
   )
 }
 
-function Tile({ icon, title, value, note, ok }: { icon: string; title: string; value: string; note: string; ok: boolean }) {
+function Field({ label, v, min, max, step = 1, on, unit }: { label: string; v: number; min: number; max: number; step?: number; on: (v: number) => void; unit: string }) {
   return (
-    <div className={`tile ${ok ? 'ok' : 'bad'}`}>
-      <div className="t-title">{icon} {title}</div>
-      <div className="t-value">{value}</div>
-      <div className="t-note">{note}</div>
+    <div className="field">
+      <div className="field-top"><label>{label}</label><NumberInput v={v} min={min} max={max} step={step} on={on} unit={unit} /></div>
+      <input className="rng" type="range" min={min} max={max} step={step} value={v} aria-label={label}
+             style={{ ['--p' as string]: `${((v - min) / (max - min)) * 100}%` }} onChange={(e) => on(+e.target.value)} />
+    </div>
+  )
+}
+
+function Stat({ icon, label, value, need, frac, ok, invert }: { icon: React.ReactNode; label: string; value: string; need: string; frac: number; ok: boolean; invert?: boolean }) {
+  return (
+    <div className="stat">
+      <div className="stat-label">{icon}{label}<span className={`dot ${ok ? 'ok' : 'bad'}`} /></div>
+      <div className="stat-value">{value}</div>
+      <div className="stat-bar"><i className={ok ? 'ok' : 'bad'} style={{ width: `${Math.max(2, Math.min(1, frac) * 100)}%`, opacity: invert ? 0.6 : 1 }} /></div>
+      <div className="stat-need">{need}</div>
     </div>
   )
 }
@@ -451,8 +563,8 @@ function Tile({ icon, title, value, note, ok }: { icon: string; title: string; v
 function DayStrip({ sun, earth, link, lang }: { sun: boolean[]; earth: boolean[]; link: boolean[]; lang: Lang }) {
   const days = Math.floor(sun.length / 24)
   const share = (a: boolean[], d: number) => a.slice(d * 24, d * 24 + 24).filter(Boolean).length / 24
-  const rows: [string, string, boolean[]][] = [[`☀️ ${T.sunUp[lang]}`, '242,183,5', sun], [`🌍 ${T.earthUp[lang]}`, '78,168,222', earth],
-    [`📡 ${T.radio[lang]}`, '52,199,89', link]]
+  const rows: [string, string, boolean[]][] = [[T.sunUp[lang], '229,165,10', sun], [T.earthUp[lang], '59,130,246', earth],
+    [T.radio[lang], '34,197,94', link]]
   return (
     <div className="strip" style={{ ['--days' as string]: days }}>
       {rows.map(([label, rgb, a]) => (
