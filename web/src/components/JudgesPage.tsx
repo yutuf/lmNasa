@@ -1,9 +1,10 @@
 // The landing page for judges and visitors (open the site with #judges): what LunaNav does in one screen, a QR code
 // of this very site so anyone in the room can open it on a phone, and one button into the app. The QR encodes the
-// address the page is served from, so it is right on any deployment.
+// public site (adaptlabs.us), including when this page is opened from localhost.
 import { useMemo, useState } from 'react'
 import qrcode from 'qrcode-generator'
 import { ArrowRight, Clapperboard, PlayCircle, Database, Globe2, Percent, Scale, Smartphone } from 'lucide-react'
+import { shareOrigin } from '../publicOrigin'
 import HeroMoon from './HeroMoon'
 import VehiclePhoto from './VehiclePhoto'
 
@@ -27,7 +28,7 @@ const T = {
     open: 'Open the app', film: 'Watch the mission film', scan: 'Scan to try it on your phone',
     facts: [
       ['21,856 + 41,276', 'points checked, south pole and whole Moon'],
-      ['~7.6 M', 'hour-by-hour checks per search, in seconds, in your browser'],
+      ['~7.6 M', 'hour-by-hour checks in the default search (every point flat enough to land × every hour), in seconds, in your browser'],
       ['2026 – 2045', 'every landing date, from NASA JPL ephemerides'],
       ['9', 'Artemis III candidate regions compared'],
     ],
@@ -46,7 +47,7 @@ const T = {
     open: 'Uygulamayı aç', film: 'Görev filmini izle', scan: 'Telefonda denemek için tara',
     facts: [
       ['21.856 + 41.276', 'nokta, güney kutbu ve tüm Ay'],
-      ['~7,6 M', 'saatlik kontrol, saniyeler içinde, tarayıcıda'],
+      ['~7,6 M', 'varsayılan aramada saatlik kontrol (inişe uygun her nokta × her saat), saniyeler içinde, tarayıcıda'],
       ['2026 – 2045', 'her iniş tarihi, NASA JPL efemerisiyle'],
       ['9', 'Artemis III aday bölgesi karşılaştırıldı'],
     ],
@@ -63,7 +64,8 @@ const T = {
 export default function JudgesPage({ onOpen }: { onOpen: (hash: string) => void }) {
   const [lang, setLang] = useState<Lang>(() => (location.hash.includes('lang=tr') ? 'tr' : 'en'))
   const t = T[lang]
-  const url = `${location.origin}${location.pathname}`
+  const url = `${shareOrigin(location.origin)}${location.pathname}`
+  const wide = typeof matchMedia === 'undefined' || matchMedia('(min-width: 760px)').matches
   return (
     <div className="jp">
       <section className="jp-hero">
@@ -98,10 +100,11 @@ export default function JudgesPage({ onOpen }: { onOpen: (hash: string) => void 
       <section className="jp-feats">
         {t.feats.map(([I, h, d], k) => <div key={h}><img className="jp-feat-art" src={`${import.meta.env.BASE_URL}art/${['feat-sites', 'feat-odds', 'feat-decision', 'feat-data'][k]}.webp`} alt="" /><I size={22} /><b>{h}</b><span>{d}</span></div>)}
       </section>
-      <section className="jp-fleet">
+      {/* the 3D vehicle renders load several MB of models: desktop only (a phone opening the QR stays fast) */}
+      {wide && <section className="jp-fleet">
         {(['apollo', 'vikram', 'hls'] as const).map((id) => <VehiclePhoto key={id} kind="lander" id={id} alt="" className="jp-veh" />)}
         {(['pragyan', 'yutu'] as const).map((id) => <VehiclePhoto key={id} kind="rover" id={id} alt="" className="jp-veh jp-veh-s" />)}
-      </section>
+      </section>}
       <p className="jp-honest">{t.honest}</p>
     </div>
   )

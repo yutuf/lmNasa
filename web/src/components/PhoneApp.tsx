@@ -9,67 +9,154 @@ import * as THREE from 'three'
 import { dataUrl } from '../data'
 import type { Lang } from '../i18n'
 import { directionMoonFixed, toThree } from '../geometry'
-import { eyePosition, headingFromOrientation, lookQuaternion, SOUTH_POLE, tiltFromAccel, type Stand } from '../phoneLook'
+import { eyePosition, headingFromOrientation, SOUTH_POLE, tiltFromAccel, tiltFromOrientation, writeLook, type Stand } from '../phoneLook'
 import { openGuest, openHost, parsePhoneHash, phoneUrl, roomCode, standFrom, type LinkStatus } from '../phoneLink'
 import '../phone.css'
 
 interface Tilt { heading: number; alt: number; roll: number }
 
+function glowTexture(stops: [number, string][]) {
+  const c = document.createElement('canvas')
+  c.width = c.height = 256
+  const x = c.getContext('2d')!
+  const g = x.createRadialGradient(128, 128, 0, 128, 128, 128)
+  for (const [t, color] of stops) g.addColorStop(t, color)
+  x.fillStyle = g
+  x.fillRect(0, 0, 256, 256)
+  const tex = new THREE.CanvasTexture(c)
+  tex.colorSpace = THREE.SRGBColorSpace
+  return tex
+}
+
 function MoonBall() {
   const [albedo, normal] = useTexture([dataUrl('moon_albedo.jpg'), dataUrl('moon_normal.jpg')])
   albedo.colorSpace = THREE.SRGBColorSpace
+  albedo.anisotropy = 8
   return (
     <mesh>
-      <sphereGeometry args={[1, 128, 64]} />
-      <meshStandardMaterial map={albedo} normalMap={normal} normalScale={new THREE.Vector2(1.1, 1.1)} roughness={1} metalness={0} />
+      <sphereGeometry args={[1, 160, 80]} />
+      <meshStandardMaterial map={albedo} normalMap={normal} normalScale={new THREE.Vector2(1.2, 1.2)} roughness={1} metalness={0} color="#e4ded4" />
     </mesh>
   )
 }
 
-function SkyMarks({ stand }: { stand: Stand }) {
+function Stars() {
   const geo = useMemo(() => {
-    const pos = new Float32Array(400 * 3)
-    for (let i = 0; i < 400; i++) {
-      const v = new THREE.Vector3(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1).normalize().multiplyScalar(30)
+    const n = 1400
+    const pos = new Float32Array(n * 3)
+    const col = new Float32Array(n * 3)
+    let s = 42
+    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647
+    for (let i = 0; i < n; i++) {
+      const v = new THREE.Vector3(rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1).normalize().multiplyScalar(26)
       pos.set([v.x, v.y, v.z], i * 3)
+      const warm = rnd()
+      col.set(warm > 0.92 ? [1, 0.86, 0.7] : warm < 0.12 ? [0.75, 0.84, 1] : [0.92, 0.93, 0.96], i * 3)
     }
     const g = new THREE.BufferGeometry()
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3))
     return g
   }, [])
-  const earth = toThree(directionMoonFixed(18, 50, stand.lat, stand.lon)).multiplyScalar(12)
-  const sun = toThree(directionMoonFixed(8, 220, stand.lat, stand.lon)).multiplyScalar(16)
+  return <points geometry={geo}><pointsMaterial vertexColors size={1.15} sizeAttenuation={false} /></points>
+}
+
+function SkyBodies({ stand }: { stand: Stand }) {
+  const earthMap = useTexture(dataUrl('earth.jpg'))
+  earthMap.colorSpace = THREE.SRGBColorSpace
+  const earthGlow = useMemo(() => glowTexture([[0, 'rgba(120,190,255,0.55)'], [0.4, 'rgba(60,120,255,0.16)'], [1, 'rgba(0,0,0,0)']]), [])
+  const earth = toThree(directionMoonFixed(24, 55, stand.lat, stand.lon)).multiplyScalar(11)
+  return (
+    <group position={earth}>
+      <sprite scale={[2.4, 2.4, 1]}><spriteMaterial map={earthGlow} transparent depthWrite={false} blending={THREE.AdditiveBlending} /></sprite>
+      <mesh>
+        <sphereGeometry args={[0.55, 48, 32]} />
+        <meshBasicMaterial map={earthMap} />
+      </mesh>
+    </group>
+  )
+}
+
+function Sun({ stand }: { stand: Stand }) {
+  const core = useMemo(() => glowTexture([[0, 'rgba(255,255,245,1)'], [0.2, 'rgba(255,236,200,0.9)'], [0.45, 'rgba(255,190,80,0.28)'], [1, 'rgba(255,160,40,0)']]), [])
+  const sun = toThree(directionMoonFixed(10, 220, stand.lat, stand.lon)).multiplyScalar(15)
   return (
     <>
-      <points geometry={geo}><pointsMaterial color="#ffffff" size={0.06} sizeAttenuation /></points>
-      <mesh position={earth}><sphereGeometry args={[0.18, 24, 16]} /><meshBasicMaterial color="#7eb6ff" /></mesh>
-      <mesh position={sun}><sphereGeometry args={[0.22, 24, 16]} /><meshBasicMaterial color="#ffd27a" /></mesh>
+      <directionalLight position={[sun.x, sun.y, sun.z]} intensity={4.4} color="#fff3df" />
+      <group position={sun}>
+        <sprite scale={[4.5, 4.5, 1]}><spriteMaterial map={core} transparent depthWrite={false} blending={THREE.AdditiveBlending} /></sprite>
+      </group>
     </>
   )
 }
 
+function Beacon({ stand }: { stand: Stand }) {
+  const foot = surfaceBeacon(stand.lat, stand.lon)
+  const up = foot.clone().normalize()
+  const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), up)
+  return (
+    <group position={foot} quaternion={quat}>
+      <mesh position={[0, 0.0045, 0]}>
+        <cylinderGeometry args={[0.00012, 0.00012, 0.009, 6]} />
+        <meshBasicMaterial color="#e10600" />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.00035, 0]}>
+        <ringGeometry args={[0.0022, 0.0027, 40]} />
+        <meshBasicMaterial color="#ffd9a0" side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  )
+}
+
+function surfaceBeacon(lat: number, lon: number) {
+  return eyePosition(Math.min(lat + 0.35, 89), lon).normalize().multiplyScalar(1.0015)
+}
+
 function LookCam({ stand, tilt }: { stand: Stand; tilt: RefObject<Tilt> }) {
-  const { camera } = useThree()
-  useFrame(() => {
+  const { camera, scene } = useThree()
+  const lamp = useRef<THREE.DirectionalLight>(null)
+  useEffect(() => {
+    const head = lamp.current
+    if (!head) return
+    scene.add(head.target)
+    return () => { scene.remove(head.target) }
+  }, [scene])
+  const aim = useRef(new THREE.Vector3())
+  const target = useRef(new THREE.Quaternion())
+  const current = useRef(new THREE.Quaternion())
+  const primed = useRef(false)
+  useEffect(() => { primed.current = false }, [stand.lat, stand.lon])
+  useFrame((_, dt) => {
     const t = tilt.current
     if (!t) return
+    writeLook(target.current, stand.lat, stand.lon, t.heading, t.alt, t.roll)
+    const k = 1 - Math.exp(-Math.min(dt, 0.05) / 0.04)
+    if (!primed.current) { current.current.copy(target.current); primed.current = true }
+    else current.current.slerp(target.current, k)
     camera.position.copy(eyePosition(stand.lat, stand.lon))
-    camera.quaternion.copy(lookQuaternion(stand.lat, stand.lon, t.heading, t.alt, t.roll))
+    camera.quaternion.copy(current.current)
+    const head = lamp.current
+    if (!head) return
+    head.position.copy(camera.position)
+    camera.getWorldDirection(aim.current)
+    head.target.position.copy(camera.position).add(aim.current)
+    head.target.updateMatrixWorld()
   })
-  return null
+  return <directionalLight ref={lamp} intensity={1.35} color="#fff8ee" />
 }
 
 function Stage({ stand, tilt }: { stand: Stand; tilt: RefObject<Tilt> }) {
   return (
-    <Canvas camera={{ fov: 62, near: 0.01, far: 80 }} dpr={[1, 1.5]} gl={{ antialias: true }}
-      onCreated={({ gl, scene }) => { scene.background = new THREE.Color('#000'); gl.setClearColor(0x000000, 1) }}>
-      <ambientLight intensity={0.08} />
-      <hemisphereLight args={['#c5ccd6', '#000', 0.25]} />
-      <directionalLight position={[4, 2, 1]} intensity={3.2} color="#fff1dc" />
+    <Canvas camera={{ fov: 68, near: 0.0005, far: 40 }} dpr={[1, 1.5]} gl={{ antialias: true }}
+      onCreated={({ gl, scene }) => { scene.background = new THREE.Color('#070814'); gl.setClearColor(0x070814, 1) }}>
+      <hemisphereLight args={['#b7c4d4', '#3a2c22', 0.72]} />
       <Suspense fallback={null}>
         <MoonBall />
-        <SkyMarks stand={stand} />
+        <SkyBodies stand={stand} />
+        <Sun stand={stand} />
+        <Beacon stand={stand} />
       </Suspense>
+      <Stars />
       <LookCam stand={stand} tilt={tilt} />
     </Canvas>
   )
@@ -91,26 +178,40 @@ function useLocalTilt(on: boolean, tilt: RefObject<Tilt>) {
   useEffect(() => {
     if (!on || !tilt.current) return
     let heading = tilt.current.heading
-    let gotHeading = false
-    const onOri = (e: DeviceOrientationEvent) => {
+    let absolute = false
+    let fused = false
+    const apply = (e: DeviceOrientationEvent, abs: boolean) => {
+      if (abs) absolute = true
+      else if (absolute) return
       const ios = (e as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading
       const h = headingFromOrientation(e.alpha, ios)
-      if (h != null) { heading = h; gotHeading = true }
-    }
-    const onMotion = (e: DeviceMotionEvent) => {
-      const g = e.accelerationIncludingGravity
-      if (!g || g.x == null || g.y == null || g.z == null || !tilt.current) return
-      if (!gotHeading && e.rotationRate?.alpha) heading = (heading + e.rotationRate.alpha * 0.02 + 360) % 360
-      const next = tiltFromAccel({ x: g.x, y: g.y, z: g.z })
+      if (h != null) heading = h
+      const next = tiltFromOrientation(e.beta, e.gamma)
       const cur = tilt.current
-      cur.alt += (next.alt - cur.alt) * 0.35
-      cur.roll += (next.roll - cur.roll) * 0.35
+      if (!next || !cur) return
+      fused = true
+      cur.alt = next.alt
+      cur.roll = next.roll
       cur.heading = heading
     }
-    addEventListener('deviceorientation', onOri)
+    const onAbs = (e: DeviceOrientationEvent) => apply(e, true)
+    const onRel = (e: DeviceOrientationEvent) => apply(e, false)
+    const onMotion = (e: DeviceMotionEvent) => {
+      if (fused || !tilt.current) return
+      const g = e.accelerationIncludingGravity
+      if (!g || g.x == null || g.y == null || g.z == null) return
+      if (e.rotationRate?.alpha) heading = (heading + e.rotationRate.alpha * 0.016 + 360) % 360
+      const next = tiltFromAccel({ x: g.x, y: g.y, z: g.z })
+      tilt.current.alt = next.alt
+      tilt.current.roll = next.roll
+      tilt.current.heading = heading
+    }
+    addEventListener('deviceorientationabsolute', onAbs)
+    addEventListener('deviceorientation', onRel)
     addEventListener('devicemotion', onMotion)
     return () => {
-      removeEventListener('deviceorientation', onOri)
+      removeEventListener('deviceorientationabsolute', onAbs)
+      removeEventListener('deviceorientation', onRel)
       removeEventListener('devicemotion', onMotion)
     }
   }, [on, tilt])
@@ -128,7 +229,7 @@ function QR({ text }: { text: string }) {
 
 const copy = {
   en: {
-    hold: 'Hold the phone up. The accelerometer looks around the surface.',
+    hold: 'Tilt it. Down is the ground ahead, up is Earth and the Sun.',
     enable: 'Enable motion',
     pair: 'Pair this phone',
     waiting: 'Open the code on the phone',
@@ -141,7 +242,7 @@ const copy = {
     failHost: 'Pairing failed',
   },
   tr: {
-    hold: 'Telefonu kaldır. İvmeölçer yüzeyde etrafa bakar.',
+    hold: 'Eğ. Aşağıda önündeki yer, yukarıda Dünya ve Güneş.',
     enable: 'Hareketi aç',
     pair: 'Bu telefonu eşle',
     waiting: 'Kodu telefonda aç',
@@ -175,7 +276,7 @@ export function PhoneGuest() {
   const [motion, setMotion] = useState(false)
   const [status, setStatus] = useState<LinkStatus>(parsed.code ? 'connecting' : 'waiting')
   const [stand, setStand] = useState<Stand>({ ...SOUTH_POLE, name: lang === 'tr' ? 'Güney kutbu' : SOUTH_POLE.name })
-  const tilt = useRef<Tilt>({ heading: 0, alt: 0, roll: 0 })
+  const tilt = useRef<Tilt>({ heading: 0, alt: -22, roll: 0 })
   const send = useRef<((msg: { t: 'ori'; heading: number; alt: number; roll: number } | { t: 'cmd'; name: 'find' | 'best' }) => void) | null>(null)
   useLocalTilt(motion, tilt)
 
@@ -192,7 +293,7 @@ export function PhoneGuest() {
       timer = window.setInterval(() => {
         const v = tilt.current
         if (v) link.send({ t: 'ori', heading: v.heading, alt: v.alt, roll: v.roll })
-      }, 50)
+      }, 16)
     })
     return () => { dead = true; clearInterval(timer); stop() }
   }, [parsed.code, tilt])
@@ -237,7 +338,7 @@ export function PhoneHost({ lang, site, onClose, onFind, onBest }: {
   const [code] = useState(roomCode)
   const [status, setStatus] = useState<LinkStatus>('connecting')
   const [detail, setDetail] = useState('')
-  const tilt = useRef<Tilt>({ heading: 0, alt: 15, roll: 0 })
+  const tilt = useRef<Tilt>({ heading: 0, alt: -22, roll: 0 })
   const link = useRef<{ send: (msg: { t: 'site'; name: string; lat: number; lon: number }) => void } | null>(null)
   const onFindRef = useRef(onFind)
   const onBestRef = useRef(onBest)
