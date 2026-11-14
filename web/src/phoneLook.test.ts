@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
 import { enu, toThree } from './geometry'
-import { commitAim, cursorNdc, dragCursor, dragLook, followAngle, gravityInScreen, headingFromOrientation, lookQuaternion, nudgeLook, poseFromGravity, stepRemote, tiltFromAccel, tiltFromOrientation } from './phoneLook'
+import { commitAim, cursorNdc, dragCursor, dragLook, followAngle, gravityInScreen, headingFromOrientation, lookQuaternion, nudgeLook, poseFromGravity, stepRemote, stepSlew, tiltFromAccel, tiltFromOrientation } from './phoneLook'
 
 describe('phone look', () => {
   it('reads the horizon from an upright phone and the sky from a face-up phone', () => {
@@ -79,6 +79,20 @@ describe('phone look', () => {
     expect(dragCursor({ x: 0, y: 0 }, 0, -40).y).toBeGreaterThan(5)
     expect(cursorNdc(0, 0)).toEqual({ x: 0, y: 0 })
     expect(cursorNdc(0, 10).y).toBeGreaterThan(0.2)
+  })
+
+  it('turns the view from the phone yaw and pitch, and holds still when the hand does', () => {
+    const opts = { dead: 0, gain: 1 }
+    expect(stepSlew({ heading: 10, alt: -22 }, { alpha: 400, beta: 0, gamma: 0 }, 0.04, opts)).toEqual({ heading: 10, alt: -22 })
+    expect(stepSlew({ heading: 10, alt: 0 }, { alpha: 0, beta: 0, gamma: 500 }, 0.04, opts).heading).toBeCloseTo(30, 5)
+    expect(stepSlew({ heading: 0, alt: 0 }, { alpha: 0, beta: 500, gamma: 0 }, 0.04, opts).alt).toBeCloseTo(-20, 5)
+    expect(stepSlew({ heading: 4, alt: -8 }, { alpha: 1, beta: 1, gamma: 1 }, 0.04)).toEqual({ heading: 4, alt: -8 })
+    expect(stepSlew({ heading: 4, alt: -8 }, { alpha: 0, beta: 0, gamma: 80 }, 0.2, opts)).toEqual({ heading: 4, alt: -8 })
+    expect(stepSlew({ heading: 0, alt: 70 }, { alpha: 0, beta: -500, gamma: 0 }, 0.04, opts).alt).toBe(75)
+    const turned = stepSlew({ heading: 0, alt: 0 }, { alpha: 0, beta: 0, gamma: 400 }, 0.04, opts)
+    const east = toThree(enu(0, 0).e).normalize()
+    const fwd = (heading: number, alt: number) => new THREE.Vector3(0, 0, -1).applyQuaternion(lookQuaternion(0, 0, heading, alt, 0))
+    expect(fwd(turned.heading, 0).dot(east)).toBeGreaterThan(fwd(0, 0).dot(east) + 0.15)
   })
 
   it('reads an upright phone from deviceorientation, which is what the browser fuses', () => {
