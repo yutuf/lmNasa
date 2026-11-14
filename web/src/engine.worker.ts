@@ -1,10 +1,11 @@
 // Runs the search engine off the main thread. Several workers split the candidate points between them.
-import { parseAtlas, parseEphem, searchPoint, type PointResult, type Search } from './engine'
+import { parseAtlas, parseEphem, parseHazard, passesTerrain, searchPoint, type Hazard, type PointResult, type Search } from './engine'
 import type { Constraints } from './model'
 
 let atlas: ReturnType<typeof parseAtlas> | null = null
 let ephem: ReturnType<typeof parseEphem> | null = null
 let dsn: Uint8Array | null = null
+let hazard: Hazard | null = null
 
 self.onmessage = (ev: MessageEvent) => {
   const msg = ev.data
@@ -12,6 +13,7 @@ self.onmessage = (ev: MessageEvent) => {
     atlas = parseAtlas(msg.atlas)
     ephem = parseEphem(msg.ephem, msg.n)
     dsn = new Uint8Array(msg.dsn)
+    hazard = msg.hazard ? parseHazard(msg.hazard) : null
     self.postMessage({ type: 'ready' })
     return
   }
@@ -20,7 +22,7 @@ self.onmessage = (ev: MessageEvent) => {
     const dsnBool = Array.from(dsn, (x) => x === 1)
     const out: PointResult[] = []
     for (let i = from; i < to; i++) {
-      if (atlas.slope[i] > q.maxSlope) continue
+      if (!passesTerrain(atlas, hazard, i, q)) continue
       out.push(searchPoint(atlas, ephem, dsnBool, i, q, c))
       if ((i - from) % 400 === 0) self.postMessage({ type: 'progress', job, done: i - from, total: to - from })
     }

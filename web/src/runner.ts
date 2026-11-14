@@ -6,7 +6,7 @@ export class EngineRunner {
   private workers: Worker[] = []
   private ready: Promise<void>
 
-  constructor(atlas: ArrayBuffer, ephem: ArrayBuffer, dsn: ArrayBuffer, n: number) {
+  constructor(atlas: ArrayBuffer, ephem: ArrayBuffer, dsn: ArrayBuffer, n: number, hazard: ArrayBuffer | null = null) {
     const count = Math.max(2, Math.min(8, (navigator.hardwareConcurrency || 4) - 1))
     const ready: Promise<void>[] = []
     for (let i = 0; i < count; i++) {
@@ -15,7 +15,7 @@ export class EngineRunner {
         const h = (e: MessageEvent) => { if (e.data.type === 'ready') { w.removeEventListener('message', h); res() } }
         w.addEventListener('message', h)
       }))
-      w.postMessage({ type: 'init', atlas: atlas.slice(0), ephem: ephem.slice(0), dsn: dsn.slice(0), n })
+      w.postMessage({ type: 'init', atlas: atlas.slice(0), ephem: ephem.slice(0), dsn: dsn.slice(0), n, hazard: hazard?.slice(0) ?? null })
       this.workers.push(w)
     }
     this.ready = Promise.all(ready).then(() => undefined)

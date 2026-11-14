@@ -103,7 +103,7 @@ def main(argv=None):
     data = Path(a.data)
     hz_path, series_dir, derived_path = data / "horizons.json", data / "series", data / "derived_sites.yaml"
     profiles = load_profiles(hz_path) if hz_path.exists() else {}
-    entries = (yaml.safe_load(derived_path.read_text()) or {}).get("sites", []) if derived_path.exists() else []
+    entries = (yaml.safe_load(derived_path.read_text(encoding="utf-8")) or {}).get("sites", []) if derived_path.exists() else []
     sites = {s.id: s for s in load_sites(data / "sites.yaml", include_derived=False)}
 
     def horizon_at(lat, lon, sid="candidate"):
@@ -168,7 +168,7 @@ def main(argv=None):
         written.append(did)
 
     save_profiles(list(profiles.values()), hz_path)
-    derived_path.write_text(HEADER + yaml.safe_dump({"sites": entries}, sort_keys=False, allow_unicode=True))
+    derived_path.write_text(HEADER + yaml.safe_dump({"sites": entries}, sort_keys=False, allow_unicode=True), encoding="utf-8")
     print(f"wrote {len(written)} region-best point(s) to {derived_path}")
     return written
 

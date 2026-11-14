@@ -22,3 +22,7 @@ data/lola5m
 data/lola20m
 data/models
 data/usgs
+
+# Raw source downloads (re-fetch; only derived web data is committed)
+data/gazetteer
+data/earth
