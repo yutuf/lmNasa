@@ -180,6 +180,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
   const sciRef = useRef<Science | null>(null)
   sciRef.current = world?.sci ?? null
   const [serialOn, setSerialOn] = useState(false)
+  const coarse = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches
   const [planning, setPlanning] = useState<'idle' | 'busy' | 'none'>('idle')
   const plan = () => {
     if (!world || planning === 'busy') return
@@ -281,6 +282,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
         </Canvas>
       )}
       <LookDrag sim={sim} />
+      {coarse && s.mode === 'rover' && !s.dead && <TouchStick sim={sim} />}
 
       <div className="hud top-left">
         <div className="hud-title">{s.mode === 'lander' ? t('lander') : t('rover')}</div>
@@ -387,6 +389,29 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
           <button className="big" onClick={restart}>{t('restart')}</button>
         </div>
       )}
+    </div>
+  )
+}
+
+/** On-screen joystick for touch screens: up/down drives, left/right steers. */
+function TouchStick({ sim }: { sim: React.MutableRefObject<Sim> }) {
+  const [knob, setKnob] = useState<[number, number]>([0, 0])
+  const base = useRef<HTMLDivElement>(null)
+  const move = (e: React.PointerEvent) => {
+    const r = base.current!.getBoundingClientRect()
+    const dx = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (r.width / 2)))
+    const dy = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2)) / (r.height / 2)))
+    setKnob([dx, dy])
+    const s = sim.current
+    s.throttle = Math.abs(dy) > 0.2 ? -dy : 0
+    s.steer = Math.abs(dx) > 0.2 ? -dx : 0
+    if (s.throttle || s.steer) s.autopilot = false
+  }
+  const end = () => { setKnob([0, 0]); sim.current.throttle = 0; sim.current.steer = 0 }
+  return (
+    <div className="stick" ref={base} onPointerDown={(e) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); move(e) }}
+         onPointerMove={(e) => e.buttons && move(e)} onPointerUp={end} onPointerCancel={end}>
+      <i style={{ transform: `translate(${knob[0] * 34}px, ${knob[1] * 34}px)` }} />
     </div>
   )
 }

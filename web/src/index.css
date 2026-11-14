@@ -355,3 +355,11 @@ button.mini.on { border-color: #67e8f9; color: #67e8f9; }
 .ico, .status, .hud-sub.ico { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .hud.objective .ico { display: flex; }
 .gameover h2 { display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
+
+/* touch joystick + Luna voice */
+.stick { position: absolute; z-index: 3; left: 50%; bottom: 120px; transform: translateX(-50%); width: 120px; height: 120px; border-radius: 50%;
+  background: rgba(9, 9, 11, .45); border: 1px solid rgba(255, 255, 255, .25); touch-action: none; display: grid; place-items: center; }
+.stick i { width: 46px; height: 46px; border-radius: 50%; background: rgba(244, 244, 245, .85); pointer-events: none; }
+.luna-head b { display: flex; align-items: center; justify-content: space-between; }
+.luna-voice { border: 1px solid var(--border); background: none; color: var(--text-2); border-radius: 5px; width: 26px; height: 24px; display: grid; place-items: center; cursor: pointer; }
+.luna-voice:hover { color: var(--text); }
