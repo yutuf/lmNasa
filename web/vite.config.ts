@@ -69,5 +69,9 @@ function devApi(env: Record<string, string>): Plugin {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  return { plugins: [react(), devApi(env)] }
+  return {
+    plugins: [react(), devApi(env)],
+    // the 3D libraries in their own files: cached across releases and fetched in parallel with the app code
+    build: { rollupOptions: { output: { manualChunks: { three: ['three'], r3f: ['@react-three/fiber', '@react-three/drei'] } } } },
+  }
 })

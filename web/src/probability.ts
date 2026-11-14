@@ -64,7 +64,7 @@ export function successProbability(inp: ProbabilityInput): Probability {
   const hours = Math.min(inp.eph.n - inp.firstHour - 1, (inp.windowDays - 1) * 24 + len + 10 * 24)
   const tr = pointTrack(inp.atlas, inp.eph, inp.dsn, inp.r.index, inp.firstHour, hours)
   const off = inp.r.index * inp.atlas.nAz
-  const viaRelay = inp.relay ? relayMask(inp.atlas.lat[inp.r.index], inp.atlas.lon[inp.r.index], inp.firstHour, hours) : null
+  const viaRelay = inp.relay ? relayMask(inp.atlas.lat[inp.r.index], inp.atlas.lon[inp.r.index], inp.firstHour, hours, 10, (az) => horizonAt(inp.atlas.horizon, off, inp.atlas.nAz, az)) : null
   // horizon error: what we measured for the fast horizon (about 0.5 deg) plus terrain scatter across the zone
   const sigmaHz = 0.5 + 0.6 * (inp.zoneM / 1000)
   const sigmaSlope = Math.max(0.3, inp.zoneSlopeP95 / 1.96)   // half-normal with its 95th percentile at the zone's p95

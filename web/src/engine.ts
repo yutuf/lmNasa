@@ -188,7 +188,7 @@ export function pointSky(atlas: Atlas, ephem: Ephem, dsn: ArrayLike<boolean>, in
   const u = [Math.cos(la) * Math.cos(lo), Math.cos(la) * Math.sin(lo), Math.sin(la)]
   const p = [R_KM * u[0], R_KM * u[1], R_KM * u[2]]
   const off = index * atlas.nAz
-  const viaRelay = relay ? relayMask(lat, lon, firstHour, hours) : null
+  const viaRelay = relay ? relayMask(lat, lon, firstHour, hours, 10, (az) => horizonAt(atlas.horizon, off, atlas.nAz, az)) : null
   const sunFraction = new Float64Array(hours)
   const earthVisible: boolean[] = new Array(hours)
   const [sx, sy, sz] = ephem.sun

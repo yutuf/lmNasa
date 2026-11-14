@@ -6,7 +6,7 @@ import { AlertTriangle, CheckCircle2, Rocket, X, XCircle } from 'lucide-react'
 import type { Lang } from '../i18n'
 import { GOALS, SCIENCE_KIND, type ScienceKind } from '../scienceSites'
 import { ROVERS } from '../vehicles'
-import { DEFAULT_DESIGN, ORBIT_PRESETS, budget, orbitStats, type Budget, type Design } from '../workshop'
+import { DEFAULT_DESIGN, ORBIT_PRESETS, budget, linkBudget, orbitStats, type Budget, type Design } from '../workshop'
 
 type T = Record<Lang, string>
 const L: Record<string, T> = {
@@ -187,6 +187,12 @@ export default function Workshop({ lang, onClose, onLaunch }: { lang: Lang; onCl
               <Seg v={d.legs} opts={[['narrow', t('narrow')], ['wide', t('wide')]]} on={(v) => set('legs', v)} />
               <div className="ws-label">{t('comms')}</div>
               <Seg v={d.comms} opts={[['dte', t('dte')], ['relay', t('relay')]]} on={(v) => set('comms', v)} />
+              {(() => {
+                // rough S-band link budget (workshop.ts linkBudget): what the radio can send home
+                const lb = linkBudget(d), bps = d.comms === 'dte' ? lb.dteBps : lb.relayBps
+                const fmt = bps >= 1e6 ? `${(bps / 1e6).toFixed(1)} Mbit/s` : `${Math.round(bps / 1e3)} kbit/s`
+                return <p className="ws-link">{tr ? `Bağlantı bütçesi (kaba): ≈ ${fmt} ${d.comms === 'dte' ? '34 m DSN antenine' : 'röleye, en uzak noktasında'}` : `Link budget (rough): ≈ ${fmt} ${d.comms === 'dte' ? 'to a 34 m DSN dish' : 'to the relay at its farthest'}`}</p>
+              })()}
               {d.type === 'rover' && (
                 <>
                   <div className="ws-label">{t('carried')}</div>

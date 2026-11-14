@@ -1,7 +1,7 @@
 // A relay satellite for talking home where Earth is low, blocked by terrain, or never rises (the far side). Modelled
 // as an elliptical frozen lunar orbit (ELFO) with its high point over the south (like ESA's Moonlight and China's
 // Queqiao-2 class), two-body Kepler motion, the Moon turning beneath it. A site is "in contact" while the relay stands
-// more than 10 degrees above its horizon. Terrain is not checked for the relay (it is usually high in the sky).
+// more than 10 degrees above its horizon and above the terrain horizon in that direction (when the caller passes it).
 export const RELAY_ORBIT = { periKm: 200, apoKm: 16000, incDeg: 55 }
 const MU = 4902.8, RM = 1737.4, SIDEREAL_S = 27.3217 * 86400
 
@@ -30,16 +30,28 @@ function path(firstHour: number, hours: number) {
   return memo
 }
 
-/** For each hour, is the relay more than `maskDeg` above the horizon of the site at (lat, lon)? */
-export function relayMask(lat: number, lon: number, firstHour: number, hours: number, maskDeg = 10): Uint8Array {
+/** For each hour, is the relay above the site's horizon: more than `maskDeg` up AND above the terrain horizon in its
+ *  direction (`terrain(azDeg)`, the site's LOLA horizon; a crater floor near the pole can have ridges above 10 deg)? */
+export function relayMask(lat: number, lon: number, firstHour: number, hours: number, maskDeg = 10,
+  terrain?: (azDeg: number) => number): Uint8Array {
   const p = path(firstHour, hours)
-  const la = (lat * Math.PI) / 180, sinMask = Math.sin((maskDeg * Math.PI) / 180)
+  const la = (lat * Math.PI) / 180
   const out = new Uint8Array(hours)
   for (let k = 0; k < hours; k++) {
     const lo = (lon * Math.PI) / 180 + (2 * Math.PI * (firstHour + k) * 3600) / SIDEREAL_S
     const s0 = Math.cos(la) * Math.cos(lo), s1 = Math.cos(la) * Math.sin(lo), s2 = Math.sin(la)
     const d0 = p.x[k] - RM * s0, d1 = p.y[k] - RM * s1, d2 = p.z[k] - RM * s2
-    out[k] = (d0 * s0 + d1 * s1 + d2 * s2) / Math.hypot(d0, d1, d2) > sinMask ? 1 : 0
+    const len = Math.hypot(d0, d1, d2)
+    const alt = (Math.asin((d0 * s0 + d1 * s1 + d2 * s2) / len) * 180) / Math.PI
+    if (alt <= maskDeg) continue
+    if (terrain) {
+      // local east and north at the site (same rotating frame), for the relay's azimuth
+      const e = [-Math.sin(lo), Math.cos(lo), 0]
+      const n = [-Math.sin(la) * Math.cos(lo), -Math.sin(la) * Math.sin(lo), Math.cos(la)]
+      const az = ((Math.atan2(d0 * e[0] + d1 * e[1] + d2 * e[2], d0 * n[0] + d1 * n[1] + d2 * n[2]) * 180) / Math.PI + 360) % 360
+      if (alt <= terrain(az)) continue
+    }
+    out[k] = 1
   }
   return out
 }

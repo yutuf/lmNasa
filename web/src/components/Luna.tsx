@@ -11,7 +11,20 @@ export type LunaAction =
   | { type: 'search'; params: Record<string, number | string | boolean> }
   | { type: 'select'; rank: number }
 
-interface Msg { role: 'user' | 'luna'; text: string; error?: boolean }
+interface Msg { role: 'user' | 'luna'; text: string; error?: boolean; trace?: string }
+
+/** What an answer was built from, shown under it: Luna may only use the numbers the page sends (traceable AI). */
+function traceOf(ctx: unknown, source: 'ai' | 'guide', lang: Lang): string {
+  const c = (ctx ?? {}) as { results?: unknown[]; engine?: { pointsChecked?: number; hourlyChecks?: number; firstDate?: string; landingDatesInWindow?: number } | null; selected?: { rank?: number } | null }
+  const tr = lang === 'tr'
+  const parts: string[] = [source === 'ai' ? (tr ? 'Gemini, yalnızca bu verilerle' : 'Gemini, from these numbers only') : (tr ? 'Çevrimdışı rehber' : 'Offline guide')]
+  if (c.engine?.pointsChecked) parts.push(tr ? `${c.engine.pointsChecked.toLocaleString('tr-TR')} nokta, ${((c.engine.hourlyChecks ?? 0) / 1e6).toFixed(1)} M saatlik kontrol` : `${c.engine.pointsChecked.toLocaleString('en-US')} points, ${((c.engine.hourlyChecks ?? 0) / 1e6).toFixed(1)} M hourly checks`)
+  if (c.engine?.firstDate) parts.push(tr ? `${c.engine.firstDate} + ${c.engine.landingDatesInWindow} gün` : `${c.engine.firstDate} + ${c.engine.landingDatesInWindow} days`)
+  if (c.results?.length) parts.push(tr ? `ilk ${c.results.length} yer` : `top ${c.results.length} sites`)
+  if (c.selected?.rank) parts.push(tr ? `seçili #${c.selected.rank}` : `selected #${c.selected.rank}`)
+  parts.push('NASA LOLA · JPL DE421/DE440 · DSN')
+  return parts.join(' · ')
+}
 
 const SUGGEST: Record<Lang, string[]> = {
   en: ['A 3-week rover landing in spring 2027 that must always reach Earth', 'Why is #1 better than #2?',
@@ -42,8 +55,8 @@ export default function Luna({ lang, context, onAction, onPlan }: { lang: Lang; 
     setText('')
     setBusy(true)
     const ctx = context()
-    const answer = (reply: string, action: LunaAction | null) => {
-      setMsgs((m) => [...m, { role: 'luna', text: reply }])
+    const answer = (reply: string, action: LunaAction | null, source: 'ai' | 'guide') => {
+      setMsgs((m) => [...m, { role: 'luna', text: reply, trace: traceOf(ctx, source, lang) }])
       speak(reply)
       if (action) onAction(action)
     }
@@ -56,11 +69,11 @@ export default function Luna({ lang, context, onAction, onPlan }: { lang: Lang; 
         if (r.status === 503 || r.status === 404) setOffline(true)       // no AI key on this server, or no server at all
         throw new Error(data.error ?? `HTTP ${r.status}`)
       }
-      answer(data.reply, data.action ?? null)
+      answer(data.reply, data.action ?? null, 'ai')
     } catch {
       // no AI service (or it failed): the built-in guide answers from the same engine results
       const local = askLocal(q, lang, ctx)
-      answer(local.reply, local.action)
+      answer(local.reply, local.action, 'guide')
     } finally {
       setBusy(false)
     }
@@ -105,7 +118,7 @@ export default function Luna({ lang, context, onAction, onPlan }: { lang: Lang; 
                 {SUGGEST[lang].map((s) => <button key={s} onClick={() => send(s)}>{s}</button>)}
               </div>
             )}
-            {msgs.map((m, k) => <div key={k} className={`msg ${m.role} ${m.error ? 'err' : ''}`}>{m.text}</div>)}
+            {msgs.map((m, k) => <div key={k} className={`msg ${m.role} ${m.error ? 'err' : ''}`}>{m.text}{m.trace && <small className="msg-trace">{lang === 'tr' ? 'Kullanılan veri: ' : 'Data used: '}{m.trace}</small>}</div>)}
             {busy && <div className="msg luna typing"><i /><i /><i /></div>}
             <div ref={end} />
           </div>

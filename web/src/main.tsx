@@ -2,9 +2,12 @@ import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import './space.css'
-import App from './App.tsx'
-import JudgesPage from './components/JudgesPage.tsx'
-import { PhoneGuest } from './components/PhoneApp.tsx'
+import { lazyOverlay } from './lazyOverlay.tsx'
+
+// each route's code loads only when that route is opened (the judges page from a QR code stays light)
+const App = lazyOverlay(() => import('./App.tsx'))
+const JudgesPage = lazyOverlay(() => import('./components/JudgesPage.tsx'))
+const PhoneGuest = lazyOverlay(() => import('./components/PhoneApp.tsx').then((m) => ({ default: m.PhoneGuest })))
 
 // #phone is the full-screen phone (accelerometer). #judges is the landing page. Anything else is the app.
 function Root() {

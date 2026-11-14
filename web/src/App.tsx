@@ -25,22 +25,25 @@ import Patch from './components/Patch'
 import SimpleView from './components/SimpleView'
 import { MissionBar, Ticker, type NextWindow } from './components/MissionBar'
 import SiteProfile from './components/SiteProfile'
-import MissionStory from './components/MissionStory'
-import MissionInterview from './components/MissionInterview'
+const MissionStory = lazyOverlay(() => import('./components/MissionStory'))
+const MissionInterview = lazyOverlay(() => import('./components/MissionInterview'))
 import type { InterviewResult } from './interview'
-import MissionFilm from './components/MissionFilm'
+const MissionFilm = lazyOverlay(() => import('./components/MissionFilm'))
 import { PhoneHost } from './components/PhoneApp'
-import Workshop from './components/Workshop'
-import DecisionLab from './components/DecisionLab'
-import SourcesPage from './components/SourcesPage'
-import HistoryPanel from './components/HistoryPanel'
-import GuidedTour from './components/GuidedTour'
-import LibrationExplainer from './components/LibrationExplainer'
+const Workshop = lazyOverlay(() => import('./components/Workshop'))
+const DecisionLab = lazyOverlay(() => import('./components/DecisionLab'))
+const SourcesPage = lazyOverlay(() => import('./components/SourcesPage'))
+const HistoryPanel = lazyOverlay(() => import('./components/HistoryPanel'))
+const GuidedTour = lazyOverlay(() => import('./components/GuidedTour'))
+const LibrationExplainer = lazyOverlay(() => import('./components/LibrationExplainer'))
 import OrbitPanel, { scenarioHtml } from './components/OrbitPanel'
 import { snapOf, type MissionSnap } from './components/MissionCompare'
 import type { ClpsMission } from './clps'
 import { setOverlayOpen } from './overlayState'
 import { ellipseCheck } from './ellipse'
+import { keepOut } from './landed'
+import { lazyOverlay } from './lazyOverlay'
+import qrcode from 'qrcode-generator'
 import type { Budget, Design } from './workshop'
 import { successProbability } from './probability'
 import ProbabilityPanel from './components/ProbabilityPanel'
@@ -358,10 +361,11 @@ export default function App() {
   const targetKm = (r: PointResult) => nearestTarget(r)?.d ?? null
   const top = useMemo(() => {
     if (!results || !atlas) return []
+    const results_ = results.filter((r) => !keepOut(r.lat, r.lon))   // stay clear of landed craft (landed.ts)
     if (targets.length) {
       // a science target: landing spots within a rover's reach of it (of the nearest one, for a goal), most GO dates
       // first, then the closest; picks kept apart so one place does not fill the list
-      const near = [...results].map((r) => ({ r, d: targetKm(r)! })).filter((x) => x.d <= targetRangeKm)
+      const near = [...results_].map((r) => ({ r, d: targetKm(r)! })).filter((x) => x.d <= targetRangeKm)
         .sort((a, b) => b.r.goCount - a.r.goCount || a.d - b.d)
       const picks: PointResult[] = []
       for (const x of near) {
@@ -370,11 +374,11 @@ export default function App() {
       }
       return picks
     }
-    if (atlas.kind === 'moon') return rankTop(results.filter((r) => Math.abs(r.lat) < 75), atlas)   // ranked apart from the poles
-    return rankTop(results, atlas)
+    if (atlas.kind === 'moon') return rankTop(results_.filter((r) => Math.abs(r.lat) < 75), atlas)   // ranked apart from the poles
+    return rankTop(results_, atlas)
   }, [results, atlas, targets, targetRangeKm])  // eslint-disable-line react-hooks/exhaustive-deps
   const polarTop = useMemo(() => (results && atlas?.kind === 'moon' && !targets.length
-    ? rankTop(results.filter((r) => Math.abs(r.lat) >= 75), atlas, 4) : []), [results, atlas, targets])
+    ? rankTop(results.filter((r) => Math.abs(r.lat) >= 75 && !keepOut(r.lat, r.lon)), atlas, 4) : []), [results, atlas, targets])
 
   const overlay: Overlay | null = useMemo(() => {
     if (!results || !atlas || !ran) return null
@@ -451,7 +455,8 @@ export default function App() {
         slopeLimit: lim - (ran.q.landing === 'rough' ? 3 : 0), zoneM: ran.q.zone || 1000, history: withRecord, trials: 300 })
       return { r, row: listRows[k], rank: k + 1, name, region: reg, colour: regionColour(reg), xKm: atlas.xKm[r.index], yKm: atlas.yKm[r.index],
         sun: { az: sky.sun.az, alt: sky.sun.alt }, note, prob, targetKm: nt?.d,
-        ellipse: ellipseCheck(atlas, eph, dsn!, r.index, fh, r.bestStart, ran.q.days, ran.q.dsn, constraints(ran.q)!, 2.1, ran.q.relay),
+        ellipse: // the 2 km grid resolves only a +-1 km landing zone: a precise lander (100-500 m) is covered by the 40 m zone check
+        ellipseCheck(atlas, eph, dsn!, r.index, fh, r.bestStart, ran.q.days, ran.q.dsn, constraints(ran.q)!, ran.q.zone >= 1000 ? 2.1 : 0, ran.q.relay),
         bestDate: best.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) }
     }).filter((c) => c.row)
   }
@@ -623,13 +628,28 @@ export default function App() {
   const globeTargets = SCIENCE_SITES.filter((s) => s.id === p.target || s.kind === goalKind).map((s): Target => ({
     id: s.id, name: s.name, lat: s.lat, lon: s.lon, colour: SCIENCE_KIND[s.kind].colour, selected: s.id === p.target,
     label: s.id === p.target || s.kind === goalKind }))
+  // provenance for the report: a QR back to this exact mission, the data behind every number, and when it was made
+  const provenanceHtml = () => {
+    const q = qrcode(0, 'M'); q.addData(location.href); q.make()
+    const tr = lang === 'tr'
+    const eStart = new Date(m.start_unix * 1000).toISOString().slice(0, 10)
+    const eEnd = new Date((m.start_unix + (m.n - 1) * 3600) * 1000).toISOString().slice(0, 10)
+    return `<h2>${tr ? 'Kaynak ve izlenebilirlik' : 'Provenance'}</h2>
+<div style="display:flex;gap:18px;align-items:flex-start"><div style="width:120px;flex:none">${q.createSvgTag({ cellSize: 3, margin: 1, scalable: true })}</div>
+<ul style="margin:0;font-size:12px;line-height:1.6">
+<li>${tr ? 'Bu görevi uygulamada aç: QR kod (tüm ayarlar bağlantıda).' : 'Open this exact mission in the app: the QR code (every setting is in the link).'}</li>
+<li>${tr ? 'Efemeris' : 'Ephemeris'}: ${eStart} → ${eEnd}, ${m.n.toLocaleString()} ${tr ? 'saat' : 'hours'} · ${tr ? 'ızgara' : 'grid'}: ${atlas.n.toLocaleString()} ${tr ? 'nokta' : 'points'} (${atlas.kind === 'pole' ? (tr ? 'güney kutbu, 2 km' : 'south pole, 2 km') : (tr ? 'tüm Ay, ~30 km' : 'whole Moon, ~30 km')})</li>
+<li>${tr ? 'Veri' : 'Data'}: ${m.sources.map((x) => x.replace(/[<>&]/g, '')).join(' · ')}</li>
+<li>${tr ? 'Oluşturuldu' : 'Generated'}: ${new Date().toISOString().replace('T', ' ').slice(0, 16)} UTC · LunaNav</li>
+<li>${tr ? 'Bir planlama aracıdır, iniş sertifikası değildir.' : 'A planning tool, not a landing certification.'}</li></ul></div>`
+  }
   // the report: ranked sites, the orbit scenarios, sources; opens the browser's print dialog to save it as a PDF
   const pdfReport = () => {
     if (!ran) return
     const w = window.open('', '_blank')
     if (!w) return
     const html = reportHtml(cmpRows.length >= 2 ? cmpRows : rows, ran.q, constraints(ran.q)!, m.sources, lang)
-      .replace('</body></html>', `${results ? scenarioHtml(results, (r) => place(r) ?? coords(r), lang) : ''}<script>setTimeout(() => print(), 400)</script></body></html>`)
+      .replace('</body></html>', `${results ? scenarioHtml(results, (r) => place(r) ?? coords(r), lang) : ''}${provenanceHtml()}<script>setTimeout(() => print(), 400)</script></body></html>`)
     w.document.write(html); w.document.close()
   }
   const missionLabel = ran ? `${customName ?? matchScenario(ran.asked)?.name[lang] ?? (lang === 'tr' ? 'Özel görev' : 'Custom mission')} · ${fmtDate(new Date(ran.q.start + 'T00:00:00Z'))} + ${ran.q.windowDays} ${S.days[lang]}` : ''

@@ -3,7 +3,9 @@
 // ELEVENLABS_VOICE_ID_TR (optional; used for Turkish when set).
 // Default voice is Rachel, the premade calm voice. Model is multilingual so Turkish works.
 
-export const DEFAULT_VOICE_ID = '21m00Tcm4TlvDq8ikWAM'
+// "Sarah", one of ElevenLabs' current built-in voices (usable on every plan through the API; the older "Rachel" id
+// is a legacy library voice, which free plans may not call: ElevenLabs answers 402). Override with ELEVENLABS_VOICE_ID.
+export const DEFAULT_VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'
 export const MODEL_ID = 'eleven_multilingual_v2'
 export const MAX_CHARS = 1000
 
@@ -37,8 +39,10 @@ export async function synthesize(text: string, voiceId: string, key: string, fet
     body: JSON.stringify(buildRequest(text)),
   })
   if (!r.ok) {
-    await r.arrayBuffer().catch(() => undefined)
-    throw new Error(`ElevenLabs ${r.status}`)
+    // pass on ElevenLabs' own reason (e.g. quota_exceeded, paid_plan_required, voice_not_found); never the key
+    const detail = await r.json().catch(() => null) as { detail?: { status?: string; message?: string } | string } | null
+    const why = typeof detail?.detail === 'string' ? detail.detail : [detail?.detail?.status, detail?.detail?.message].filter(Boolean).join(': ')
+    throw new Error(`ElevenLabs ${r.status}${why ? ` (${why.slice(0, 200)})` : ''}`)
   }
   return new Uint8Array(await r.arrayBuffer())
 }
