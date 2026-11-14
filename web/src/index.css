@@ -289,3 +289,5 @@ button.mini:hover { border-color: var(--sun); }
 .route-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 .route-row button.mini.on { border-color: #5ee7ff; color: #5ee7ff; }
 .hud-sub.bad { color: #ffb0b0; }
+.note.eclipse { color: #ffcf6e; }
+.status .ecl { color: #ffcf6e; }
