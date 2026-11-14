@@ -14,6 +14,7 @@ import { R_M, altAz, bodies, conditions, diskAbove, horizonElev, horizonProfile,
 import { dataUrl } from '../data'
 import { planRoute, type Route } from '../route'
 import { eclipseAt } from '../eclipse'
+import { NasaModel } from './Models'
 import { connectSerial, disconnectSerial, sendSky, serialConnected, serialSupported, skyLine } from '../serial'
 
 export type DriveMode = 'lander' | 'rover'
@@ -22,7 +23,7 @@ export interface DriveStart { x: number; y: number; hour: number; missionH: numb
 // Rover power model (illustrative, VIPER-class): stated on screen so nobody mistakes it for a real spec.
 const ROVER = { batteryWh: 3000, panelW: 450, driveW: 220, idleW: 120, maxSpeed: 0.25, maxSlope: 20, mast: 2 }
 const WARPS = [1, 10, 60, 600, 3600]
-const PARK = [7, 4]   // rover parking spot beside the lander (m)
+const PARK = [9, 5]   // rover parking spot beside the lander (m)
 const NEAR = { half: 1200, step: 10 }
 const FAR = { half: 80000, step: 800 }
 
@@ -451,11 +452,12 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
   const ambient = useRef<THREE.HemisphereLight>(null)
   const beacon = useRef<THREE.Group>(null)
   // regolith PBR texture from NASA's Artemis south-pole simulation kit (USGS Astrogeology, 84S project), 1024 px
-  const [regColor, regNormal] = useTexture([dataUrl('regolith_color.jpg'), dataUrl('regolith_normal.jpg')])
+  const [regColor, regNormal, earthMap] = useTexture([dataUrl('regolith_color.jpg'), dataUrl('regolith_normal.jpg'), dataUrl('earth.jpg')])
   useMemo(() => {
     for (const x of [regColor, regNormal]) { x.wrapS = x.wrapT = THREE.RepeatWrapping; x.anisotropy = 8 }
     regColor.colorSpace = THREE.SRGBColorSpace
-  }, [regColor, regNormal])
+    earthMap.colorSpace = THREE.SRGBColorSpace
+  }, [regColor, regNormal, earthMap])
   const glareRef = useRef<THREE.Sprite>(null)
   const landerYaw = useRef(sim.current.heading)
 
@@ -756,9 +758,9 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
     // ---- camera
     const look = new THREE.Vector3()
     if (s.mode === 'lander') {
-      // camera on a short mast at the front edge of the deck, facing the landing heading
+      // camera at the ascent-stage window height, facing the landing heading
       const ly = landerYaw.current
-      const base = toV(start.x, start.y).add(new THREE.Vector3(Math.cos(ly) * 2.2, 4.3, -Math.sin(ly) * 2.2))
+      const base = toV(start.x, start.y).add(new THREE.Vector3(Math.cos(ly) * 2.4, 5.6, -Math.sin(ly) * 2.4))
       camera.position.copy(base)
       const yaw = s.heading + s.yaw
       look.set(Math.cos(yaw) * Math.cos(s.pitch), Math.sin(s.pitch), -Math.sin(yaw) * Math.cos(s.pitch))
@@ -806,7 +808,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
         </mesh>
         <mesh ref={earthMesh}>
           <sphereGeometry args={[earthR, 48, 32]} />
-          <meshStandardMaterial color="#3d7fd6" emissive="#0b1a33" roughness={0.6} />
+          <meshStandardMaterial map={earthMap} emissive="#0b1a33" emissiveIntensity={0.3} roughness={0.7} />
         </mesh>
       </group>
       <primitive object={routeLine} />
@@ -906,71 +908,18 @@ function readPad(s: Sim) {
 }
 
 const Lander = ({ ref, dish }: { ref: React.Ref<THREE.Group>; dish: React.Ref<THREE.Group> }) => (
-  // our own generic lander: deck, four legs, solar wing, high-gain dish that tracks Earth
+  // NASA 3D Resources: Apollo Lunar Module (about 7 m tall)
   <group ref={ref}>
-    <mesh position={[0, 2.2, 0]} castShadow receiveShadow>
-      <cylinderGeometry args={[1.6, 1.8, 1.4, 8]} />
-      <meshStandardMaterial color="#d8d2c4" metalness={0.5} roughness={0.35} />
-    </mesh>
-    <mesh position={[0, 3.05, 0]} castShadow>
-      <cylinderGeometry args={[1.2, 1.6, 0.3, 8]} />
-      <meshStandardMaterial color="#c9a34a" metalness={0.8} roughness={0.3} />
-    </mesh>
-    {[0, 1, 2, 3].map((k) => {
-      const a = (k * Math.PI) / 2 + Math.PI / 4
-      return (
-        <group key={k} rotation={[0, a, 0]}>
-          <mesh position={[2.2, 1.1, 0]} rotation={[0, 0, 0.55]} castShadow>
-            <cylinderGeometry args={[0.07, 0.07, 2.6, 6]} />
-            <meshStandardMaterial color="#9aa0a8" metalness={0.7} roughness={0.4} />
-          </mesh>
-          <mesh position={[2.85, 0.05, 0]} castShadow>
-            <cylinderGeometry args={[0.35, 0.4, 0.1, 12]} />
-            <meshStandardMaterial color="#9aa0a8" metalness={0.6} roughness={0.5} />
-          </mesh>
-        </group>
-      )
-    })}
-    <mesh position={[0, 4.2, -1.2]} castShadow>
-      <boxGeometry args={[3.2, 2, 0.05]} />
-      <meshStandardMaterial color="#1b2a52" metalness={0.6} roughness={0.25} />
-    </mesh>
-    <group ref={dish} position={[0.9, 3.6, 0.6]}>
-      <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[0.5, 0.15, 0.25, 20, 1, true]} />
-        <meshStandardMaterial color="#eeeeee" side={THREE.DoubleSide} metalness={0.3} roughness={0.4} />
-      </mesh>
-    </group>
+    <Suspense fallback={null}><NasaModel file="lander.glb" size={7} fit="height" /></Suspense>
+    <group ref={dish} position={[0, 6, 0]} />
   </group>
 )
 
 const RoverModel = ({ panel }: { panel: React.Ref<THREE.Group> }) => (
-  // our own rover, forward = +x: body, four wheels, 2 m mast with camera head, vertical sun-tracking panel
+  // NASA 3D Resources: Mars 2020 Perseverance (3 m long), standing in for a lunar rover; forward = +x
   <group>
-    <mesh position={[0, 0.75, 0]} castShadow receiveShadow>
-      <boxGeometry args={[1.5, 0.45, 1.05]} />
-      <meshStandardMaterial color="#e7e3da" metalness={0.3} roughness={0.5} />
-    </mesh>
-    {[[-0.6, 0.62], [0.6, 0.62], [-0.6, -0.62], [0.6, -0.62]].map(([x, z]) => (
-      <mesh key={`${x}${z}`} position={[x, 0.32, z]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[0.32, 0.32, 0.22, 18]} />
-        <meshStandardMaterial color="#3a3a3c" roughness={0.9} />
-      </mesh>
-    ))}
-    <mesh position={[0.45, 1.45, 0]} castShadow>
-      <cylinderGeometry args={[0.04, 0.05, 1.3, 8]} />
-      <meshStandardMaterial color="#b9bcc2" metalness={0.6} roughness={0.4} />
-    </mesh>
-    <mesh position={[0.5, 2.05, 0]} castShadow>
-      <boxGeometry args={[0.22, 0.16, 0.42]} />
-      <meshStandardMaterial color="#2b2f36" metalness={0.4} roughness={0.4} />
-    </mesh>
-    <group ref={panel} position={[-0.3, 1.3, 0]}>
-      <mesh position={[0, 0.25, 0]} castShadow>
-        <boxGeometry args={[0.04, 0.9, 1.3]} />
-        <meshStandardMaterial color="#1b2a52" metalness={0.6} roughness={0.25} />
-      </mesh>
-    </group>
+    <Suspense fallback={null}><NasaModel file="rover.glb" size={3} fit="length" /></Suspense>
+    <group ref={panel} />
   </group>
 )
 

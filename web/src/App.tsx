@@ -103,7 +103,7 @@ function readHash(): { lang: Lang; p: Params } {
   const num = (k: string, d: number) => (q.has(k) ? Number(q.get(k)) : d)
   return {
     lang: q.get('lang') === 'tr' ? 'tr' : 'en',
-    p: { start: q.get('start') ?? '2027-09-01', windowDays: num('window', 30), days: num('days', 14), sun: num('sun', 70),
+    p: { start: [q.get('start') ?? '2027-09-01'].map((s) => (/^\d{4}-\d{2}-\d{2}$/.test(s) && s >= '2026-11-01' && s <= '2028-11-30' ? s : '2027-09-01'))[0], windowDays: num('window', 30), days: num('days', 14), sun: num('sun', 70),
       earth: num('earth', 50), shadow: num('shadow', 48), batt: num('batt', 2000), slope: num('slope', 8), dsn: q.get('dsn') !== '0' },
   }
 }
