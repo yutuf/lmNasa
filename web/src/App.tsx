@@ -13,7 +13,7 @@ import YearView from './components/YearView'
 import { download, reportHtml, siteRow, toCsv, type SiteRow } from './report'
 import HorizonView from './components/HorizonView'
 import Luna, { type LunaAction } from './components/Luna'
-import { AlertTriangle, ArrowLeftRight, CheckCircle2, Footprints, Sparkles, Wrench, MoonStar as NightIcon, Snowflake, Timer, Users, Hourglass, Satellite, Droplets, FlaskConical, Rocket, X, Mountain, Link2, MapPin, Pause, Play, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Orbit, Printer, QrCode, Scale, Sun } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, CheckCircle2, Footprints, Sparkles, Wrench, MoonStar as NightIcon, Snowflake, Timer, Users, Hourglass, Satellite, Droplets, FlaskConical, Rocket, X, Mountain, Link2, MapPin, Pause, Play, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Orbit, Printer, QrCode, Scale, Smartphone, Sun } from 'lucide-react'
 import type { FlightView, Overlay, Pin, Target } from './components/Globe'
 import type { DriveMode, DriveStart } from './components/Drive'
 
@@ -29,6 +29,7 @@ import MissionStory from './components/MissionStory'
 import MissionInterview from './components/MissionInterview'
 import type { InterviewResult } from './interview'
 import MissionFilm from './components/MissionFilm'
+import { PhoneHost } from './components/PhoneApp'
 import Workshop from './components/Workshop'
 import DecisionLab from './components/DecisionLab'
 import SourcesPage from './components/SourcesPage'
@@ -218,6 +219,7 @@ export default function App() {
   const [story, setStory] = useState(false)
   const [interview, setInterview] = useState(false)
   const [film, setFilm] = useState(() => /(^|[#&])film=1/.test(location.hash))
+  const [phone, setPhone] = useState(false)
   const [workshop, setWorkshop] = useState(false)
   const [lab, setLab] = useState(false)
   const [sources, setSources] = useState(false)
@@ -724,6 +726,7 @@ export default function App() {
         {ui === 'advanced' && <button className="nav-ws" onClick={() => setLab(true)}><Scale size={14} /> {lang === 'tr' ? 'Karar' : 'Decide'}</button>}
         {ui === 'advanced' && <button className="nav-ws" onClick={() => setWorkshop(true)}><Wrench size={14} /> {lang === 'tr' ? 'Atölye' : 'Workshop'}</button>}
         <button className="nav-ws nav-qr" onClick={() => { location.hash = `judges&lang=${lang}` }} title={lang === 'tr' ? 'Jüri sayfası ve QR kodu' : 'Judges page and QR code'} aria-label="QR"><QrCode size={15} /></button>
+        <button className="nav-ws" onClick={() => setPhone(true)}><Smartphone size={14} /> {lang === 'tr' ? 'Telefon' : 'Phone'}</button>
         <button className="nav-story" onClick={() => setFilm(true)}><Sparkles size={14} /> {lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}</button>
         <div className="nav-r">
           <div className="seg" role="group" aria-label="Language">
@@ -1176,6 +1179,17 @@ export default function App() {
           setTimeout(() => document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' }), 400)
         }} />
       )}
+      {phone && (() => {
+        const c = cards.find((x) => x.r.goCount > 0) ?? cards[0]
+        const site = c
+          ? { name: c.name, lat: c.r.lat, lon: c.r.lon }
+          : { name: lang === 'tr' ? 'Güney kutbu' : 'South pole', lat: -85, lon: 0 }
+        return (
+          <PhoneHost lang={lang} site={site} onClose={() => setPhone(false)}
+            onFind={() => run(p)}
+            onBest={() => { const best = cards.find((x) => x.r.goCount > 0) ?? cards[0]; if (best) setProfile(best) }} />
+        )
+      })()}
       {film && (() => {
         const c = cards.find((x) => x.r.goCount > 0) ?? cards[0]
         if (!c || !ran || !eph || !dsn) return null

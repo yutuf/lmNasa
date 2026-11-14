@@ -4,17 +4,21 @@ import './index.css'
 import './space.css'
 import App from './App.tsx'
 import JudgesPage from './components/JudgesPage.tsx'
+import { PhoneGuest } from './components/PhoneApp.tsx'
 
-// #judges shows the landing page (QR code, one-screen summary); anything else is the app
+// #phone is the full-screen phone (accelerometer). #judges is the landing page. Anything else is the app.
 function Root() {
-  const isJudges = () => location.hash.startsWith('#judges')
-  const [judges, setJudges] = useState(isJudges)
+  const route = () => location.hash.startsWith('#phone') ? 'phone' : location.hash.startsWith('#judges') ? 'judges' : 'app'
+  const [page, setPage] = useState(route)
   useEffect(() => {
-    const on = () => setJudges(isJudges())
+    const on = () => setPage(route())
     addEventListener('hashchange', on)
     return () => removeEventListener('hashchange', on)
   }, [])
-  return judges ? <JudgesPage onOpen={(h) => { location.hash = h; scrollTo({ top: 0 }) }} /> : <App />
+  if (page === 'phone') return <PhoneGuest />
+  return page === 'judges'
+    ? <JudgesPage onOpen={(h) => { location.hash = h; scrollTo({ top: 0 }) }} />
+    : <App />
 }
 
 // offline support (production only): keeps the app, the NASA data and the models it used (public/sw.js)
