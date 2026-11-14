@@ -110,6 +110,21 @@ export function eyePosition(lat: number, lon: number): THREE.Vector3 {
   return surfacePoint(lat, lon, EYE_RADIUS)
 }
 
+/** Drag-to-look. Finger moving right turns right; finger moving up looks up. Altitude stays clear of the zenith flip. */
+export function dragLook(tilt: { heading: number; alt: number }, dx: number, dy: number, degPerPx = 0.22): { heading: number; alt: number } {
+  return {
+    heading: (tilt.heading + dx * degPerPx + 360) % 360,
+    alt: Math.max(-75, Math.min(75, tilt.alt - dy * degPerPx)),
+  }
+}
+
+export function nudgeLook(tilt: { heading: number; alt: number }, dir: 'left' | 'right' | 'up' | 'down', step = 8): { heading: number; alt: number } {
+  if (dir === 'left') return dragLook(tilt, -step / 0.22, 0)
+  if (dir === 'right') return dragLook(tilt, step / 0.22, 0)
+  if (dir === 'up') return dragLook(tilt, 0, -step / 0.22)
+  return dragLook(tilt, 0, step / 0.22)
+}
+
 export interface Stand { name: string; lat: number; lon: number }
 
 export const SOUTH_POLE: Stand = { name: 'South pole', lat: -85, lon: 0 }

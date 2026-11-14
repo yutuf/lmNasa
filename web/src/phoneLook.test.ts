@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
 import { enu, toThree } from './geometry'
-import { followAngle, gravityInScreen, headingFromOrientation, lookQuaternion, poseFromGravity, tiltFromAccel, tiltFromOrientation } from './phoneLook'
+import { dragLook, followAngle, gravityInScreen, headingFromOrientation, lookQuaternion, nudgeLook, poseFromGravity, tiltFromAccel, tiltFromOrientation } from './phoneLook'
 
 describe('phone look', () => {
   it('reads the horizon from an upright phone and the sky from a face-up phone', () => {
@@ -40,6 +40,22 @@ describe('phone look', () => {
     expect(followAngle(0, 90, 30)).toBe(30)
     const half = followAngle(0, 180, 30)
     expect(Math.min(half, 360 - half)).toBe(30)
+  })
+
+  it('turns a finger drag into a look, and will not pitch through the zenith', () => {
+    expect(dragLook({ heading: 10, alt: 0 }, 100, 0).heading).toBeCloseTo(32, 5)
+    expect(dragLook({ heading: 10, alt: 0 }, 0, -100).alt).toBeCloseTo(22, 5)
+    expect(dragLook({ heading: 350, alt: 70 }, 100, -100).alt).toBe(75)
+    expect(nudgeLook({ heading: 0, alt: 0 }, 'left').heading).toBe(352)
+    expect(nudgeLook({ heading: 0, alt: 0 }, 'down').alt).toBe(-8)
+    const east = toThree(enu(0, 0).e).normalize()
+    const sky = toThree(enu(0, 0).u).normalize()
+    const fwd = (heading: number, alt: number) => new THREE.Vector3(0, 0, -1).applyQuaternion(lookQuaternion(0, 0, heading, alt, 0))
+    const level = fwd(0, 0)
+    const turned = fwd(dragLook({ heading: 0, alt: 0 }, 100, 0).heading, 0)
+    const raised = fwd(0, dragLook({ heading: 0, alt: 0 }, 0, -100).alt)
+    expect(turned.dot(east)).toBeGreaterThan(level.dot(east) + 0.2)
+    expect(raised.dot(sky)).toBeGreaterThan(level.dot(sky) + 0.2)
   })
 
   it('reads an upright phone from deviceorientation, which is what the browser fuses', () => {
