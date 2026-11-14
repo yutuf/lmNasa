@@ -1,0 +1,25 @@
+.phone-app { position: fixed; inset: 0; z-index: 82; background: #000; color: #fff; overflow: hidden; }
+.phone-app canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.phone-hud { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
+.phone-top, .phone-dock { pointer-events: auto; }
+.phone-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.phone-brand { font: 900 italic 22px var(--display); font-stretch: 125%; letter-spacing: .04em; }
+.phone-brand b { color: var(--red); }
+.phone-site { margin: 2px 0 0; font-size: 13px; color: var(--text-2); }
+.phone-x { width: 36px; height: 36px; border-radius: 8px; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.45); color: #fff; cursor: pointer; }
+.phone-cross { position: absolute; left: 50%; top: 46%; width: 18px; height: 18px; transform: translate(-50%, -50%); }
+.phone-cross::before, .phone-cross::after { content: ''; position: absolute; background: rgba(255,255,255,.75); }
+.phone-cross::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+.phone-cross::after { top: 50%; left: 0; right: 0; height: 1px; }
+.phone-readout { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font: 700 12px/1.5 ui-monospace, monospace; color: rgba(255,255,255,.8); text-align: right; letter-spacing: .04em; }
+.phone-dock { display: grid; gap: 10px; }
+.phone-status { font-size: 13px; color: var(--text-2); }
+.phone-status.live { color: var(--go); }
+.phone-status.bad { color: var(--nogo); }
+.phone-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.phone-actions button { height: 46px; padding: 0 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,.28); background: rgba(12,12,16,.72); color: #fff; font: 700 14px var(--display); font-stretch: 112%; cursor: pointer; }
+.phone-actions button.primary { background: var(--red); border-color: var(--red); }
+.phone-pair { display: grid; justify-items: center; gap: 8px; padding: 14px; border-radius: 12px; background: rgba(12,12,16,.82); }
+.phone-pair svg { width: 180px; height: 180px; background: #fff; border-radius: 8px; }
+.phone-code { font: 800 28px/1 var(--display); font-stretch: 118%; letter-spacing: .18em; }
+.phone-pair small { color: var(--text-3); font-size: 12px; text-align: center; }
