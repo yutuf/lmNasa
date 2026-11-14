@@ -228,9 +228,36 @@ h3.sec { font-size: 13px; color: var(--text-2); font-weight: 500; margin: 18px 0
 .luna { position: fixed; right: 20px; bottom: 66px; z-index: 30; width: min(400px, calc(100vw - 40px)); height: min(540px, 70vh);
   display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border-2); border-radius: var(--radius);
   box-shadow: 0 16px 48px rgba(0, 0, 0, .5); overflow: hidden; }
-.luna-head { padding: 12px 14px; border-bottom: 1px solid var(--border); display: grid; gap: 2px; }
+.luna-head { padding: 12px 14px 0; border-bottom: 1px solid var(--border); display: grid; gap: 2px; }
 .luna-head b { font-size: 14px; font-weight: 600; }
 .luna-head span { font-size: 12px; color: var(--text-2); }
+.voice-picker { display: flex; align-items: center; gap: 5px; min-width: 0; margin: 7px 0 2px; }
+.voice-picker select { min-width: 0; max-width: 100%; height: 27px; padding: 0 7px; color: #dbe6f1; background: #111821; border: 1px solid #354253; border-radius: 4px; font: 10px var(--body); }
+.voice-picker button { width: 27px; height: 27px; flex: none; display: grid; place-items: center; color: #b6d6f4; background: #172435; border: 1px solid #354253; border-radius: 4px; cursor: pointer; }
+.voice-picker button:hover { color: #fff; border-color: #8ec8ff; }
+.voice-unavailable { display: block; margin-top: 6px; font-size: 10px !important; color: var(--warn) !important; }
+.luna-splash { position: relative; isolation: isolate; min-height: 96px; margin: 9px -14px 0; padding: 13px 16px;
+  display: flex; align-items: center; overflow: hidden; background: radial-gradient(ellipse at 82% 55%, rgba(56, 104, 156, .34), transparent 34%),
+    linear-gradient(112deg, #0a101a 0%, #101620 58%, #121522 100%); border-top: 1px solid rgba(255,255,255,.07); }
+.luna-splash::before { content: ''; position: absolute; inset: 0; z-index: -1; opacity: .48;
+  background-image: radial-gradient(circle at 8% 24%, #fff 0 1px, transparent 1.5px), radial-gradient(circle at 29% 73%, #8bbcf4 0 1px, transparent 1.5px),
+    radial-gradient(circle at 56% 18%, #fff 0 1px, transparent 1.5px), radial-gradient(circle at 91% 24%, #fff 0 1px, transparent 1.5px),
+    linear-gradient(90deg, transparent 49.7%, rgba(134,181,224,.08) 50%, transparent 50.3%); background-size: 97px 71px, 121px 89px, 83px 67px, 113px 73px, 100% 100%; }
+.luna-splash-copy { position: relative; z-index: 2; display: grid; gap: 4px; }
+.luna-splash-copy small { font: 700 8px var(--display); letter-spacing: .16em; color: #9bb4d2; }
+.luna-splash-copy strong { font: 850 15px/1.1 var(--display); letter-spacing: .045em; color: #f4f7fb; }
+.luna-splash-copy span { display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; font: 700 8px var(--display); letter-spacing: .1em; color: #a9c9e8; }
+.luna-splash-copy span i { width: 6px; height: 6px; border-radius: 50%; background: #6be1ae; box-shadow: 0 0 9px #6be1ae; animation: lunaPulse 1.8s ease-in-out infinite; }
+.luna-splash-copy span i.local { background: #f4b84c; box-shadow: 0 0 9px #f4b84c; }
+.luna-splash-orbit { position: absolute; z-index: 1; right: 24px; top: 50%; width: 86px; height: 38px; border: 1px solid rgba(114,181,242,.48);
+  border-radius: 50%; transform: translateY(-50%) rotate(-31deg); box-shadow: 0 0 18px rgba(78,150,221,.12); animation: lunaOrbit 16s linear infinite; }
+.luna-splash-orbit::before { content: ''; position: absolute; inset: -9px 17px; border: 1px solid rgba(219,234,250,.18); border-radius: 50%; transform: rotate(66deg); }
+.luna-splash-orbit i { position: absolute; left: 50%; top: 50%; width: 27px; height: 27px; border-radius: 50%; transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 32% 28%, #e4e6dc 0 9%, #9da7aa 28%, #545e68 66%, #202a36 100%); box-shadow: 0 0 20px rgba(163,199,226,.28); }
+.luna-splash-orbit::after { content: ''; position: absolute; right: 9px; top: 2px; width: 5px; height: 5px; border-radius: 50%; background: #ff605b; box-shadow: 0 0 9px #ff605b; }
+@keyframes lunaOrbit { to { transform: translateY(-50%) rotate(329deg); } }
+@keyframes lunaPulse { 50% { opacity: .42; box-shadow: 0 0 2px currentColor; } }
+@media (prefers-reduced-motion: reduce) { .luna-splash-orbit, .luna-splash-copy span i { animation: none; } }
 .luna-msgs { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .msg { max-width: 88%; padding: 8px 11px; border-radius: 8px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
 .msg.user { align-self: flex-end; background: var(--surface-3); }

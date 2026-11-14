@@ -19,8 +19,8 @@ describe('budget', () => {
     expect(rough.zslope).toBeLessThan(soft.zslope)
     expect(prec.zone).toBeLessThan(soft.zone)
   })
-  it('a relay link does not need Earth in view', () => {
-    expect(budget({ ...DEFAULT_DESIGN, comms: 'relay' }).earthPct).toBe(0)
+  it('a relay link still needs contact half the time; the relay supplies it in the search', () => {
+    expect(budget({ ...DEFAULT_DESIGN, comms: 'relay' }).earthPct).toBe(50)
   })
 })
 

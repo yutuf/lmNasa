@@ -10,6 +10,7 @@ import { missionStory, type Chapter } from '../story'
 import { LANDERS, type Lander } from '../vehicles'
 import type { CardSite } from './SiteCard'
 import VehiclePhoto from './VehiclePhoto'
+import { useSpeechVoice } from '../speech'
 
 type Step = 'goal' | 'lander' | 'when' | 'search' | 'story' | 'done'
 interface Msg { who: 'luna' | 'you'; text: string; tone?: Chapter['tone']; title?: string }
@@ -34,6 +35,7 @@ export default function MissionStory({ lang, cards, ranKey, onSearch, onClose, o
   const [sc, setSc] = useState<Scenario | null>(null)
   const [lander, setLander] = useState<Lander | null>(null)
   const [voice, setVoice] = useState(false)
+  const speech = useSpeechVoice(lang)
   const [text, setText] = useState('')
   const chapters = useRef<Chapter[]>([])
   const [chap, setChap] = useState(0)
@@ -44,11 +46,7 @@ export default function MissionStory({ lang, cards, ranKey, onSearch, onClose, o
 
   const say = (m: Msg) => {
     setMsgs((x) => [...x, m])
-    if (voice && m.who === 'luna' && typeof speechSynthesis !== 'undefined') {
-      const u = new SpeechSynthesisUtterance(`${m.title ? `${m.title}. ` : ''}${m.text}`)
-      u.lang = tr ? 'tr-TR' : 'en-US'
-      speechSynthesis.speak(u)
-    }
+    if (voice && m.who === 'luna') speech.speak(`${m.title ? `${m.title}. ` : ''}${m.text}`, 0.92)
   }
 
   const pickGoal = (s: Scenario) => {

@@ -10,6 +10,7 @@ import type { Lander } from '../vehicles'
 import Patch from './Patch'
 import VehiclePhoto from './VehiclePhoto'
 import { useSiteImage, type CardSite } from './SiteCard'
+import { useSpeechVoice } from '../speech'
 
 const LaunchScene = lazy(() => import('./LaunchScene'))
 
@@ -60,6 +61,7 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
   const total = starts[starts.length - 1] + DUR[scenes[scenes.length - 1]]
   const [paused, setPaused] = useState(false)
   const [voice, setVoice] = useState(false)
+  const speech = useSpeechVoice(lang)
   const [time, setTime] = useClock(paused)
   const k = starts.reduce((last, s0, i) => (time >= s0 ? i : last), 0)
   const scene = scenes[k]
@@ -86,9 +88,7 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
   // read each scene's subtitle aloud when voice is on
   useEffect(() => {
     if (!voice || typeof speechSynthesis === 'undefined') return
-    speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(subtitle[scene]); u.lang = tr ? 'tr-TR' : 'en-US'; u.rate = 1.05
-    speechSynthesis.speak(u)
+    speech.speak(subtitle[scene], 0.98)
   }, [scene, voice])  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel() }, [])
   useEffect(() => {

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { Lang } from '../i18n'
 import { askLocal } from '../lunaLocal'
 import { ArrowUp, Sparkles, Volume2, VolumeX } from 'lucide-react'
+import VoicePicker from './VoicePicker'
+import { useSpeechVoice } from '../speech'
 
 export type LunaAction =
   | { type: 'search'; params: Record<string, number | string | boolean> }
@@ -25,12 +27,10 @@ export default function Luna({ lang, context, onAction, onPlan }: { lang: Lang; 
   const [busy, setBusy] = useState(false)
   const [voice, setVoice] = useState(false)
   const [offline, setOffline] = useState(false)   // true once the server says it has no AI key
+  const speech = useSpeechVoice(lang)
   const speak = (text: string) => {
     if (!voice || typeof speechSynthesis === 'undefined') return
-    speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(text)
-    u.lang = lang === 'tr' ? 'tr-TR' : 'en-US'
-    speechSynthesis.speak(u)
+    speech.speak(text, 0.95)
   }
   const end = useRef<HTMLDivElement>(null)
   useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth' }) }, [msgs, busy])
@@ -76,13 +76,25 @@ export default function Luna({ lang, context, onAction, onPlan }: { lang: Lang; 
           <div className="luna-head">
             <b>Luna
               {typeof speechSynthesis !== 'undefined' && (
-                <button className="luna-voice" onClick={() => { if (voice) speechSynthesis.cancel(); setVoice(!voice) }}
+                <button className="luna-voice" onClick={() => { if (voice) speechSynthesis.cancel(); else speech.speak(lang === 'tr' ? 'Görev kontrol dinlemede. Bir Ay iniş planı hazırlıyoruz.' : 'Mission control is listening. We are preparing a lunar landing plan.', 0.96); setVoice(!voice) }}
                         aria-label={voice ? 'Mute' : 'Read answers aloud'} title={lang === 'tr' ? 'Yanıtları sesli oku' : 'Read answers aloud'}>
                   {voice ? <Volume2 size={14} /> : <VolumeX size={14} />}
                 </button>
               )}
             </b>
             <span>{lang === 'tr' ? 'Görevinizi anlatın veya sonuçları sorun' : 'Describe your mission or ask about the results'}</span>
+            {voice && <VoicePicker lang={lang} voices={speech.voices} selected={speech.selected} onChange={speech.choose}
+              onPreview={() => speech.speak(lang === 'tr' ? 'Görev kontrol dinlemede. Bir Ay iniş planı hazırlıyoruz.' : 'Mission control is listening. We are preparing a lunar landing plan.', 0.96)} />}
+            <div className="luna-splash" aria-hidden="true">
+              <div className="luna-splash-orbit"><i /></div>
+              <div className="luna-splash-copy">
+                <small>{lang === 'tr' ? 'GÖREV ZEKÂSI · AY YÜZEYİ' : 'MISSION INTELLIGENCE · LUNAR SURFACE'}</small>
+                <strong>{lang === 'tr' ? 'UÇUŞ YÖNETMENİN HAZIR' : 'YOUR FLIGHT DIRECTOR'}</strong>
+                <span><i className={offline ? 'local' : ''} />{offline
+                  ? (lang === 'tr' ? 'YEREL REHBER · MOTOR VERİSİNE BAĞLI' : 'LOCAL GUIDE · ENGINE LINKED')
+                  : (lang === 'tr' ? 'LUNA · GÖREV VERİSİNE BAĞLI' : 'LUNA · MISSION DATA LINKED')}</span>
+              </div>
+            </div>
           </div>
           <div className="luna-msgs">
             {msgs.length === 0 && onPlan && (
