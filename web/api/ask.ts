@@ -28,7 +28,9 @@ Rules:
 - If the user describes a mission or asks to change settings, return action {"type":"search","params":{...}} with any of:
   start (YYYY-MM-DD, between 2026-11-01 and 2028-11-30), windowDays (5-90), days (1-30, time on the surface),
   sun (0-100, minimum % of hours with sunlight), earth (0-100, minimum % of hours with Earth contact),
-  shadow (0-240, longest tolerated darkness in hours), batt (500-20000 Wh), slope (2-20 degrees), dsn (true/false).
+  shadow (0-240, longest tolerated darkness in hours), batt (500-20000 Wh), slope (2-20 degrees), dsn (true/false),
+  zone (landing-zone radius in metres: 0 off, 100 precision landing, 250, 500, 1000 typical robotic lander),
+  zslope (2-30 degrees: 95% of the landing zone must be gentler than this).
   Only include parameters the user implied; say in the reply what you set.
 - If the user asks to look at a result, return {"type":"select","rank":N} (1-based).
 - Otherwise action is null.`
@@ -49,6 +51,7 @@ const SCHEMA = {
             start: { type: 'STRING' }, windowDays: { type: 'INTEGER' }, days: { type: 'INTEGER' },
             sun: { type: 'INTEGER' }, earth: { type: 'INTEGER' }, shadow: { type: 'INTEGER' },
             batt: { type: 'INTEGER' }, slope: { type: 'INTEGER' }, dsn: { type: 'BOOLEAN' },
+            zone: { type: 'INTEGER' }, zslope: { type: 'INTEGER' },
           },
         },
       },

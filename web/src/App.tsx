@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { dataUrl, loadManifest, type Manifest, type Series } from './data'
-import { insideRing, parseAtlas, parseEphem, pointTrack, sunlitMap, type Atlas, type PointResult } from './engine'
+import { insideRing, parseAtlas, parseEphem, parseHazard, pointTrack, sunlitMap, zoneSlopeAt, type Atlas, type Hazard, type PointResult } from './engine'
 import { T, fmtPct, hours, why, type Lang } from './i18n'
 import { evaluateWindow, requiredBatteryWh, type Constraints } from './model'
 import { EngineRunner } from './runner'
@@ -11,7 +11,7 @@ import YearView from './components/YearView'
 import { download, reportHtml, siteRow, toCsv, type SiteRow } from './report'
 import HorizonView from './components/HorizonView'
 import Luna, { type LunaAction } from './components/Luna'
-import { AlertTriangle, ArrowLeftRight, Link2, MapPin, Pause, Play, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Printer, Sun } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, Mountain, Link2, MapPin, Pause, Play, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Printer, Sun } from 'lucide-react'
 import type { Overlay, Pin } from './components/Globe'
 import type { DriveMode, DriveStart } from './components/Drive'
 
@@ -38,6 +38,12 @@ const S = {
   maxShadow: { en: 'Longest shadow at most', tr: 'En uzun gölge en çok' },
   battery: { en: 'Battery', tr: 'Batarya' },
   slope: { en: 'Steepest ground', tr: 'En dik zemin' },
+  touchdown: { en: 'Touchdown zone', tr: 'İniş alanı' },
+  zoneRadius: { en: 'Landing zone radius', tr: 'İniş alanı yarıçapı' },
+  zoneOff: { en: 'Off', tr: 'Kapalı' },
+  zoneSlope: { en: '95% of the zone gentler than', tr: 'Alanın %95’i şundan az eğimli' },
+  zoneHint: { en: 'LOLA 40 m slopes inside the circle the lander may touch down in. 100 m ≈ precision landing, 1 km ≈ a typical robotic lander.', tr: 'İniş aracının konabileceği daire içindeki LOLA 40 m eğimleri. 100 m ≈ hassas iniş, 1 km ≈ tipik robotik iniş aracı.' },
+  colZone: { en: 'Zone slope', tr: 'Alan eğimi' },
   dsn: { en: 'Earth contact needs a NASA DSN dish too', tr: 'Dünya bağlantısı NASA DSN anteni de gerektirsin' },
   search: { en: 'Run search', tr: 'Aramayı çalıştır' },
   searching: { en: 'Searching', tr: 'Aranıyor' },
@@ -98,7 +104,7 @@ const PRESETS = [
   { id: 'sprint', short: { en: 'Sprint', tr: 'Kısa görev' }, name: { en: 'Short sprint · 5 days', tr: 'Kısa görev · 5 gün' }, days: 5, sun: 80, earth: 70, shadow: 24, batt: 1000 },
 ]
 
-interface Params { start: string; windowDays: number; days: number; sun: number; earth: number; shadow: number; batt: number; slope: number; dsn: boolean }
+interface Params { start: string; windowDays: number; days: number; sun: number; earth: number; shadow: number; batt: number; slope: number; zone: number; zslope: number; dsn: boolean }
 
 function readHash(): { lang: Lang; p: Params } {
   const q = new URLSearchParams(location.hash.slice(1))
@@ -106,7 +112,8 @@ function readHash(): { lang: Lang; p: Params } {
   return {
     lang: q.get('lang') === 'tr' ? 'tr' : 'en',
     p: { start: [q.get('start') ?? '2027-09-01'].map((s) => (/^\d{4}-\d{2}-\d{2}$/.test(s) && s >= '2026-11-01' && s <= '2028-11-30' ? s : '2027-09-01'))[0], windowDays: num('window', 30), days: num('days', 14), sun: num('sun', 70),
-      earth: num('earth', 50), shadow: num('shadow', 48), batt: num('batt', 2000), slope: num('slope', 8), dsn: q.get('dsn') !== '0' },
+      earth: num('earth', 50), shadow: num('shadow', 48), batt: num('batt', 2000), slope: num('slope', 8),
+      zone: [num('zone', 100)].map((z) => ([0, 100, 250, 500, 1000].includes(z) ? z : 100))[0], zslope: num('zslope', 10), dsn: q.get('dsn') !== '0' },
   }
 }
 
@@ -116,6 +123,7 @@ export default function App() {
   const [p, setP] = useState<Params>(init.p)
   const [m, setM] = useState<Manifest | null>(null)
   const [atlas, setAtlas] = useState<Atlas | null>(null)
+  const [hazard, setHazard] = useState<Hazard | null>(null)
   const [results, setResults] = useState<PointResult[] | null>(null)
   const [ran, setRan] = useState<{ q: Params; ms: number; hoursChecked: number } | null>(null)
   const [progress, setProgress] = useState<number | null>(null)
@@ -140,16 +148,18 @@ export default function App() {
     (async () => {
       const man = await loadManifest()
       const [a, e, d] = await Promise.all(['atlas.bin', 'ephem.bin', man.dsn].map((f) => fetch(dataUrl(f)).then((r) => r.arrayBuffer())))
+      const hz = await fetch(dataUrl('hazard.bin')).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null)
       ephemRef.current = e
+      setHazard(hz ? parseHazard(hz) : null)
       setDsn(Array.from(new Uint8Array(d), (x) => x === 1))
       setAtlas(parseAtlas(a))
-      runner.current = new EngineRunner(a, e, d, man.n)
+      runner.current = new EngineRunner(a, e, d, man.n, hz)
       setM(man)
     })()
   }, [])
   useEffect(() => {
     history.replaceState(null, '', `#lang=${lang}&start=${p.start}&window=${p.windowDays}&days=${p.days}&sun=${p.sun}` +
-      `&earth=${p.earth}&shadow=${p.shadow}&batt=${p.batt}&slope=${p.slope}&dsn=${p.dsn ? 1 : 0}` +
+      `&earth=${p.earth}&shadow=${p.shadow}&batt=${p.batt}&slope=${p.slope}&zone=${p.zone}&zslope=${p.zslope}&dsn=${p.dsn ? 1 : 0}` +
       (siteIndex !== null ? `&site=${siteIndex}` : ''))
   }, [lang, p, siteIndex])  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -167,7 +177,7 @@ export default function App() {
     setProgress(0)
     const t0 = performance.now()
     const res = await runner.current.run(atlas.n, { firstHour: fh, nStarts, strideH: 24, durationH: q.days * 24,
-      maxSlope: q.slope, needDsn: q.dsn }, c, setProgress)
+      maxSlope: q.slope, needDsn: q.dsn, zone: q.zone, zoneSlope: q.zslope }, c, setProgress)
     setRan({ q: { ...q, windowDays: nStarts }, ms: performance.now() - t0, hoursChecked: res.length * ((nStarts - 1) * 24 + q.days * 24) })
     setResults(res)
     setSel(0)
@@ -287,12 +297,12 @@ export default function App() {
   const clamp = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : d)
   const lunaContext = () => ({
     settings: ran?.q ?? p,
-    meaning: 'sun/earth = minimum % of mission hours; shadow = longest tolerated darkness (h); batt = Wh; slope = max degrees; dsn = Earth contact also needs a NASA DSN dish',
+    meaning: 'sun/earth = minimum % of mission hours; shadow = longest tolerated darkness (h); batt = Wh; slope = max degrees over 400 m at the point; zone = landing-zone radius in m (0 = off; 100, 250, 500 or 1000); zslope = 95% of that zone must be gentler than this many degrees (LOLA 40 m slopes); dsn = Earth contact also needs a NASA DSN dish',
     engine: ran ? { pointsChecked: atlas.n, hourlyChecks: ran.hoursChecked, landingDatesInWindow: ran.q.windowDays, firstDate: ran.q.start } : null,
     results: top.map((r, k) => ({ rank: k + 1, lat: +r.lat.toFixed(3), lon: +r.lon.toFixed(3), artemisRegion: region(r) ?? null, place: place(r) ?? null,
       goLandingDates: r.goCount, bestLanding: startDate(r.bestStart).toISOString().slice(0, 10),
       bestWindow: { sunlightPct: Math.round(r.sunFrac * 100), earthContactPct: Math.round(r.commFrac * 100), longestDarkHours: r.longestDarkH },
-      slopeDeg: atlas.slope[r.index], heightM: atlas.height[r.index] })),
+      slopeDeg: atlas.slope[r.index], zoneSlopeP95Deg: zoneSlopeAt(hazard, ran?.q.zone, r.index), heightM: atlas.height[r.index] })),
     selected: detail && pick ? { rank: sel + 1, verdict: detail.w.go ? 'GO' : 'NO-GO', sunlightPct: Math.round(detail.w.sunFrac * 100),
       earthContactPct: Math.round(detail.w.commFrac * 100), longestDarkHours: detail.w.longestDarkH,
       batterySurvives: detail.w.survived, batteryNeededWh: Math.round(detail.need),
@@ -304,7 +314,8 @@ export default function App() {
     const start = typeof q.start === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(q.start) && q.start >= '2026-11-01' && q.start <= '2028-11-30' ? q.start : p.start
     const next: Params = { start, windowDays: clamp(q.windowDays, 5, 90, p.windowDays), days: clamp(q.days, 1, 30, p.days),
       sun: clamp(q.sun, 0, 100, p.sun), earth: clamp(q.earth, 0, 100, p.earth), shadow: clamp(q.shadow, 0, 240, p.shadow),
-      batt: clamp(q.batt, 500, 20000, p.batt), slope: clamp(q.slope, 2, 20, p.slope), dsn: typeof q.dsn === 'boolean' ? q.dsn : p.dsn }
+      batt: clamp(q.batt, 500, 20000, p.batt), slope: clamp(q.slope, 2, 20, p.slope),
+      zone: [0, 100, 250, 500, 1000].includes(q.zone as number) ? (q.zone as number) : p.zone, zslope: clamp(q.zslope, 2, 30, p.zslope), dsn: typeof q.dsn === 'boolean' ? q.dsn : p.dsn }
     setP(next)
     run(next)
   }
@@ -395,6 +406,23 @@ export default function App() {
             <Field label={S.slope[lang]} v={p.slope} min={2} max={20} on={(v) => set('slope', v)} unit="°" />
             <label className="checkbox"><input type="checkbox" checked={p.dsn} onChange={(e) => set('dsn', e.target.checked)} /><span>{S.dsn[lang]}</span></label>
           </div>
+          {hazard && (
+            <div className="group">
+              <div className="group-label">{S.touchdown[lang]}</div>
+              <div className="field">
+                <div className="field-top"><label>{S.zoneRadius[lang]}</label></div>
+                <div className="seg full">
+                  {[0, ...hazard.radii].map((z) => (
+                    <button key={z} className={p.zone === z ? 'on' : ''} onClick={() => set('zone', z)}>
+                      {z === 0 ? S.zoneOff[lang] : z >= 1000 ? `${z / 1000} km` : `${z} m`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {p.zone > 0 && <Field label={S.zoneSlope[lang]} v={p.zslope} min={2} max={30} on={(v) => set('zslope', v)} unit="°" />}
+              <p className="meta">{S.zoneHint[lang]}</p>
+            </div>
+          )}
           <div className="side-foot">
             <button className="btn primary block" disabled={progress !== null} onClick={() => run(p)}>
               {progress !== null ? `${S.searching[lang]} ${Math.round(progress * 100)}%` : S.search[lang]}
@@ -469,6 +497,7 @@ export default function App() {
                       <th className="c-cmp" title={S.compare[lang]}><ArrowLeftRight size={13} /></th>
                       <th>#</th><th>{S.colSite[lang]}</th><th>{S.colGo[lang]}</th><th>{lang === 'tr' ? 'En iyi iniş' : 'Best landing'}</th>
                       <th className="num">{T.sunlight[lang]}</th><th className="num">{S.colEarth[lang]}</th><th className="num">{S.colSlope[lang]}</th>
+                      {ran.q.zone > 0 && hazard && <th className="num" title={S.zoneSlope[lang]}>{S.colZone[lang]}</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -490,6 +519,7 @@ export default function App() {
                         <td className="num">{Math.round(r.sunFrac * 100)}%</td>
                         <td className="num">{Math.round(r.commFrac * 100)}%</td>
                         <td className="num">{atlas.slope[r.index].toFixed(1)}°</td>
+                        {ran.q.zone > 0 && hazard && <td className="num">{zoneSlopeAt(hazard, ran.q.zone, r.index)?.toFixed(1)}°</td>}
                       </tr>
                     ))}
                   </tbody>
@@ -525,6 +555,18 @@ export default function App() {
                   <span className={`badge ${detail.w.go ? 'go' : 'nogo'}`}>{detail.w.go ? 'GO' : 'NO-GO'}</span>
                   <p>{why(detail.w, 1, detail.c, lang)}</p>
                 </div>
+                {(() => {
+                  const zs = zoneSlopeAt(hazard, ran.q.zone, pick.index)
+                  if (zs === null) return null
+                  const zLabel = ran.q.zone >= 1000 ? `${ran.q.zone / 1000} km` : `${ran.q.zone} m`
+                  return (
+                    <p className="touchdown"><Mountain size={13} />{' '}
+                      {lang === 'tr'
+                        ? `İniş alanı (${zLabel} yarıçap): alanın %95’i ${zs.toFixed(1)}°’den az eğimli (LOLA 40 m), sınır ${ran.q.zslope}°.`
+                        : `Touchdown zone (${zLabel} radius): 95% of it is gentler than ${zs.toFixed(1)}° (LOLA 40 m slopes), limit ${ran.q.zslope}°.`}
+                    </p>
+                  )
+                })()}
                 <div className="stats">
                   <Stat icon={<Sun size={14} />} label={T.sunlight[lang]} value={fmtPct(detail.w.sunFrac, lang)} need={`≥ ${ran.q.sun}%`}
                         frac={detail.w.sunFrac} ok={detail.w.sunFrac >= detail.c.min_sun_frac} />

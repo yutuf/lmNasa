@@ -22,6 +22,12 @@ export interface Ephem {
   sunR: Float32Array
 }
 
+/** Touchdown hazard (scripts/build_hazard.py): 95th-percentile LOLA 40 m slope inside landing zones of each radius. */
+export interface Hazard {
+  radii: number[]           // zone radius (m)
+  p95: Float32Array[]       // per radius, per atlas point (deg)
+}
+
 export interface Search {
   firstHour: number       // index of the first landing hour in the ephemeris
   nStarts: number         // landing options, every `strideH` hours
@@ -29,6 +35,32 @@ export interface Search {
   durationH: number
   maxSlope: number
   needDsn: boolean
+  zone?: number           // landing-zone radius (m); 0 or absent = no touchdown hazard check
+  zoneSlope?: number      // 95 % of the zone must be gentler than this (deg)
+}
+
+export function parseHazard(buf: ArrayBuffer): Hazard {
+  const dv = new DataView(buf)
+  const n = dv.getUint32(0, true)
+  const k = dv.getUint8(4)
+  const radii = Array.from({ length: k }, (_, i) => dv.getUint16(5 + 2 * i, true))
+  const o = 5 + 2 * k
+  const p95 = radii.map((_, i) => Float32Array.from(new Uint8Array(buf, o + i * n, n), (v) => v / 4))
+  return { radii, p95 }
+}
+
+/** 95th-percentile slope inside the landing zone at a point, or null without a zone or hazard data. */
+export function zoneSlopeAt(h: Hazard | null, zone: number | undefined, index: number): number | null {
+  if (!h || !zone) return null
+  const z = h.radii.indexOf(zone)
+  return z < 0 ? null : h.p95[z][index]
+}
+
+/** Is a point flat enough to search: the 400 m site slope, and (if asked) the touchdown zone? */
+export function passesTerrain(atlas: Atlas, h: Hazard | null, index: number, q: Search): boolean {
+  if (atlas.slope[index] > q.maxSlope) return false
+  const z = zoneSlopeAt(h, q.zone, index)
+  return z === null || q.zoneSlope === undefined || z <= q.zoneSlope
 }
 
 export interface PointResult {

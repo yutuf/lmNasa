@@ -111,7 +111,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
 
     sites_path = Path(a.sites)
-    text = sites_path.read_text()
+    text = sites_path.read_text(encoding="utf-8")
     m = re.search(r"^([ \t]*)- id:", text, re.M)
     indent = m.group(1) if m else "  "
     found = find_regions(Path(a.folder))
@@ -139,7 +139,7 @@ def main(argv=None):
             continue
         added.append(yaml_entry(reg, lat, lon, area_km2, files, indent))
     if added and not a.dry_run:
-        sites_path.write_text(text.rstrip("\n") + "\n\n" + "\n".join(added))
+        sites_path.write_text(text.rstrip("\n") + "\n\n" + "\n".join(added), encoding="utf-8")
         print(f"added {len(added)} region centre(s) to {sites_path}")
         print("next: build_horizons.py, precompute.py, derive_best_points.py (see README)")
     return added
