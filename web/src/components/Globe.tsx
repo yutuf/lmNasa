@@ -8,7 +8,8 @@ import { NasaModel } from './Models'
 import { flightPath, type Approach } from '../flight'
 
 export interface PoleCapInfo { albedo: string; normal: string; r_max_m: number; edge_lat: number }
-export interface Overlay { texture: THREE.Texture; rMaxM: number; edgeLat: number; sphere?: boolean }
+// `under`: a second layer drawn beneath this one (the whole-Moon map under the south-pole cap)
+export interface Overlay { texture: THREE.Texture; rMaxM: number; edgeLat: number; sphere?: boolean; under?: Overlay }
 export interface Target { id: string; name: string; lat: number; lon: number; colour: string; selected: boolean; label?: boolean }
 export interface Pin { lat: number; lon: number; label: string; good: boolean }
 
@@ -87,15 +88,16 @@ function PoleCap({ cap }: { cap: PoleCapInfo }) {
   )
 }
 
-function OverlayCap({ overlay }: { overlay: Overlay }) {
+function OverlayCap({ overlay, r = 1.0014 }: { overlay: Overlay; r?: number }) {
   if (overlay.sphere) return (
-    <mesh><sphereGeometry args={[1.0014, 192, 96]} /><meshBasicMaterial map={overlay.texture} transparent depthWrite={false} /></mesh>
+    <mesh><sphereGeometry args={[r, 192, 96]} /><meshBasicMaterial map={overlay.texture} transparent depthWrite={false} /></mesh>
   )
-  return <CapMesh overlay={overlay} />
+  return <CapMesh overlay={overlay} r={r} />
 }
 
-function CapMesh({ overlay }: { overlay: Overlay }) {
-  const geometry = useMemo(() => capGeometry(overlay.edgeLat, overlay.rMaxM, 1.0014), [overlay])
+function CapMesh({ overlay, r }: { overlay: Overlay; r: number }) {
+  // keyed on the shape, not the overlay object: a playing map repaints the texture every step, the cap stays
+  const geometry = useMemo(() => capGeometry(overlay.edgeLat, overlay.rMaxM, r), [overlay.edgeLat, overlay.rMaxM, r])
   return (
     <mesh geometry={geometry}>
       <meshBasicMaterial map={overlay.texture} transparent depthWrite={false} side={THREE.DoubleSide} />
@@ -396,7 +398,8 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
       <Moon />
       {orbit && <OrbitPath orbit={orbit} />}
       {poleCap && <PoleCap cap={poleCap} />}
-      {overlay && !closeUp && <OverlayCap overlay={overlay} />}
+      {overlay?.under && !closeUp && <OverlayCap overlay={overlay.under} />}
+      {overlay && !closeUp && <OverlayCap overlay={overlay} r={overlay.under ? 1.0019 : 1.0014} />}
       <group position={earth.clone().multiplyScalar(5.2)}>
         <Suspense fallback={null}><EarthBall /></Suspense>
         {labels && <Html center zIndexRange={[40, 0]} className="tag tag-earth">{earthLabel}</Html>}

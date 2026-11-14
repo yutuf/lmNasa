@@ -9,7 +9,7 @@ type RGBA = [number, number, number, number] | null
 
 export function paintOverlay(atlas: Atlas, colour: (i: number) => RGBA): Overlay {
   if (atlas.kind === 'moon') {
-    const W = 1440, H = 720
+    const W = 720, H = 360   // 0.5° a pixel: the grid points are ~1° apart, and a small canvas repaints fast while the map plays
     const cells = document.createElement('canvas'); cells.width = W; cells.height = H
     const x0 = cells.getContext('2d')!
     for (let i = 0; i < atlas.n; i++) {
@@ -24,7 +24,7 @@ export function paintOverlay(atlas: Atlas, colour: (i: number) => RGBA): Overlay
     // is softened into a smooth map (the values themselves are unchanged)
     const c = document.createElement('canvas'); c.width = W; c.height = H
     const x = c.getContext('2d')!
-    x.filter = 'blur(3px)'
+    x.filter = 'blur(1.5px)'
     x.drawImage(cells, 0, 0)
     const tex = new THREE.CanvasTexture(c)
     tex.colorSpace = THREE.SRGBColorSpace

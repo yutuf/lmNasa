@@ -475,18 +475,27 @@ export default function App() {
   }, [pendingDrive, detail, pinned])
   const mapSpan = ran ? (ran.q.windowDays - 1) * 24 + ran.q.days * 24 : 0
   const mapHour = ran && m ? Math.min(m.n - 1, Math.max(0, firstHour(ran.q) + mapH)) : 0
+  // the next step is queued only after the last one has been drawn (a fixed interval stacked repaints and starved the globe)
   useEffect(() => {
     if (!mapPlay) return
-    const id = setInterval(() => setMapH((h) => (h + 2 >= mapSpan ? 0 : h + 2)), 90)
-    return () => clearInterval(id)
-  }, [mapPlay, mapSpan])
+    let id = 0
+    const raf = requestAnimationFrame(() => { id = window.setTimeout(() => setMapH((h) => (h + 2 >= mapSpan ? 0 : h + 2)), 60) })
+    return () => { cancelAnimationFrame(raf); clearTimeout(id) }
+  }, [mapPlay, mapSpan, mapH])
+  // the sunlight map covers the whole Moon (the ~30 km grid), with the 2 km south-pole grid laid over the pole,
+  // whatever grid the search used
+  useEffect(() => { if (mapMode === 'sun' && m && dsn && ephemRef.current) void ensureMoon() }, [mapMode, m, dsn])  // eslint-disable-line react-hooks/exhaustive-deps
   const sunOverlay: Overlay | null = useMemo(() => {
-    if (mapMode !== 'sun' || !atlas || !eph) return null
-    const lit = sunlitMap(atlas, eph, mapHour)
+    if (mapMode !== 'sun' || !eph) return null
     // shaded by how much of the Sun's disk is up (0..1), not lit / unlit: grazing light blends instead of stair-stepping
     const mix = (f: number): [number, number, number, number] => [Math.round(12 + 233 * f), Math.round(20 + 176 * f), Math.round(48 + 22 * f), Math.round(215 - 75 * f)]
-    return paintOverlay(atlas, (i) => mix(Math.min(1, Math.max(0, lit[i]))))
-  }, [mapMode, atlas, eph, mapHour])
+    const paint = (a: Atlas) => { const lit = sunlitMap(a, eph, mapHour); return paintOverlay(a, (i) => mix(Math.min(1, Math.max(0, lit[i])))) }
+    const pole = atlasPole ? paint(atlasPole) : null
+    const whole = atlasMoon ? paint(atlasMoon) : null
+    return pole && whole ? { ...pole, under: whole } : pole ?? whole
+  }, [mapMode, atlasPole, atlasMoon, eph, mapHour])
+  // the map is repainted every step while it plays: free each old texture on the GPU
+  useEffect(() => () => { sunOverlay?.texture.dispose(); sunOverlay?.under?.texture.dispose() }, [sunOverlay])
   // nearby alternatives: points within 8 km that pass on more landing dates than the pick
   const nearby = useMemo(() => {
     if (!pick || !results || !atlas) return []
@@ -716,6 +725,7 @@ export default function App() {
                   <>
                     <span><i className="sw lit" />{lang === 'tr' ? 'Güneş görüyor' : 'In sunlight'}</span>
                     <span><i className="sw dark" />{lang === 'tr' ? 'Gölgede' : 'In shadow'}</span>
+                    <span className="legend-note">{lang === 'tr' ? 'Tüm Ay ~30 km ızgarada, güney kutbu 2 km ızgarada; ufku çevreleyen araziyle hesaplanır.' : 'Whole Moon on the ~30 km grid, the south pole on the 2 km grid; each point uses its own terrain horizon.'}</span>
                   </>
                 )}
               </div>
