@@ -1,7 +1,8 @@
+import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
 import { polarXY } from './places'
-import { planeDir, type Dem } from './terrain'
+import { parseDem, planeDir, type Dem } from './terrain'
 import { standGeometry, standLook, standQuaternion } from './phoneGround'
 
 function flatDem(lat: number, lon: number): Dem {
@@ -81,5 +82,15 @@ describe('phone ground', () => {
   it('returns nothing when the site is outside the polar grid', () => {
     const dem: Dem = { rows: 4, cols: 4, mPerPx: 200, line0: 0, sample0: 0, scale: 1, h: new Int16Array(16) }
     expect(standGeometry(dem, -85, 0, 30, 30)).toBeNull()
+  })
+
+  it('still builds ground when the south-pole stand is only just past the real grid', () => {
+    const file = new URL('../public/data/pole_dem.bin', import.meta.url)
+    expect(existsSync(file)).toBe(true)
+    const buf = readFileSync(file)
+    const dem = parseDem(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength))
+    const geo = standGeometry(dem, -85, 0)
+    expect(geo).not.toBeNull()
+    geo?.dispose()
   })
 })
