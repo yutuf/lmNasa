@@ -2,6 +2,7 @@
 // /api/ask and use only the numbers the page sends; actions (a new search, selecting a result) are applied here.
 import { useEffect, useRef, useState } from 'react'
 import type { Lang } from '../i18n'
+import { ArrowUp, Sparkles } from 'lucide-react'
 
 export type LunaAction =
   | { type: 'search'; params: Record<string, number | string | boolean> }
@@ -48,12 +49,12 @@ export default function Luna({ lang, context, onAction }: { lang: Lang; context:
   return (
     <>
       <button className={`luna-fab ${open ? 'on' : ''}`} onClick={() => setOpen(!open)}>
-        ✦ {lang === 'tr' ? "Luna'ya sor" : 'Ask Luna'}
+        <Sparkles size={14} /> {lang === 'tr' ? "Luna'ya sor" : 'Ask Luna'}
       </button>
       {open && (
         <div className="luna">
           <div className="luna-head">
-            <b>✦ Luna</b>
+            <b>Luna</b>
             <span>{lang === 'tr' ? 'Görevinizi anlatın veya sonuçları sorun' : 'Describe your mission or ask about the results'}</span>
           </div>
           <div className="luna-msgs">
@@ -69,7 +70,7 @@ export default function Luna({ lang, context, onAction }: { lang: Lang; context:
           <form className="luna-input" onSubmit={(e) => { e.preventDefault(); send(text) }}>
             <input value={text} onChange={(e) => setText(e.target.value)} maxLength={500}
                    placeholder={lang === 'tr' ? 'ör. 2028 yazında 10 günlük bir görev…' : 'e.g. a 10-day mission in summer 2028…'} />
-            <button disabled={busy || !text.trim()}>↑</button>
+            <button disabled={busy || !text.trim()} aria-label="Send"><ArrowUp size={15} /></button>
           </form>
           <p className="luna-note">{lang === 'tr'
             ? "Yanıtlar yapay zekâ (Google Gemini) ile üretilir ve yalnızca LunaNav motorunun sonuçlarını kullanır."
