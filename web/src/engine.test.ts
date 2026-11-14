@@ -32,3 +32,15 @@ describe('engine matches the Python reference', () => {
     })
   }
 })
+
+describe('sunlight map', () => {
+  it('matches the per-point sky at that hour', async () => {
+    const { sunlitMap, pointSky } = await import('./engine')
+    const m = sunlitMap(atlas, ephem, 100)
+    expect(m.length).toBe(atlas.n)
+    for (const i of [0, 500, 12345]) expect(m[i]).toBeCloseTo(pointSky(atlas, ephem, [], i, 100, 1, false).sunFraction[0], 6)
+    const lit = m.filter((v) => v >= 0.5).length / m.length
+    expect(lit).toBeGreaterThan(0.05)
+    expect(lit).toBeLessThan(0.95)
+  })
+})
