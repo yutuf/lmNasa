@@ -38,3 +38,17 @@ describe('Ask Luna', () => {
     if (saved) process.env.GEMINI_API_KEY = saved
   })
 })
+
+describe('Ask Luna model fallback', () => {
+  it('retries with the latest-flash alias when the model name is retired', async () => {
+    const urls: string[] = []
+    const fake = (async (url: string) => {
+      urls.push(url)
+      if (url.includes('old-model')) return new Response('{}', { status: 404 })
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ reply: 'ok', action: null }) }] } }] }))
+    }) as unknown as typeof fetch
+    const r = await ask(body, 'K', 'old-model', fake)
+    expect(r.reply).toBe('ok')
+    expect(urls[1]).toContain('gemini-flash-latest')
+  })
+})

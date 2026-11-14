@@ -13,6 +13,9 @@ export interface Atlas {
   height: Int16Array
   slope: Float32Array
   horizon: Uint8Array     // n * nAz, (deg + 8) * 10
+  lat: Float64Array       // per point (deg)
+  lon: Float64Array
+  kind: 'pole' | 'moon'   // the 2 km south-pole grid, or the ~30 km whole-Moon grid
 }
 
 export interface Ephem {
@@ -37,6 +40,27 @@ export interface Search {
   needDsn: boolean
   zone?: number           // landing-zone radius (m); 0 or absent = no touchdown hazard check
   zoneSlope?: number      // 95 % of the zone must be gentler than this (deg)
+  iceKm?: number          // an ice cold trap must lie within this distance (km); 0 or absent = no science check
+}
+
+/** Science value (scripts/build_science.py): distance to the nearest ice cold trap, and cold-trap area within 5 km. */
+export interface IceReach {
+  distKm: Float32Array      // NaN = outside the data (north of 85 S)
+  areaKm2: Float32Array
+}
+
+export function parseIceReach(buf: ArrayBuffer): IceReach {
+  const n = new DataView(buf).getUint32(0, true)
+  const d = new Uint8Array(buf, 4, n)
+  const a = new Uint16Array(buf.slice(4 + n, 4 + n + 2 * n))
+  return { distKm: Float32Array.from(d, (v) => (v === 255 ? NaN : v / 4)), areaKm2: Float32Array.from(a, (v) => v / 100) }
+}
+
+/** Does a point have an ice cold trap close enough? True without a requirement or without the data. */
+export function passesIce(ice: IceReach | null, index: number, q: Search): boolean {
+  if (!ice || !q.iceKm) return true
+  const d = ice.distKm[index]
+  return !Number.isNaN(d) && d <= q.iceKm
 }
 
 export function parseHazard(buf: ArrayBuffer): Hazard {
@@ -92,8 +116,37 @@ export function parseAtlas(buf: ArrayBuffer): Atlas {
   const height = i16(n)
   const slopeRaw = new Uint8Array(buf, o, n); o += n
   const horizon = new Uint8Array(buf, o, n * nAz)
-  return { n, nAz, spacingM, rMaxM, xKm: Float64Array.from(x, (v) => v / 10), yKm: Float64Array.from(y, (v) => v / 10),
-    height, slope: Float32Array.from(slopeRaw, (v) => v / 4), horizon }
+  const xKm = Float64Array.from(x, (v) => v / 10), yKm = Float64Array.from(y, (v) => v / 10)
+  const lat = new Float64Array(n), lon = new Float64Array(n)
+  for (let i = 0; i < n; i++) [lat[i], lon[i]] = pointLatLon(xKm[i], yKm[i])
+  return { n, nAz, spacingM, rMaxM, xKm, yKm, height, slope: Float32Array.from(slopeRaw, (v) => v / 4), horizon, lat, lon, kind: 'pole' }
+}
+
+/** The whole-Moon atlas (scripts/build_global_atlas.py): points by latitude/longitude, about 30 km apart. Their
+ *  south-polar stereographic coordinates are filled in too, so the code that measures distances or tests the
+ *  Artemis region outlines works the same on both grids. */
+export function parseGlobalAtlas(buf: ArrayBuffer): Atlas {
+  const dv = new DataView(buf)
+  const n = dv.getUint32(0, true)
+  const nAz = dv.getUint16(4, true)
+  let o = 6
+  const i16 = (count: number) => { const a = new Int16Array(buf.slice(o, o + 2 * count)); o += 2 * count; return a }
+  const latR = i16(n), lonR = i16(n), height = i16(n)
+  const slopeRaw = new Uint8Array(buf, o, n); o += n
+  const horizon = new Uint8Array(buf, o, n * nAz)
+  const lat = Float64Array.from(latR, (v) => v / 100), lon = Float64Array.from(lonR, (v) => v / 100)
+  const xKm = new Float64Array(n), yKm = new Float64Array(n)
+  for (let i = 0; i < n; i++) {
+    const r = 2 * R_KM * Math.tan(((90 + lat[i]) * RAD) / 2)
+    xKm[i] = r * Math.sin(lon[i] * RAD); yKm[i] = r * Math.cos(lon[i] * RAD)
+  }
+  return { n, nAz, spacingM: 30000, rMaxM: NaN, xKm, yKm, height, slope: Float32Array.from(slopeRaw, (v) => v / 4), horizon, lat, lon, kind: 'moon' }
+}
+
+/** Great-circle distance between two points (km). */
+export function gcKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const a = Math.sin(((lat2 - lat1) * RAD) / 2) ** 2 + Math.cos(lat1 * RAD) * Math.cos(lat2 * RAD) * Math.sin(((lon2 - lon1) * RAD) / 2) ** 2
+  return 2 * R_KM * Math.asin(Math.min(1, Math.sqrt(a)))
 }
 
 export function parseEphem(buf: ArrayBuffer, n: number): Ephem {
@@ -125,7 +178,7 @@ function diskFraction(alt: number, hz: number, r: number): number {
 /** Hourly sun fraction and Earth visibility at one atlas point over `hours` hours from `firstHour`. */
 export function pointSky(atlas: Atlas, ephem: Ephem, dsn: ArrayLike<boolean>, index: number, firstHour: number,
                          hours: number, needDsn: boolean) {
-  const [lat, lon] = pointLatLon(atlas.xKm[index], atlas.yKm[index])
+  const lat = atlas.lat[index], lon = atlas.lon[index]
   const la = lat * RAD
   const lo = lon * RAD
   const e = [-Math.sin(lo), Math.cos(lo), 0]

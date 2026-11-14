@@ -90,3 +90,21 @@ Git shows **77 commits from 10 Nov to 14 Nov 06:10**. The event runs 14–15 Nov
 - Hardware PCBs and enclosures. Show them as photos only.
 - The Streamlit planner, beyond porting its slip and score-breakdown ideas.
 - The rover game and more 3D eye-candy. It's already a strong "wow"; keep it as the last 15 seconds of the demo.
+
+## Done on 14 Nov (after the touchdown zone)
+
+- [x] **Ask Luna works without an AI key.** The offline guide (`web/src/lunaLocal.ts`) handles mission descriptions (EN/TR), "show #N", "why is #1 better than #2", "explain", and "what if the launch slips". Gemini is used when `GEMINI_API_KEY` is set, and falls back to `gemini-flash-latest` if the model name is retired.
+- [x] **Mission scenarios:** six of them (lander, crewed, ice rover (21 days), long stay, sprint, night survivor), plus **Simulate all scenarios**, which compares them side by side over one landing window (`web/src/scenarios.ts`).
+- [x] **Spacecraft route** on the globe (Route tab): Earth → Moon coast → polar orbit over the site → powered descent. The approach direction keeps the Sun behind the lander, and the site detail says why (`web/src/flight.ts`).
+- [x] **Usability:** a 3-step guide; the search button says when settings changed; GitHub links in the header and sidebar.
+- [ ] To set up: for real AI answers, put `GEMINI_API_KEY=...` in `web/.env.local` locally and in Vercel's environment variables.
+- [x] **Science value (M3):** `scripts/build_science.py` → `science.bin` gives each point's distance to the nearest *ice cold trap* (permanent shadow where Diviner puts water ice within 1 m of the surface; 2,415 km² of them south of 85°S) and the cold-trap area within 5 km. It is a search requirement (Off/2/5/10 km), a table column, a line in the site detail, and part of the Rover and Night scenarios. Luna understands "near ice".
+- [x] **Survival vs science chart (M4):** every passing site by GO share and distance to ice, with the best trade-offs highlighted, a table, hover, and click to open.
+- [x] **Validation panel (M6)** in Method & data: six independent checks, each with its number.
+- [ ] Still open: Artemis III head-to-head table (M5), drawing the landing zone on the globe, the NO-GO reason text for the zone.
+- [x] **Artemis III head-to-head (M5):** for each of the nine NASA regions, the region centre (from the USGS outline) against the best point found inside the region, for the current mission. The table names the check a centre fails (site slope, landing zone, ice). Nobile Rim 2 and Peak near Cabeus B lie north of 84.5°S, outside the search grid, and are marked as such (`web/src/artemis.ts`). Default lander result: every in-grid centre fails a terrain check, while passing points exist 4–13 km away in five regions.
+- [x] **Launch window** on the landing-dates card: consecutive GO landing dates around the best date, and how many days the launch can slip.
+- Dropped: drawing the landing zone on the globe (a 1 km circle is invisible at globe scale). The zone in the NO-GO reason is not needed, because sites that fail the zone never reach the results; the Artemis table explains those cases instead.
+- [x] **Pitch material:** the README opens with a 30-second summary, the validation numbers, and a before/during-the-event table (tag `pre-hackathon`). There is a 2-minute web demo script (`docs/DEMO_WEB.md`) and fresh screenshots (`scripts/web_screenshots.py`). The CSV, report and comparison include landing-zone slope, nearest ice and approach.
+- [x] Ice rover scenario set to 21 days: over 30 days, no site within 2 km of ice gets through the darkness (measured: 0 sites); over 21 days, 62 sites pass.
+- [ ] Still to do: record the video; deploy (Vercel, root `web`, optional `GEMINI_API_KEY`); fill in the Space Apps submission form.

@@ -6,7 +6,60 @@ lander, or drive a rover there.
 
 [![tests](https://github.com/yutuf/lmNasa/actions/workflows/ci.yml/badge.svg)](https://github.com/yutuf/lmNasa/actions/workflows/ci.yml)
 
-![Landing site search: mission settings, the globe with the result map, the ranked sites](docs/web-search.png)
+![The simple interface: pick a mission, get the best landing sites as cards with 3D terrain renders](docs/web-simple.png)
+
+Two interfaces: **Simple** (pick a mission and a month, get the top sites as cards, open a site's profile) and
+**Advanced** (every requirement, the tables, charts, the Artemis comparison and exports); switch at the top.
+
+![A site profile: rank, region colour, the terrain lit by the Sun of the best landing date, and the numbers](docs/web-profile.png)
+
+## In 30 seconds
+
+**The problem.** At the lunar south pole the Sun skims the horizon, so a few hundred metres decide whether a lander
+has power, can talk to Earth, can touch down safely, and is near water ice. Today, answering *"where and on which
+date do we land?"* takes several expert tools.
+
+**What LunaNav does.** Pick a mission (or describe it to the guide). In a few seconds it checks **21,856 points × every
+landing date × every hour** against NASA LOLA terrain and JPL DE440, and ranks where the mission survives:
+
+- **Survives:** sunlight, Earth contact (with a free NASA DSN dish), the longest darkness, and a battery model.
+- **Lands safely:** 95 % of the touchdown zone (100 m to 1 km) is gentler than a limit, from LOLA 40 m slopes.
+- **Worth it:** the distance to the nearest *ice cold trap* (permanent shadow where Diviner puts ice within 1 m).
+- **Gets there:** a spacecraft route from Earth to a polar orbit to the descent, approaching with the Sun behind it.
+
+**One number.** Under a 14-day robotic-lander mission in September 2027, **every centre of NASA's Artemis III
+regions inside the search area fails a terrain check, and LunaNav finds landable points 4–13 km away in five of
+them.**
+
+**Checked, not assumed.** Sunlight against NASA's own maps (median +1.9 points, r = 0.96); touchdown slopes against
+LOLA's official 40 m slope map (median 1.15°, r = 0.94, 6,620 points); this browser engine against the Python
+reference (18 cases identical). The full list is in the app under *Method & data*.
+
+### Built during NASA Space Apps 2026 (14–15 Nov)
+
+The project existed before the event: everything up to the git tag `pre-hackathon` (the site search, horizons,
+lander and rover views, and the Python planner). Added during the event, all on top of that tag:
+
+| Added | Where |
+|---|---|
+| Touchdown zone check (LOLA 40 m slopes, 100 m to 1 km zones), validated against LOLA's slope map | `scripts/build_hazard.py`, `web/src/engine.ts` |
+| Water ice: distance to the nearest ice cold trap and cold-trap area within 5 km | `scripts/build_science.py` |
+| Survival-vs-science chart with the best trade-offs | `web/src/components/TradeOff.tsx` |
+| Six mission scenarios, and a simulation that compares them side by side | `web/src/scenarios.ts` |
+| Spacecraft route on the globe, with the approach direction chosen against the Sun | `web/src/flight.ts` |
+| Artemis III head-to-head: each region's centre against the best point inside it | `web/src/artemis.ts` |
+| Ask Luna works with no AI key (an offline guide, EN/TR); Gemini when a key is set | `web/src/lunaLocal.ts` |
+| Validation panel, launch window, 3-step guide; zone, ice and approach in the CSV and report | `web/src/App.tsx`, `web/src/report.ts` |
+
+The plan and progress log: [docs/HACKATHON_PLAN.md](docs/HACKATHON_PLAN.md). A 2-minute demo script for the web app: [docs/DEMO_WEB.md](docs/DEMO_WEB.md).
+
+![Artemis III regions head to head: each region's centre against the best point LunaNav finds inside it](docs/web-artemis.png)
+
+![Survival vs science: every passing site by how often it passes and how far the nearest water ice is](docs/web-tradeoff.png)
+
+![Scenario simulation: six kinds of mission over the same landing window](docs/web-scenarios.png)
+
+![Spacecraft route: Earth to a polar orbit over the site, then the descent](docs/web-route.png)
 
 ## The web app (`web/`)
 

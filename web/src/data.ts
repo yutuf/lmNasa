@@ -36,6 +36,10 @@ export interface Series {
 
 const BASE = `${import.meta.env.BASE_URL}data/`
 
+/** Landing dates the data covers (scripts/build_ephem_web.py writes hourly Sun/Earth to the end of 2045). */
+export const FIRST_DATE = '2026-11-01'
+export const LAST_DATE = '2045-12-01'
+
 export async function loadManifest(): Promise<Manifest> {
   const r = await fetch(BASE + 'manifest.json')
   return r.json()

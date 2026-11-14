@@ -14,17 +14,20 @@ import { R_M, altAz, bodies, conditions, diskAbove, horizonElev, horizonProfile,
 import { dataUrl } from '../data'
 import { planRoute, type Route } from '../route'
 import { eclipseAt } from '../eclipse'
-import { NasaModel } from './Models'
-import { BatteryMedium, Car, Crosshair, Earth, LogOut, Navigation, PlaneLanding, Radio, Snowflake, Sun, Thermometer, Usb, Zap } from 'lucide-react'
+import { LanderBody, RoverBody, landerEye } from './VehicleModels'
+import { landerById, roverById } from '../vehicles'
+import { BatteryMedium, Car, Crosshair, Footprints, Flashlight, Earth, LogOut, Navigation, PlaneLanding, Radio, Snowflake, Sun, Thermometer, Usb, Zap } from 'lucide-react'
 import { connectSerial, disconnectSerial, sendSky, serialConnected, serialSupported, skyLine } from '../serial'
 
-export type DriveMode = 'lander' | 'rover'
-export interface DriveStart { x: number; y: number; hour: number; missionH: number; label: string; startMs: number }
+export type DriveMode = 'lander' | 'rover' | 'walk'
+export interface DriveStart { x: number; y: number; hour: number; missionH: number; label: string; startMs: number; lander?: string; rover?: string }
 
-// Rover power model (illustrative, VIPER-class): stated on screen so nobody mistakes it for a real spec.
+// Rover model, set from the chosen rover when the view opens (vehicles.ts); the default is VIPER-class.
 const ROVER = { batteryWh: 3000, panelW: 450, driveW: 220, idleW: 120, maxSpeed: 0.25, maxSlope: 20, mast: 2 }
 const WARPS = [1, 10, 60, 600, 3600]
 const PARK = [9, 5]   // rover parking spot beside the lander (m)
+// Moonwalk: walking pace on the Moon (Apollo crews loped at ~1 m/s), eye height, the steepest slope on foot
+const WALK = { speed: 1.2, run: 2.6, eye: 1.7, maxSlope: 30 }
 const NEAR = { half: 1200, step: 10 }
 const FAR = { half: 80000, step: 800 }
 
@@ -85,6 +88,15 @@ const L = {
   auto: { en: 'Autopilot', tr: 'Otopilot' },
   clearRoute: { en: 'Clear', tr: 'Temizle' },
   toLander: { en: 'to the lander', tr: 'iniş aracına' },
+  walk: { en: 'Moonwalk', tr: 'Ay yürüyüşü' },
+  stepOut: { en: 'Walk on the Moon', tr: 'Ay’da yürü' },
+  keysWalk: { en: 'W/S walk · A/D turn · Shift run · drag to look · F flashlight · 1–5 time speed',
+    tr: 'W/S yürü · A/D dön · Shift koş · sürükle: bak · F el feneri · 1–5 zaman hızı' },
+  tooSteepWalk: { en: 'Too steep to climb on foot', tr: 'Yürüyerek tırmanmak için çok dik' },
+  torchOn: { en: 'Flashlight on', tr: 'El feneri açık' },
+  torchOff: { en: 'Flashlight off', tr: 'El feneri kapalı' },
+  walked: { en: 'walked', tr: 'yürünen' },
+  darkHint: { en: 'In shadow: press F for the flashlight', tr: 'Gölgedesiniz: el feneri için F' },
   compassOn: { en: 'Sky compass connected', tr: 'Gökyüzü pusulası bağlı' },
 } as const
 
@@ -108,6 +120,16 @@ function loadPatch(s: SiteInfo) {
 const near = (s: SiteInfo, x: number, y: number, margin: number) =>
   x > s.bounds_m[0] - margin && x < s.bounds_m[2] + margin && y > s.bounds_m[1] - margin && y < s.bounds_m[3] + margin
 
+/** On foot: 18 m out from the lander, facing away from it with the low Sun to the side (long, readable shadows). */
+function placeWalker(s: Sim, start: DriveStart) {
+  const a = s.sunHeading + 2.2
+  s.x = start.x + Math.cos(a) * 18
+  s.y = start.y + Math.sin(a) * 18
+  s.heading = a
+  s.yaw = 0
+  s.pitch = -0.08
+}
+
 /** Shared mutable simulation state (kept out of React so the frame loop does not re-render). */
 interface Sim {
   mode: DriveMode
@@ -125,20 +147,25 @@ interface Sim {
   target: { x: number; y: number; ice: number } | null
   phase: 'go' | 'return' | 'done'; drilled: number; doneHour: number
   route: Route | null; routeVer: number; routeI: number; autopilot: boolean
+  sunHeading: number; run: boolean; bob: number; torch: boolean; prints: { x: number; y: number; a: number }[]; printVer: number; lastPrint: number
 }
 
 export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
   { start: DriveStart; eph: Ephem; dsn: boolean[]; lang: Lang; initialMode: DriveMode; onExit: () => void }) {
+  const rv = roverById(start.rover)
+  const ld = landerById(start.lander)
+  Object.assign(ROVER, { maxSpeed: rv.maxSpeed, maxSlope: rv.maxSlope, batteryWh: rv.batteryWh, panelW: rv.panelW, driveW: rv.driveW, idleW: rv.idleW })
   const [world, setWorld] = useState<World | null>(null)
   const [hud, setHud] = useState(0)
   const sim = useRef<Sim>({
     mode: initialMode, x: start.x + PARK[0], y: start.y + PARK[1], heading: 0, speed: 0, throttle: 0, steer: 0,
-    hour: start.hour, warp: initialMode === 'rover' ? 60 : 600, playing: initialMode === 'rover', battery: ROVER.batteryWh,
+    hour: start.hour, warp: initialMode === 'rover' ? 60 : initialMode === 'walk' ? 1 : 600, playing: initialMode !== 'lander', battery: ROVER.batteryWh,
     solarW: 0, useW: 0, driven: 0, startHour: start.hour, dead: false, steep: false, lights: true,
-    cam: 'chase', pad: false, padBtn: [], yaw: 0, pitch: initialMode === 'lander' ? 0.02 : -0.12,
+    cam: 'chase', pad: false, padBtn: [], yaw: 0, pitch: initialMode === 'lander' ? 0.02 : initialMode === 'walk' ? -0.05 : -0.12,
     origin: { x: start.x, y: start.y, h: 0 }, profile: null, profileAt: { x: NaN, y: NaN }, cond: null, ecl: 0,
     science: false, drillKey: false, target: null, phase: 'go', drilled: 0, doneHour: 0,
     route: null, routeVer: 0, routeI: 0, autopilot: false,
+    sunHeading: 0, run: false, bob: 0, torch: true, prints: [], printVer: 0, lastPrint: 0,
   })
 
   // load the 200 m grid and any 10 m site maps within reach of the start
@@ -154,6 +181,8 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
       const sky = conditions(eph, horizonProfile(ground.height, start.x, start.y), start.x, start.y, start.hour)
       const [dx, dy] = planeDir(sky.lon, sky.sun.az)
       s.heading = Math.atan2(dy, dx) + (initialMode === 'rover' ? 0.6 : 0)
+      s.sunHeading = Math.atan2(dy, dx)
+      if (initialMode === 'walk') placeWalker(s, start)
       const tg = sci ? findIceTarget(sci, start.x, start.y) : null
       s.target = tg && { x: tg.x, y: tg.y, ice: tg.ice }
       setWorld({ dem, patches, ground, sci, thermal })
@@ -223,6 +252,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
       s.throttle = (keys.has('w') || keys.has('arrowup') ? 1 : 0) - (keys.has('s') || keys.has('arrowdown') ? 1 : 0)
       s.steer = (keys.has('a') || keys.has('arrowleft') ? 1 : 0) - (keys.has('d') || keys.has('arrowright') ? 1 : 0)
       s.drillKey = keys.has('e')
+      s.run = keys.has('shift')
       if (s.throttle || s.steer) s.autopilot = false
     }
     const down = (e: KeyboardEvent) => {
@@ -231,6 +261,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
       if (k === 'escape') onExit()
       if (k === 'c') s.cam = s.cam === 'chase' ? 'mast' : 'chase'
       if (k === 'l') s.lights = !s.lights
+      if (k === 'f') s.torch = !s.torch
       if (k === 'v') s.science = !s.science
       if (k === 'p') planRef.current()
       if (k === ' ') s.playing = !s.playing
@@ -282,10 +313,10 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
         </Canvas>
       )}
       <LookDrag sim={sim} />
-      {coarse && s.mode === 'rover' && !s.dead && <TouchStick sim={sim} />}
+      {coarse && (s.mode === 'rover' || s.mode === 'walk') && !s.dead && <TouchStick sim={sim} />}
 
       <div className="hud top-left">
-        <div className="hud-title">{s.mode === 'lander' ? t('lander') : t('rover')}</div>
+        <div className="hud-title">{s.mode === 'lander' ? `${t('lander')} · ${ld.name}` : s.mode === 'walk' ? t('walk') : `${t('rover')} · ${rv.name}`}</div>
         <div className="hud-sub">{start.label}</div>
         <div className="hud-sub">{lat.toFixed(3)}°, {(((lon % 360) + 360) % 360).toFixed(2)}°E · {src ? `${t('terrain10')} · ${src.name}` : t('terrain200')}</div>
       </div>
@@ -359,11 +390,15 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
         </div>
         <div className={`status ${link ? 'ok' : 'bad'}`}><Radio size={12} /> {t('link')}: {link ? t('dsnOk') : c?.earthUp ? t('noDsn') : '—'}</div>
         {s.mode === 'rover' && <div className="hud-sub">{t('driven')} {(s.driven / 1000).toFixed(2)} km · {(s.speed * 100).toFixed(0)} cm/s</div>}
+        {s.mode === 'walk' && <div className="hud-sub"><Footprints size={12} /> {t('walked')} {s.driven < 1000 ? `${Math.round(s.driven)} m` : `${(s.driven / 1000).toFixed(2)} km`} · <Flashlight size={12} /> {s.torch ? t('torchOn') : t('torchOff')}</div>}
       </div>
 
       <div className="hud bottom-right">
         {s.mode === 'lander'
-          ? <button className="big" onClick={() => { s.mode = 'rover'; s.warp = 60; s.playing = true; s.pitch = -0.12; s.yaw = 0 }}><Car size={14} /> {t('deploy')}</button>
+          ? <>
+              <button className="big" onClick={() => { s.mode = 'rover'; s.warp = 60; s.playing = true; s.pitch = -0.12; s.yaw = 0 }}><Car size={14} /> {t('deploy')}</button>
+              <button className="big" onClick={() => { s.mode = 'walk'; placeWalker(s, start); s.warp = 1; s.playing = true; s.driven = 0; s.lastPrint = 0; s.profileAt = { x: NaN, y: NaN } }}><Footprints size={14} /> {t('stepOut')}</button>
+            </>
           : <button className="big ghost" onClick={() => { s.mode = 'lander'; s.x = start.x + PARK[0]; s.y = start.y + PARK[1]; s.yaw = 0; s.pitch = 0.02; s.profileAt = { x: NaN, y: NaN } }}><PlaneLanding size={14} /> {t('back')}</button>}
         {serialSupported() && (
           <button className={`big ghost ${serialOn ? 'on' : ''}`} onClick={async () => {
@@ -371,8 +406,10 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
           }}><Usb size={14} /> {serialOn ? t('compassOn') : t('compass')}</button>
         )}
         <button className="big ghost" onClick={onExit}><LogOut size={14} /> {t('exit')}</button>
-        <p className="keys">{s.mode === 'lander' ? t('keysLander') : t('keys')}</p>
-        <p className="keys">{t('model')}</p>
+        <p className="keys">{s.mode === 'lander' ? t('keysLander') : s.mode === 'walk' ? t('keysWalk') : t('keys')}</p>
+        <p className="keys">{lang === 'tr'
+          ? `${rv.name}: ${rv.panelW ? `${rv.panelW} W panel, ` : 'güneş paneli yok, '}${(rv.batteryWh / 1000).toFixed(1)} kWh batarya, ${rv.maxSpeed} m/sn, en çok ${rv.maxSlope}° eğim (yaklaşık değerler); arazi, Güneş, Dünya ve DSN gerçek veridir.`
+          : `${rv.name}: ${rv.panelW ? `${rv.panelW} W panel, ` : 'no solar panel, '}${(rv.batteryWh / 1000).toFixed(1)} kWh battery, ${rv.maxSpeed} m/s, up to ${rv.maxSlope}° slopes (approximate); terrain, Sun, Earth and DSN are real data.`}</p>
       </div>
 
       {s.mode === 'lander' && (
@@ -382,6 +419,8 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
         </div>
       )}
       {s.mode === 'rover' && s.steep && !s.dead && <div className="toast">{t('steep')}</div>}
+      {s.mode === 'walk' && s.steep && <div className="toast">{t('tooSteepWalk')}</div>}
+      {s.mode === 'walk' && !s.steep && !s.torch && (c?.sunFrac ?? 1) < 0.5 && <div className="toast">{t('darkHint')}</div>}
       {s.dead && (
         <div className="gameover">
           <h2><Snowflake size={20} /> {t('dead')}</h2>
@@ -461,6 +500,8 @@ function Compass({ az, sunAz, earthAz, sunUp, earthUp, lang, target }: { az: num
 // ---------------------------------------------------------------- 3D scene
 
 function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRefObject<Sim>; eph: Ephem; start: DriveStart }) {
+  const ld = landerById(start.lander)
+  const rv = roverById(start.rover)
   const { camera, scene } = useThree()
   const h = world.ground.height
   const sun = useRef<THREE.DirectionalLight>(null)
@@ -472,6 +513,9 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
   const lander = useRef<THREE.Group>(null)
   const dish = useRef<THREE.Group>(null)
   const head = useRef<THREE.SpotLight>(null)
+  const torch = useRef<THREE.SpotLight>(null)
+  const prints = useRef<THREE.InstancedMesh>(null)
+  const printKey = useRef('')
   const nearMesh = useRef<THREE.Mesh>(null)
   const farMesh = useRef<THREE.Mesh>(null)
   const chunk = useRef({ cx: NaN, cy: NaN, ox: NaN, oy: NaN, litHour: NaN, litX: NaN, litY: NaN, sci: false })
@@ -497,6 +541,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
     l.add(l.target)
     l.target.position.set(6, -0.8, 0)
   }, [])
+  useEffect(() => { if (torch.current) scene.add(torch.current.target) }, [scene])
   const stars = useMemo(starField, [])
   const glare = useMemo(sunGlare, [])
   const routeLine = useMemo(() => new THREE.Line(new THREE.BufferGeometry(),
@@ -691,6 +736,29 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
         else s.speed = 0
       } else s.steep = false
     }
+    if (s.mode === 'walk') {
+      s.heading += s.steer * 1.7 * dt
+      const step = s.throttle * (s.run ? WALK.run : WALK.speed) * dt
+      if (Math.abs(step) > 1e-5) {
+        const nx = s.x + Math.cos(s.heading + s.yaw) * step
+        const ny = s.y + Math.sin(s.heading + s.yaw) * step
+        const rise = h(nx, ny) - h(s.x, s.y)
+        const slope = Math.atan2(rise * Math.sign(step), Math.abs(step)) * 180 / Math.PI
+        s.steep = slope > WALK.maxSlope
+        if (!s.steep && !Number.isNaN(rise)) {
+          s.x = nx; s.y = ny; s.driven += Math.abs(step); s.bob += Math.abs(step)
+          // a boot print every 0.8 m, alternating left and right of the walking line
+          if (s.driven - s.lastPrint > 0.8) {
+            s.lastPrint = s.driven
+            const side = s.prints.length % 2 ? 0.16 : -0.16
+            const a = s.heading + s.yaw
+            s.prints.push({ x: s.x - Math.sin(a) * side, y: s.y + Math.cos(a) * side, a })
+            if (s.prints.length > 800) s.prints.shift()
+            s.printVer++
+          }
+        }
+      } else s.steep = false
+    }
     s.hour = Math.min(s.hour + simDt / 3600, eph.n - 2)
 
     // ---- power
@@ -780,13 +848,42 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
     if (head.current) {
       head.current.intensity = s.lights && isRover ? ((c?.sunFrac ?? 0) < 0.5 ? 60 : 8) : 0
     }
+    if (prints.current) {
+      const pk = `${s.printVer}:${s.origin.x}:${s.origin.y}`
+      if (printKey.current !== pk) {
+        printKey.current = pk
+        const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(1, 1, 1), up = new THREE.Vector3(0, 1, 0)
+        s.prints.forEach((f, k) => {
+          q.setFromAxisAngle(up, f.a)
+          m.compose(toV(f.x, f.y, 0.03), q, sc)
+          prints.current!.setMatrixAt(k, m)
+        })
+        prints.current.count = s.prints.length
+        prints.current.instanceMatrix.needsUpdate = true
+      }
+    }
 
-    // ---- camera
+    // ---- camera (the helmet flashlight only exists on foot)
+    if (torch.current && s.mode !== 'walk') torch.current.intensity = 0
     const look = new THREE.Vector3()
-    if (s.mode === 'lander') {
+    if (s.mode === 'walk') {
+      // first person, with the slow bounce of walking in one-sixth gravity
+      const bob = Math.abs(Math.sin(s.bob * 2.1)) * (s.run ? 0.22 : 0.1)
+      const eye = p.clone().add(new THREE.Vector3(0, WALK.eye + bob, 0))
+      camera.position.lerp(eye, Math.min(1, dt * 12))
+      const yaw = s.heading + s.yaw
+      look.set(Math.cos(yaw) * Math.cos(s.pitch), Math.sin(s.pitch), -Math.sin(yaw) * Math.cos(s.pitch))
+      camera.lookAt(camera.position.clone().add(look))
+      if (torch.current) {
+        torch.current.position.copy(camera.position).add(new THREE.Vector3(0, -0.15, 0))
+        torch.current.target.position.copy(camera.position).addScaledVector(look, 20)
+        torch.current.target.updateMatrixWorld()
+        torch.current.intensity = s.torch ? 90 : 0
+      }
+    } else if (s.mode === 'lander') {
       // camera at the ascent-stage window height, facing the landing heading
       const ly = landerYaw.current
-      const base = toV(start.x, start.y).add(new THREE.Vector3(Math.cos(ly) * 2.4, 5.6, -Math.sin(ly) * 2.4))
+      const base = toV(start.x, start.y).add(new THREE.Vector3(Math.cos(ly) * 2.4, landerEye(ld.id), -Math.sin(ly) * 2.4))
       camera.position.copy(base)
       const yaw = s.heading + s.yaw
       look.set(Math.cos(yaw) * Math.cos(s.pitch), Math.sin(s.pitch), -Math.sin(yaw) * Math.cos(s.pitch))
@@ -838,7 +935,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
         </mesh>
       </group>
       <primitive object={routeLine} />
-      <Lander ref={lander} dish={dish} />
+      <Lander ref={lander} dish={dish} id={ld.id} />
       <group ref={beacon} visible={false}>
         <mesh position={[0, 25, 0]}>
           <cylinderGeometry args={[0.6, 0.6, 50, 16, 1, true]} />
@@ -849,8 +946,13 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
           <meshBasicMaterial color="#5ee7ff" transparent opacity={0.6} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} />
         </mesh>
       </group>
+      <spotLight ref={torch} angle={0.42} penumbra={0.55} distance={90} decay={1.2} color="#fff4e0" intensity={0} />
+      <instancedMesh ref={prints} args={[undefined, undefined, 800]} frustumCulled={false} renderOrder={1}>
+        <boxGeometry args={[0.3, 0.012, 0.12]} />
+        <meshStandardMaterial color="#3b3833" roughness={1} />
+      </instancedMesh>
       <group ref={rover}>
-        <RoverModel panel={panel} />
+        <RoverModel panel={panel} id={rv.id} />
         <spotLight ref={head} position={[1, 1.1, 0]} angle={0.5} penumbra={0.4} distance={120} decay={1} color="#eaf2ff" castShadow={false} />
       </group>
     </>
@@ -933,18 +1035,17 @@ function readPad(s: Sim) {
   s.padBtn = gp.buttons.map((b) => b.pressed)
 }
 
-const Lander = ({ ref, dish }: { ref: React.Ref<THREE.Group>; dish: React.Ref<THREE.Group> }) => (
-  // NASA 3D Resources: Apollo Lunar Module (about 7 m tall)
+const Lander = ({ ref, dish, id }: { ref: React.Ref<THREE.Group>; dish: React.Ref<THREE.Group>; id: string }) => (
   <group ref={ref}>
-    <Suspense fallback={null}><NasaModel file="lander.glb" size={7} fit="height" /></Suspense>
-    <group ref={dish} position={[0, 6, 0]} />
+    <LanderBody id={id} />
+    <group ref={dish} position={[0, landerEye(id) + 0.4, 0]} />
   </group>
 )
 
-const RoverModel = ({ panel }: { panel: React.Ref<THREE.Group> }) => (
-  // NASA 3D Resources: Mars 2020 Perseverance (3 m long), standing in for a lunar rover; forward = +x
+const RoverModel = ({ panel, id }: { panel: React.Ref<THREE.Group>; id: string }) => (
+  // forward = +x
   <group>
-    <Suspense fallback={null}><NasaModel file="rover.glb" size={3} fit="length" /></Suspense>
+    <RoverBody id={id} />
     <group ref={panel} />
   </group>
 )
