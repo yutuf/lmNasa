@@ -11,7 +11,7 @@ import YearView from './components/YearView'
 import { download, reportHtml, siteRow, toCsv, type SiteRow } from './report'
 import HorizonView from './components/HorizonView'
 import Luna, { type LunaAction } from './components/Luna'
-import { AlertTriangle, ArrowLeftRight, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Printer, Sun } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, Link2, MapPin, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Printer, Sun } from 'lucide-react'
 import type { Overlay, Pin } from './components/Globe'
 import type { DriveMode, DriveStart } from './components/Drive'
 
@@ -119,7 +119,12 @@ export default function App() {
   const [results, setResults] = useState<PointResult[] | null>(null)
   const [ran, setRan] = useState<{ q: Params; ms: number; hoursChecked: number } | null>(null)
   const [progress, setProgress] = useState<number | null>(null)
-  const [sel, setSel] = useState(0)
+  const [sel, setSelRaw] = useState(0)
+  const [pinned, setPinned] = useState<PointResult | null>(null)
+  const initSite = useRef<number | null>(Number(new URLSearchParams(location.hash.slice(1)).get('site')) || null)
+  const setSel = (k: number) => { setPinned(null); setSelRaw(k) }
+  const [copied, setCopied] = useState(false)
+  const siteIndex = pinned?.index ?? null
   const [dsn, setDsn] = useState<boolean[] | null>(null)
   const ephemRef = useRef<ArrayBuffer | null>(null)
   const runner = useRef<EngineRunner | null>(null)
@@ -141,8 +146,9 @@ export default function App() {
   }, [])
   useEffect(() => {
     history.replaceState(null, '', `#lang=${lang}&start=${p.start}&window=${p.windowDays}&days=${p.days}&sun=${p.sun}` +
-      `&earth=${p.earth}&shadow=${p.shadow}&batt=${p.batt}&slope=${p.slope}&dsn=${p.dsn ? 1 : 0}`)
-  }, [lang, p])
+      `&earth=${p.earth}&shadow=${p.shadow}&batt=${p.batt}&slope=${p.slope}&dsn=${p.dsn ? 1 : 0}` +
+      (siteIndex !== null ? `&site=${siteIndex}` : ''))
+  }, [lang, p, siteIndex])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const constraints = (q: Params): Constraints | null => m && ({ ...m.constraints, duration_days: q.days,
     min_sun_frac: q.sun / 100, min_comm_frac: q.earth / 100, max_dark_hours: q.shadow, battery_wh: q.batt })
@@ -162,6 +168,11 @@ export default function App() {
     setRan({ q: { ...q, windowDays: nStarts }, ms: performance.now() - t0, hoursChecked: res.length * ((nStarts - 1) * 24 + q.days * 24) })
     setResults(res)
     setSel(0)
+    if (initSite.current !== null) {
+      const hit = res.find((r) => r.index === initSite.current)
+      if (hit) setPinned(hit)
+      initSite.current = null
+    }
     setProgress(null)
   }
   useEffect(() => { if (m && atlas) run(p) }, [m, atlas])  // eslint-disable-line react-hooks/exhaustive-deps
@@ -197,7 +208,8 @@ export default function App() {
     return { texture: tex, rMaxM: atlas.rMaxM, edgeLat: -84.5 }
   }, [results, atlas, ran])
 
-  const pick = top[sel]
+  const pick = pinned ?? top[sel]
+  const pickRank = pinned ? (top.findIndex((r) => r.index === pinned.index) + 1 || null) : sel + 1
   const eph = useMemo(() => (m && ephemRef.current ? parseEphem(ephemRef.current, m.n) : null), [m])
   const eclipses = useMemo(() => (eph ? listEclipses(eph) : []), [eph])
   const region = (r: PointResult) => m?.regions?.find((g) => g.rings.some((ring) => insideRing(atlas!.xKm[r.index], atlas!.yKm[r.index], ring)))?.name.replace(/_/g, ' ')
@@ -226,6 +238,15 @@ export default function App() {
     return top.map((r, k) => siteRow(atlas, eph, dsn, r, k + 1, ran.q, c, firstHour(ran.q), [region(r), describePlace(r.lat, ((r.lon % 360) + 360) % 360, feats, lang)?.text].filter(Boolean).join(' · ') || null))
   }, [top, atlas, ran, m, dsn, eph, feats, lang])  // eslint-disable-line react-hooks/exhaustive-deps
   const cmpRows = rows.filter((r) => cmp.includes(r.index))
+  // nearby alternatives: points within 8 km that pass on more landing dates than the pick
+  const nearby = useMemo(() => {
+    if (!pick || !results || !atlas) return []
+    const x0 = atlas.xKm[pick.index], y0 = atlas.yKm[pick.index]
+    return results.filter((r) => r.index !== pick.index && r.goCount > pick.goCount &&
+      Math.hypot(atlas.xKm[r.index] - x0, atlas.yKm[r.index] - y0) <= 8)
+      .map((r) => ({ r, d: Math.hypot(atlas.xKm[r.index] - x0, atlas.yKm[r.index] - y0) }))
+      .sort((a, b) => b.r.goCount - a.r.goCount || a.d - b.d).slice(0, 3)
+  }, [pick, results, atlas])
 
   if (!m || !atlas) return <div className="loading">LunaNav<small>{lang === 'tr' ? 'NASA verisi yükleniyor…' : 'loading NASA data…'}</small></div>
   const startDate = (s: number) => new Date(Date.parse(ran!.q.start + 'T00:00:00Z') + s * 86400e3)
@@ -259,11 +280,26 @@ export default function App() {
     run(next)
   }
 
+  const events = (() => {
+    if (!detail) return []
+    const out: { h: number; kind: 'sunset' | 'sunrise' | 'earthset' | 'earthrise' }[] = []
+    for (let j = 1; j < detail.len; j++) {
+      const k = detail.a + j
+      const s0 = detail.series.sunFraction[k - 1] >= 0.5, s1 = detail.series.sunFraction[k] >= 0.5
+      const e0 = detail.series.earthVisible[k - 1], e1 = detail.series.earthVisible[k]
+      if (s0 !== s1) out.push({ h: j, kind: s1 ? 'sunrise' : 'sunset' })
+      if (e0 !== e1) out.push({ h: j, kind: e1 ? 'earthrise' : 'earthset' })
+    }
+    return out
+  })()
+  const EV = { sunrise: { en: 'Sunrise', tr: 'Güneş doğuyor' }, sunset: { en: 'Sun goes behind terrain', tr: 'Güneş arazinin arkasına geçiyor' },
+    earthrise: { en: 'Earth link back', tr: 'Dünya bağlantısı geri' }, earthset: { en: 'Earth link lost', tr: 'Dünya bağlantısı kesiliyor' } }
+
   const enter = (mode: DriveMode) => {
     if (!pick || !detail || !ran) return
     setDrive({ mode, start: { x: atlas.xKm[pick.index] * 1000, y: atlas.yKm[pick.index] * 1000, hour: detail.fh + detail.a,
       missionH: detail.len, startMs: startDate(pick.bestStart).getTime(),
-      label: `#${sel + 1} · ${region(pick) ?? `${pick.lat.toFixed(2)}°, ${pick.lon.toFixed(2)}°E`} · ${fmtDate(startDate(pick.bestStart))}` } })
+      label: `${siteName(pick)} · ${fmtDate(startDate(pick.bestStart))}` } })
   }
 
   const loc = lang === 'tr' ? 'tr-TR' : 'en-US'
@@ -417,12 +453,17 @@ export default function App() {
               <section className="card" id="site">
                 <div className="card-head">
                   <div>
-                    <div className="eyebrow">{S.siteN[lang]} {sel + 1}{region(pick) ? ` · ${S.inRegion[lang]}` : ''}</div>
+                    <div className="eyebrow">{S.siteN[lang]}{pickRank ? ` ${pickRank}` : ''}{region(pick) ? ` · ${S.inRegion[lang]}` : ''}</div>
                     <h2>{siteName(pick)}</h2>
                     <p className="sub">{region(pick) && place(pick) ? `${place(pick)} · ` : ''}{pick.lat.toFixed(3)}°, {(((pick.lon % 360) + 360) % 360).toFixed(3)}°E · {S.bestDate[lang]} {fmtDate(startDate(pick.bestStart))} · {ran.q.days} {S.days[lang]} ·{' '}
                       {lang === 'tr' ? 'eğim' : 'slope'} {atlas.slope[pick.index].toFixed(1)}° · {lang === 'tr' ? 'yükseklik' : 'height'} {atlas.height[pick.index].toLocaleString(loc)} m</p>
                   </div>
                   <div className="actions">
+                    <button className="btn" onClick={() => {
+                      const u = new URL(location.href)
+                      u.hash = u.hash.replace(/&site=\d+/, '') + `&site=${pick.index}`
+                      navigator.clipboard?.writeText(u.toString()).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) })
+                    }}><Link2 size={14} /> {copied ? (lang === 'tr' ? 'Kopyalandı' : 'Copied') : (lang === 'tr' ? 'Bağlantı' : 'Copy link')}</button>
                     <button className="btn" onClick={() => enter('lander')}><PlaneLanding size={14} /> {S.standHere[lang]}</button>
                     <button className="btn" onClick={() => enter('rover')}><Car size={14} /> {S.driveHere[lang]}</button>
                   </div>
@@ -443,6 +484,16 @@ export default function App() {
                         need={detail.need === 0 ? (lang === 'tr' ? 'gece yok' : 'no night to bridge') : `${Math.round(detail.need).toLocaleString(loc)} Wh ${lang === 'tr' ? 'gerekli' : 'needed'}`}
                         frac={detail.need === 0 ? 0 : Math.min(1, detail.need / ran.q.batt)} invert />
                 </div>
+                {nearby.length > 0 && (
+                  <div className="nearby">
+                    <span className="nearby-label"><MapPin size={13} /> {lang === 'tr' ? 'Yakında daha iyisi var' : 'Better spots nearby'}</span>
+                    {nearby.map(({ r, d }) => (
+                      <button key={r.index} className="chip-btn" onClick={() => setPinned(r)}>
+                        {d.toFixed(1)} km · {siteName(r)} · <b>{r.goCount}/{ran.q.windowDays}</b> {lang === 'tr' ? 'tarih' : 'dates'}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </section>
 
               <section className="card">
@@ -454,6 +505,17 @@ export default function App() {
                     </span>
                   ))}
                 </div>
+                {events.length > 0 && (
+                  <>
+                    <h3 className="sec">{lang === 'tr' ? 'Görev olayları' : 'Mission events'}</h3>
+                    <ul className="events">
+                      {events.slice(0, 12).map((e, k) => (
+                        <li key={k}><span className={`ev ${e.kind}`} /><b>{lang === 'tr' ? 'Gün' : 'Day'} {Math.floor(e.h / 24) + 1}, {String(e.h % 24).padStart(2, '0')}:00</b>{EV[e.kind][lang]}</li>
+                      ))}
+                      {events.length > 12 && <li className="more">+{events.length - 12}</li>}
+                    </ul>
+                  </>
+                )}
                 <h3 className="sec">{T.dayByDay[lang]}</h3>
                 <DayStrip sun={Array.from({ length: detail.len }, (_, j) => detail.series.sunFraction[detail.a + j] >= 0.5)}
                           earth={Array.from({ length: detail.len }, (_, j) => detail.series.earthVisible[detail.a + j])}

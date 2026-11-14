@@ -327,3 +327,18 @@ button.mini.on { border-color: #67e8f9; color: #67e8f9; }
 .month-grid button.nogo { background: var(--surface-3); }
 .month-grid button:hover { outline: 1px solid var(--text); }
 .month-grid button.cur { outline: 1.5px solid var(--text); outline-offset: 1px; }
+
+/* nearby alternatives and mission events */
+.nearby { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+.nearby-label { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-2); margin-right: 4px; }
+.chip-btn { border: 1px solid var(--border-2); background: var(--surface); color: var(--text-2); border-radius: 999px; padding: 3px 10px;
+  font-size: 12px; cursor: pointer; }
+.chip-btn:hover { color: var(--text); border-color: #52525b; }
+.chip-btn b { color: #4ade80; font-weight: 600; }
+.events { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 16px; font-size: 13px; color: var(--text-2); }
+.events li { display: flex; align-items: center; gap: 8px; }
+.events b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; min-width: 92px; }
+.events .more { color: var(--text-3); }
+.ev { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ev.sunrise { background: var(--sun); } .ev.sunset { background: transparent; box-shadow: inset 0 0 0 1.5px var(--sun); }
+.ev.earthrise { background: var(--earth); } .ev.earthset { background: transparent; box-shadow: inset 0 0 0 1.5px var(--earth); }
