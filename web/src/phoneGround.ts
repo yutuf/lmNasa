@@ -25,15 +25,34 @@ export function standQuaternion(out: THREE.Quaternion, headingDeg: number, altDe
   return out.setFromRotationMatrix(m)
 }
 
+/** Stereographic bounds that stay two pixels inside the grid, where bicubic height is defined. */
+function sampleBox(dem: Dem) {
+  const inset = dem.mPerPx * 2
+  return {
+    minX: (0 - dem.sample0) * dem.mPerPx + inset,
+    maxX: ((dem.cols - 1) - dem.sample0) * dem.mPerPx - inset,
+    minY: (dem.line0 - (dem.rows - 1)) * dem.mPerPx + inset,
+    maxY: (dem.line0 - 0) * dem.mPerPx - inset,
+  }
+}
+
+function clampSample(dem: Dem, x: number, y: number): [number, number] {
+  const b = sampleBox(dem)
+  return [Math.min(b.maxX, Math.max(b.minX, x)), Math.min(b.maxY, Math.max(b.minY, y))]
+}
+
 /**
  * Ground around a site, metres, origin on the surface at that site.
- * Returns null when the site is outside the polar grid.
+ * A site a short way past the grid edge still gets the overlapping patch.
+ * Returns null when the patch does not reach the grid.
  */
 export function standGeometry(dem: Dem, lat: number, lon: number, half = 900, step = 30): THREE.BufferGeometry | null {
   const [xKm, yKm] = polarXY(lat, lon)
   const ox = xKm * 1000
   const oy = yKm * 1000
-  const h0 = heightSmooth(dem, ox, oy)
+  const [cx, cy] = clampSample(dem, ox, oy)
+  if (Math.hypot(cx - ox, cy - oy) > half) return null
+  const h0 = heightSmooth(dem, cx, cy)
   if (!Number.isFinite(h0)) return null
   const n = Math.round((2 * half) / step) + 1
   const pos = new Float32Array(n * n * 3)
@@ -45,6 +64,10 @@ export function standGeometry(dem: Dem, lat: number, lon: number, half = 900, st
       const dx = sx - ox
       const dy = sy - oy
       let z = heightSmooth(dem, sx, sy)
+      if (!Number.isFinite(z)) {
+        const [qx, qy] = clampSample(dem, sx, sy)
+        z = heightSmooth(dem, qx, qy)
+      }
       if (!Number.isFinite(z)) z = h0
       const y = z - h0 - (dx * dx + dy * dy) / (2 * R_M)
       const k = i * n + j
