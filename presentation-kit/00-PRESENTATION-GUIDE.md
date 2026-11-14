@@ -60,6 +60,8 @@ Extra if time allows: **Build your own lander** (Workshop): change panels, batte
 - **Compare two missions** head to head; **PDF report**; **offline mode** (works without wifi after one visit).
 - **Real 3D models:** Vikram, Starship HLS, Apollo LM, Apollo LRV (museum scan), Pragyan, Yutu-2.
 - **Tell me the mission** film: new scenes (the landing window, the ellipse check, the odds simulation), a mission verdict board.
+- **Plan a mission with me:** Luna asks for the goal first, then only the numbers that are still missing, and the GO or NO-GO comes from the search.
+- **Line drawings** on the goal cards, the "What next?" cards, and the judges page. They are transparent pictures, so the page background shows through.
 
 Talk tip: open https://lunanav-theta.vercel.app/#judges first: it has the one-screen summary and the QR code, and "Open the app" goes straight in.
 

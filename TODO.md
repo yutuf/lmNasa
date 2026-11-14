@@ -3,14 +3,13 @@
 Updated by the agents as work lands. `[x]` done and verified · `[~]` in progress (who) · `[ ]` not started.
 Rules: test with `npm test` + `npx tsc -b` in `web/`; show the owner locally before committing; never push `main` without asking.
 
-## In progress
-- [~] **Demo deck**: 7-slide English deck for the Space Apps limit, from the screenshots already in `presentation-kit/screenshots/` (demo agent). A recorded video is still not made.
-
 ## Not started
-- [ ] **Go live**: site is public at https://lunanav-theta.vercel.app (Vercel Authentication already off) but runs this morning's `main`. To do: merge `hackathon` → `main` (needs OK). **Owner:** set `GEMINI_API_KEY` in Vercel → Settings → Environment Variables (the live `/api/ask` answers 503 "GEMINI_API_KEY missing"), and `ELEVENLABS_API_KEY` for the new voice; then redeploy
-- [ ] **New demo video** recorded from the app (the 7-slide deck is the submission-safe stand-in)
+- [ ] **Owner, Vercel keys:** the live `/api/ask` still answers 503 `GEMINI_API_KEY missing`. Add `GEMINI_API_KEY` and `ELEVENLABS_API_KEY` in Vercel → Settings → Environment Variables (Production), then redeploy. There is no key in the repo.
+- [ ] **New demo video** recorded from the app. The 7-slide deck is the submission. A project video longer than 30 seconds is not eligible for Global Judging, so keep any recording local.
 
 ## Done (this session)
+- [x] **Demo deck**: `presentation-kit/LunaNav-demo.pptx`, 7 English slides, from `presentation-kit/screenshots/`
+- [x] **Go live**: the reviewed hackathon tree is published on `main` as one new commit on the previous live history. `main` was not force-pushed. The phone screen stays in the working tree and is not in this publish.
 - [x] Space UI: page background `#000000`; the 3D moon has no card frame and runs to the edges of the view
 - [x] Presentation kit: submitted-deck limit is 7 slides including the title; ellipse, relay, and real models are no longer "next"
 - [x] Illustrations: 17 handbook-line images in `web/public/art/` (goals, "What next?" cards, judges page), used as `.webp`
