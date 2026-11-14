@@ -1,6 +1,7 @@
 // Per-site metrics for the comparison table, the CSV export and the printable report.
 import { pointTrack, type Atlas, type Ephem, type PointResult } from './engine'
 import { evaluateWindow, requiredBatteryWh, type Constraints } from './model'
+import { chooseApproach } from './flight'
 
 export interface SiteRow {
   rank: number
@@ -19,6 +20,10 @@ export interface SiteRow {
   survives: boolean
   slopeDeg: number
   heightM: number
+  zoneSlopeDeg: number | null   // 95th-percentile slope in the landing zone (null: no zone check)
+  iceKm: number | null          // distance to the nearest ice cold trap (null: outside the ice data)
+  approachDeg: number           // descent heading at touchdown (0 north, 180 south)
+  sunOffDeg: number             // Sun's angle from the flight direction at touchdown (180 = straight behind)
   perStart: boolean[]          // GO on each landing date of the window
   sunDaily: number[]           // share of each mission day with >= half the Sun up (best landing date)
   earthDaily: number[]         // share of each mission day with a radio link
@@ -27,7 +32,7 @@ export interface SiteRow {
 export interface Mission { start: string; windowDays: number; days: number; dsn: boolean }
 
 export function siteRow(atlas: Atlas, eph: Ephem, dsn: ArrayLike<boolean>, r: PointResult, rank: number, q: Mission,
-  c: Constraints, firstHour: number, region: string | null): SiteRow {
+  c: Constraints, firstHour: number, region: string | null, extra: { zoneSlopeDeg: number | null; iceKm: number | null } = { zoneSlopeDeg: null, iceKm: null }): SiteRow {
   const hoursN = (q.windowDays - 1) * 24 + q.days * 24
   const tr = pointTrack(atlas, eph, dsn, r.index, firstHour, hoursN)
   const ev = q.dsn ? tr.earthVisible.map((v, k) => v && !!dsn[firstHour + k]) : tr.earthVisible
@@ -42,7 +47,9 @@ export function siteRow(atlas: Atlas, eph: Ephem, dsn: ArrayLike<boolean>, r: Po
     for (let k = 0; k < 24; k++) if (f(a + d * 24 + k)) n++
     return n / 24
   })
+  const ap = chooseApproach(tr.sunAz[a])
   return {
+    ...extra, approachDeg: ap.headingDeg, sunOffDeg: Math.round(ap.sunOffDeg),
     rank, index: r.index, lat: r.lat, lon: ((r.lon % 360) + 360) % 360, region, goDates: r.goCount, windowDays: q.windowDays,
     bestLanding: new Date(Date.parse(q.start + 'T00:00:00Z') + r.bestStart * 86400e3).toISOString().slice(0, 10),
     go: w.go, sunPct: Math.round(w.sunFrac * 100), earthPct: Math.round(w.commFrac * 100), longestDarkH: w.longestDarkH,
@@ -55,7 +62,8 @@ export function siteRow(atlas: Atlas, eph: Ephem, dsn: ArrayLike<boolean>, r: Po
 const COLS: [keyof SiteRow, string][] = [['rank', 'rank'], ['lat', 'lat_deg'], ['lon', 'lon_deg_east'], ['region', 'artemis_iii_region'],
   ['goDates', 'go_landing_dates'], ['windowDays', 'landing_dates_checked'], ['bestLanding', 'best_landing_utc'], ['go', 'verdict'],
   ['sunPct', 'sunlight_pct'], ['earthPct', 'earth_contact_pct'], ['longestDarkH', 'longest_dark_h'], ['batteryNeedWh', 'battery_needed_wh'],
-  ['survives', 'battery_survives'], ['slopeDeg', 'slope_deg'], ['heightM', 'height_m']]
+  ['survives', 'battery_survives'], ['slopeDeg', 'slope_deg'], ['heightM', 'height_m'], ['zoneSlopeDeg', 'landing_zone_p95_slope_deg'],
+  ['iceKm', 'nearest_ice_cold_trap_km'], ['approachDeg', 'descent_heading_deg'], ['sunOffDeg', 'sun_off_flight_direction_deg']]
 
 export function toCsv(rows: SiteRow[]): string {
   const cell = (k: keyof SiteRow, v: SiteRow[keyof SiteRow]) => {
@@ -84,7 +92,8 @@ export function reportHtml(rows: SiteRow[], q: Mission, c: Constraints, sources:
   const tr = lang === 'tr'
   const L = (en: string, t: string) => (tr ? t : en)
   const head = [L('#', '#'), L('Place', 'Yer'), L('GO dates', 'Uygun tarih'), L('Best landing', 'En iyi iniş'), L('Sunlight', 'Güneş'),
-    L('Earth contact', 'Dünya bağlantısı'), L('Longest dark', 'En uzun karanlık'), L('Battery needed', 'Gereken batarya'), L('Slope', 'Eğim')]
+    L('Earth contact', 'Dünya bağlantısı'), L('Longest dark', 'En uzun karanlık'), L('Battery needed', 'Gereken batarya'), L('Slope', 'Eğim'),
+    L('Landing zone (95%)', 'İniş alanı (%95)'), L('Nearest ice', 'En yakın buz'), L('Approach', 'Yaklaşma')]
   const strip = (v: number[], rgb: string) => `<div class="strip">${v.map((x) => `<i style="background:rgba(${rgb},${0.1 + 0.9 * x})"></i>`).join('')}</div>`
   const cal = (p: boolean[]) => `<div class="strip">${p.map((g) => `<i class="${g ? 'g' : 'r'}"></i>`).join('')}</div>`
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><title>LunaNav report</title>
@@ -109,7 +118,9 @@ ${L('longest dark', 'en uzun karanlık')} ≤ ${c.max_dark_hours} h · ${L('batt
 <table><tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr>
 ${rows.map((r) => `<tr><td>${r.rank}</td><td>${r.lat.toFixed(3)}°, ${r.lon.toFixed(2)}°E${r.region ? `<br><span class="muted">${esc(r.region)}</span>` : ''}</td>
 <td>${r.goDates} / ${r.windowDays}</td><td>${r.bestLanding} <span class="${r.go ? 'go' : 'nogo'}">${r.go ? 'GO' : 'NO-GO'}</span></td>
-<td>${r.sunPct}%</td><td>${r.earthPct}%</td><td>${r.longestDarkH} h</td><td>${r.batteryNeedWh.toLocaleString()} Wh${r.survives ? '' : ' ✕'}</td><td>${r.slopeDeg.toFixed(1)}°</td></tr>`).join('\n')}
+<td>${r.sunPct}%</td><td>${r.earthPct}%</td><td>${r.longestDarkH} h</td><td>${r.batteryNeedWh.toLocaleString()} Wh${r.survives ? '' : ' ✕'}</td><td>${r.slopeDeg.toFixed(1)}°</td>
+<td>${r.zoneSlopeDeg === null ? '–' : `${r.zoneSlopeDeg.toFixed(1)}°`}</td><td>${r.iceKm === null ? '–' : `${r.iceKm.toFixed(1)} km`}</td>
+<td>${r.approachDeg === 0 ? L('heading N', 'kuzeye') : L('heading S', 'güneye')}, ${L('Sun', 'Güneş')} ${r.sunOffDeg}° ${r.sunOffDeg >= 90 ? L('behind', 'arkada') : L('ahead', 'önde')}</td></tr>`).join('\n')}
 </table>
 <h2>${L('Day by day (best landing date)', 'Gün gün (en iyi iniş tarihi)')}</h2>
 <div class="cards">${rows.map((r) => `<div class="card"><b>#${r.rank}</b> ${r.region ? esc(r.region) : `${r.lat.toFixed(2)}°, ${r.lon.toFixed(1)}°E`}

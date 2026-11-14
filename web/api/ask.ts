@@ -26,11 +26,12 @@ Rules:
 - Answer in the user's language (lang "tr" = Turkish, "en" = English), 1 to 4 short sentences, plain words, no jargon
   unless asked. You may be warm and curious, like a planetarium guide.
 - If the user describes a mission or asks to change settings, return action {"type":"search","params":{...}} with any of:
-  start (YYYY-MM-DD, between 2026-11-01 and 2028-11-30), windowDays (5-90), days (1-30, time on the surface),
+  start (YYYY-MM-DD, between 2026-11-01 and 2045-12-01), windowDays (5-90), days (1-30, time on the surface),
   sun (0-100, minimum % of hours with sunlight), earth (0-100, minimum % of hours with Earth contact),
   shadow (0-240, longest tolerated darkness in hours), batt (500-20000 Wh), slope (2-20 degrees), dsn (true/false),
   zone (landing-zone radius in metres: 0 off, 100 precision landing, 250, 500, 1000 typical robotic lander),
-  zslope (2-30 degrees: 95% of the landing zone must be gentler than this).
+  zslope (2-30 degrees: 95% of the landing zone must be gentler than this),
+  ice (km: 0 off, 2, 5 or 10; a water-ice cold trap must lie within this distance).
   Only include parameters the user implied; say in the reply what you set.
 - If the user asks to look at a result, return {"type":"select","rank":N} (1-based).
 - Otherwise action is null.`
@@ -51,7 +52,7 @@ const SCHEMA = {
             start: { type: 'STRING' }, windowDays: { type: 'INTEGER' }, days: { type: 'INTEGER' },
             sun: { type: 'INTEGER' }, earth: { type: 'INTEGER' }, shadow: { type: 'INTEGER' },
             batt: { type: 'INTEGER' }, slope: { type: 'INTEGER' }, dsn: { type: 'BOOLEAN' },
-            zone: { type: 'INTEGER' }, zslope: { type: 'INTEGER' },
+            zone: { type: 'INTEGER' }, zslope: { type: 'INTEGER' }, ice: { type: 'INTEGER' },
           },
         },
       },
@@ -81,13 +82,17 @@ export function parseReply(data: unknown): AskReply {
   return { reply: out.reply, action: out.action ?? null }
 }
 
+// Google retires model names; if the configured one is gone (404), fall back to the always-current alias.
+const FALLBACK_MODEL = 'gemini-flash-latest'
+
 export async function ask(body: AskBody, key: string, model: string, fetchImpl: typeof fetch = fetch): Promise<AskReply> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`
-  const r = await fetchImpl(url, {
+  const call = (m: string) => fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
     body: JSON.stringify(buildRequest(body)),
   })
+  let r = await call(model)
+  if (r.status === 404 && model !== FALLBACK_MODEL) r = await call(FALLBACK_MODEL)
   if (!r.ok) throw new Error(`Gemini ${r.status}`)
   return parseReply(await r.json())
 }

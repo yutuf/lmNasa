@@ -1,5 +1,5 @@
 // Every landing date in the data range for one site: a month-by-month calendar of GO / NO-GO.
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { pointTrack, type Atlas, type Ephem } from '../engine'
 import { evaluateWindow, type Constraints } from '../model'
 import type { Lang } from '../i18n'
@@ -22,27 +22,49 @@ export default function YearView({ atlas, eph, dsn, index, c, days, needDsn, sta
   const go = useMemo(() => yearGo(atlas, eph, dsn, index, c, days, needDsn), [atlas, eph, dsn, index, c, days, needDsn])
   // the ephemeris starts at 00:00 UTC; day s = start + s days
   const day0 = Math.round(startUnix / 86400)
+  // one bar per year (share of GO landing dates), then that year's months
+  const years = useMemo(() => {
+    const y = new Map<number, { go: number; n: number }>()
+    go.forEach((g, s) => {
+      const yr = new Date((day0 + s) * 86400e3).getUTCFullYear()
+      const e = y.get(yr) ?? { go: 0, n: 0 }
+      e.n++; if (g) e.go++
+      y.set(yr, e)
+    })
+    return [...y.entries()].map(([year, e]) => ({ year, share: e.go / e.n, n: e.n }))
+  }, [go, day0])
+  const [year, setYear] = useState(() => Number(current.slice(0, 4)) || years[0]?.year)
   const months = useMemo(() => {
     const m = new Map<string, { label: string; cells: { s: number; d: number; dow: number }[] }>()
     go.forEach((_, s) => {
       const dt = new Date((day0 + s) * 86400e3)
+      if (dt.getUTCFullYear() !== year) return
       const key = dt.toISOString().slice(0, 7)
       if (!m.has(key)) m.set(key, { label: dt.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }), cells: [] })
       m.get(key)!.cells.push({ s, d: dt.getUTCDate(), dow: (dt.getUTCDay() + 6) % 7 })
     })
     return [...m.values()]
-  }, [go, day0, lang])
+  }, [go, day0, lang, year])
   const share = go.filter(Boolean).length / Math.max(1, go.length)
   const iso = (s: number) => new Date((day0 + s) * 86400e3).toISOString().slice(0, 10)
   return (
     <section className="card">
       <div className="card-head">
         <div>
-          <h2>{lang === 'tr' ? 'Tüm yıl: hangi iniş tarihleri çalışır' : 'All year: which landing dates work'}</h2>
+          <h2>{lang === 'tr' ? `Her iniş tarihi, ${years[0]?.year}–${years[years.length - 1]?.year}` : `Every landing date, ${years[0]?.year}–${years[years.length - 1]?.year}`}</h2>
           <p className="sub">{lang === 'tr'
-            ? `Bu nokta, ${days} günlük görev için tarihlerin %${Math.round(share * 100)}'inde uygun. Bir güne tıklayın: arama o tarihten başlar.`
-            : `This site is GO on ${Math.round(share * 100)}% of landing dates for a ${days}-day mission. Click a day to search from that date.`}</p>
+            ? `Bu nokta, ${days} günlük görev için ${go.length.toLocaleString('tr-TR')} tarihin %${Math.round(share * 100)}'inde uygun. Bir yıl seçin, sonra bir güne tıklayın: arama o tarihten başlar.`
+            : `This site is GO on ${Math.round(share * 100)}% of ${go.length.toLocaleString('en-US')} landing dates for a ${days}-day mission. Pick a year, then click a day to search from that date.`}</p>
         </div>
+      </div>
+      <div className="years" role="tablist" aria-label={lang === 'tr' ? 'Yıl' : 'Year'}>
+        {years.map((y) => (
+          <button key={y.year} role="tab" aria-selected={y.year === year} className={y.year === year ? 'on' : ''} onClick={() => setYear(y.year)}
+                  title={`${y.year}: ${Math.round(y.share * 100)}% GO`}>
+            <span className="yb"><i style={{ height: `${Math.max(3, y.share * 100)}%` }} /></span>
+            <span className="yl">{String(y.year).slice(2)}</span>
+          </button>
+        ))}
       </div>
       <div className="year">
         {months.map((mo) => (
