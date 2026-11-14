@@ -1,6 +1,6 @@
 // The Gemini call is tested against a fake fetch: request shape, key placement, reply parsing, actions.
 import { describe, expect, it } from 'vitest'
-import handler, { ask, buildRequest, type AskBody } from './ask'
+import handler, { ask, buildRequest, type AskBody } from './ask.js'
 
 const body: AskBody = { question: 'Find a 3-week mission in March 2027', lang: 'en', context: { results: [] } }
 
