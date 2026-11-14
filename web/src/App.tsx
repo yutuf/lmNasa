@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { dataUrl, FIRST_DATE, LAST_DATE, loadManifest, type Manifest, type Series } from './data'
 import { gcKm, insideRing, parseAtlas, parseGlobalAtlas, parseEphem, parseHazard, parseIceReach, passesIce, passesTerrain, pointTrack, searchPoint, sunlitMap, zoneSlopeAt, type Atlas, type Hazard, type IceReach, type PointResult } from './engine'
+import { resolvePin } from './pinSite'
 import { T, catalogueSources, fmtHoursShort, fmtIsoDate, fmtPct, fmtPercent, hours, localizeReportHtml, verdictLabel, why, type Lang } from './i18n'
 import { evaluateWindow, requiredBatteryWh, type Constraints } from './model'
 import { EngineRunner } from './runner'
@@ -50,7 +51,7 @@ import ProbabilityPanel from './components/ProbabilityPanel'
 import { launchDate, missionStory } from './story'
 import type { CardSite } from './components/SiteCard'
 import { regionColour } from './teams'
-import { ROVERS, landerById, type Lander } from './vehicles'
+import { ROVERS, compatibleRover, landerById, type Lander } from './vehicles'
 import { SCIENCE_KIND, SCIENCE_SITES, farSide, inPoleGrid, siteLabel, targetSites, type ScienceKind, type ScienceSite } from './scienceSites'
 import { paintOverlay } from './overlays'
 import ScopeTarget from './components/ScopeTarget'
@@ -238,6 +239,10 @@ export default function App() {
   const [pendingDrive, setPendingDrive] = useState<DriveMode | null>(null)
   const enterRef = useRef<(m: DriveMode) => void>(() => {})
   const [p, setP] = useState<Params>(init.p)
+  useEffect(() => {
+    const rover = compatibleRover(p.lander, p.rover)
+    if (rover !== p.rover) setP((current) => ({ ...current, rover: compatibleRover(current.lander, current.rover) }))
+  }, [p.lander, p.rover])
   const [m, setM] = useState<Manifest | null>(null)
   const [atlasPole, setAtlas] = useState<Atlas | null>(null)
   const [hazardData, setHazard] = useState<Hazard | null>(null)
@@ -328,6 +333,55 @@ export default function App() {
       initSite.current = null
     }
     setProgress(null)
+  }
+  // A typed point: snap to the grid that covers it, score that one cell, and open its site page.
+  // ensureMoon's atlas is used directly; setAtlasMoon has not re-rendered this closure yet.
+  async function openPin(lat: number, lon: number) {
+    if (!m || !atlasPole || !eph || !dsn) return
+    let moonAtlas = atlasMoon
+    if (lat >= -84.5 && moonAtlas === null) {
+      try {
+        moonAtlas = (await ensureMoon()).atlas
+      } catch {
+        return
+      }
+    }
+    if (lat >= -84.5 && !moonAtlas) return
+    const pin = resolvePin(atlasPole, moonAtlas ?? atlasPole, lat, lon, lang)
+    if (pin.index < 0) return
+    const grid: Atlas = pin.grid === 'pole' ? atlasPole : moonAtlas!
+    const qParams = ran?.q ?? p
+    const fh = firstHour(qParams)
+    const nStarts = Math.max(1, Math.min(qParams.windowDays, Math.floor((m.n - fh - qParams.days * 24) / 24) + 1))
+    if (fh < 0 || nStarts < 1) return
+    const c = constraints(qParams)
+    if (!c) return
+    const qSearch = { firstHour: fh, nStarts, strideH: 24, durationH: qParams.days * 24, maxSlope: pin.grid === 'moon' ? Math.max(qParams.slope, 12) : qParams.slope, needDsn: qParams.dsn, relay: qParams.relay, zone: pin.grid === 'moon' ? 0 : qParams.zone, zoneSlope: qParams.zslope, iceKm: pin.grid === 'moon' ? 0 : qParams.ice }
+    const result = searchPoint(grid, eph, dsn, pin.index, qSearch, c)
+    const mission = { ...qParams, windowDays: nStarts }
+    const zoneSlopeDeg = pin.grid === 'pole' ? zoneSlopeAt(hazard, qParams.zone, result.index) : null
+    const iceKm = pin.grid === 'pole' && ice && !Number.isNaN(ice.distKm[result.index]) ? ice.distKm[result.index] : null
+    const regionName = m.regions?.find((g) => g.rings.some((ring) => insideRing(grid.xKm[result.index], grid.yKm[result.index], ring)))?.name.replace(/_/g, ' ') ?? null
+    const lon360 = ((result.lon % 360) + 360) % 360
+    const described = describePlace(result.lat, lon360, feats, lang)
+    const row = siteRow(grid, eph, dsn, result, 1, mission, c, fh, [regionName, described?.text].filter(Boolean).join(' · ') || null, { zoneSlopeDeg, iceKm })
+    const tr = lang === 'tr'
+    const name = described?.text ?? regionName ?? `${result.lat.toFixed(2)}°, ${lon360.toFixed(1)}°E`
+    const placeName = described?.name ?? name
+    const sky = localSky(eph, grid.xKm[result.index] * 1000, grid.yKm[result.index] * 1000, fh + result.bestStart * 24 + 12)
+    const best = new Date(Date.parse(qParams.start + 'T00:00:00Z') + result.bestStart * 86400e3)
+    const nt = nearestTarget(result)
+    const baseNote = farSide(result.lat, result.lon) ? (qParams.relay ? (tr ? 'Uzak yüz: röle uydusuyla konuşur' : 'Far side: talks via the relay') : (tr ? 'Uzak yüz: Dünya hiç doğmaz' : 'Far side: Earth never rises'))
+      : nt ? `${nt.d.toFixed(0)} km ${tr ? '→' : 'to'} ${siteLabel(nt.s, lang)}` : undefined
+    const note = pin.note ? (baseNote ? `${baseNote} · ${pin.note}` : pin.note) : baseNote
+    const lim = qParams.zone > 0 && grid.kind === 'pole' ? qParams.zslope : landerById(qParams.lander).zslope
+    const prob = successProbability({ atlas: grid, eph, dsn, r: result, firstHour: fh, days: qParams.days, windowDays: mission.windowDays, needDsn: qParams.dsn, relay: qParams.relay,
+      c, zoneSlopeP95: row.zoneSlopeDeg ?? grid.slope[result.index] * 1.6,
+      slopeLimit: lim - (qParams.landing === 'rough' ? 3 : 0), zoneM: qParams.zone || 1000, history: withRecord, trials: 300 })
+    setProfile({ r: result, row, rank: 1, name, placeName, region: regionName, colour: regionColour(regionName), xKm: grid.xKm[result.index], yKm: grid.yKm[result.index],
+      sun: { az: sky.sun.az, alt: sky.sun.alt }, note, prob, targetKm: nt?.d,
+      ellipse: ellipseCheck(grid, eph, dsn, result.index, fh, result.bestStart, qParams.days, qParams.dsn, c, qParams.zone >= 1000 ? 2.1 : 0, qParams.relay),
+      bestDate: best.toLocaleDateString(tr ? 'tr-TR' : 'en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) })
   }
   // run every scenario over the current landing window and summarise each one
   async function simulate() {
@@ -577,7 +631,7 @@ export default function App() {
   const scenario = matchScenario(p)
   const dirty = !!ran && (Object.keys(p) as (keyof Params)[]).some((k) => p[k] !== ran.asked[k])
   // the mission comes from the scenario, the hardware (battery, landing precision, slope limit, longest stay) from the lander
-  const withLander = (q: Params, l: Lander): Params => ({ ...q, lander: l.id, batt: l.batt, zone: l.zone, zslope: l.zslope, days: Math.min(q.days, l.maxDays) })
+  const withLander = (q: Params, l: Lander): Params => ({ ...q, lander: l.id, rover: compatibleRover(l.id, q.rover), batt: l.batt, zone: l.zone, zslope: l.zslope, days: Math.min(q.days, l.maxDays) })
   const watchLanding = () => {
     if (atlas.kind === 'pole') { setPendingDrive('landing'); return }
     setMapMode('route'); setFlightView('pilot')
@@ -795,9 +849,10 @@ export default function App() {
               windowLabel={missionLabel}
               lander={p.lander} rover={p.rover}
               onLander={(l) => { const next = withLander(p, l); setP(next); run(next) }}
-              onRover={(id) => set('rover', id)}
+              onRover={(id) => set('rover', compatibleRover(p.lander, id))}
+              onDrive={(c) => { setPinned(c.r); setPendingDrive('rover') }}
               onScenario={(sc) => { const next = applyScenario(sc); setCustomName(null); setP(next); run(next) }}
-              onStart={(d) => set('start', d)} onRun={() => run(p)} onOpen={setProfile}
+              onStart={(d) => set('start', d)} onRun={() => run(p)} onOpen={setProfile} onCoordinate={openPin}
               onAdvanced={() => { setUi('advanced'); scrollTo({ top: 0 }) }} onStory={() => setFilm(true)}
               onDecide={() => setLab(true)} onWorkshop={() => setWorkshop(true)} onSources={() => setSources(true)} onMission={runClps} onOrbits={() => setOrbitPanel(true)} onHistory={() => setHistoryPanel(true)} onTour={() => setTour(true)} onLibration={() => setLibration(true)}
               pinned={pinnedMission} current={snapOf(missionLabel, cards[0])}

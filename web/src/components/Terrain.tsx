@@ -50,17 +50,24 @@ export default function Terrain({ spot, heights, sunAz, sunAlt, earthAz, earthAl
     return g
   }, [heights, n, s, half])
   const centre = ((heights[Math.floor(n / 2) * n + Math.floor(n / 2)] / 1000)) * EXAG
-  const toScene = (d: number[]) => new THREE.Vector3(d[0], d[2] * EXAG, -d[1]).normalize()
+  // Relief exaggeration changes geometry, never the ephemeris direction.
+  const toScene = (d: number[]) => new THREE.Vector3(d[0], d[2], -d[1]).normalize()
   const sun = toScene(patchDirection(patch.frame, spot.lon, sunAz, sunAlt))
   const earth = toScene(patchDirection(patch.frame, spot.lon, earthAz, earthAlt))
-  const lightPos = sun.clone().multiplyScalar(half * 3)
+  const lightPos = sun.clone().multiplyScalar(half * 3).add(new THREE.Vector3(0, centre, 0))
+  const lightTarget = useMemo(() => {
+    const target = new THREE.Object3D()
+    target.position.set(0, centre, 0)
+    return target
+  }, [centre])
   const ray = (d: THREE.Vector3) => [new THREE.Vector3(0, centre, 0), d.clone().multiplyScalar(half * 0.45).add(new THREE.Vector3(0, centre, 0))]
   const camDist = half * 1.6
   return (
-    <Canvas shadows camera={{ position: [-camDist * 0.7, camDist * 0.75, camDist], fov: 40, near: 0.1, far: 2000 }} dpr={[1, 2]}>
-      <color attach="background" args={['#04060c']} />
+    <Canvas shadows camera={{ position: [-camDist * 0.7, centre + camDist * 0.75, camDist], fov: 40, near: 0.1, far: 2000 }} dpr={[1, 1.5]} onCreated={({ gl }) => { gl.debug.checkShaderErrors = false }}>
+      <color attach="background" args={['#000']} />
       <ambientLight intensity={0.05} />
-      <directionalLight position={lightPos} intensity={3.4} color="#fff6e8" castShadow
+      <primitive object={lightTarget} />
+      <directionalLight position={lightPos} target={lightTarget} intensity={sunAlt > 0 ? 3.4 : 0} color="#fff6e8" castShadow
                         shadow-mapSize-width={4096} shadow-mapSize-height={4096} shadow-bias={-0.0004}
                         shadow-camera-left={-half * 1.5} shadow-camera-right={half * 1.5}
                         shadow-camera-top={half * 1.5} shadow-camera-bottom={-half * 1.5}

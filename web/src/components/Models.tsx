@@ -1,25 +1,11 @@
 // Real 3D models: NASA 3D Resources, plus CC-BY models from Sketchfab (public/models, see CREDITS.md), Draco-decoded locally so they work offline.
 // Each model is normalised: scaled to a target size, its longest horizontal axis turned to +x (forward),
 // centred on x/z and stood on y = 0.
-import { useMemo } from 'react'
+import { useEffect, useMemo, type RefObject } from 'react'
 import { useGLTF } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-
-// A renderer owns its WebGL textures. VehiclePhoto creates separate off-screen
-// renderers, so sharing one PMREM texture between them makes the NASA GLBs vanish.
-const envTextures = new WeakMap<THREE.WebGLRenderer, THREE.Texture>()
-function modelEnv(gl: THREE.WebGLRenderer) {
-  let texture = envTextures.get(gl)
-  if (!texture) {
-    const pm = new THREE.PMREMGenerator(gl)
-    texture = pm.fromScene(new RoomEnvironment(), 0.04).texture
-    pm.dispose()
-    envTextures.set(gl, texture)
-  }
-  return texture
-}
+import { cleanPragyan, rigWheels, rollWheels, type RoverMotion, type Wheel } from '../modelRig'
 
 const DRACO = `${import.meta.env.BASE_URL}draco/`
 const modelUrl = (f: string) => `${import.meta.env.BASE_URL}models/${f}`
@@ -34,6 +20,7 @@ export interface ModelProps {
   fit?: 'height' | 'length' | 'max'
   yaw?: number                     // extra turn about +y after normalising (rad)
   shadows?: boolean
+  motion?: RefObject<RoverMotion>
 }
 
 /** Physical materials (glass-like transmission, clearcoat, sheen) cost a second render of the whole scene every frame
@@ -59,9 +46,9 @@ function lighten(mat: THREE.Material): THREE.Material {
   return out
 }
 
-export function NasaModel({ file, size, fit = 'max', yaw = 0, shadows = true }: ModelProps) {
+export function NasaModel({ file, size, fit = 'max', yaw = 0, shadows = true, motion }: ModelProps) {
   const { scene } = useGLTF(modelUrl(file), DRACO)
-  const gl = useThree((s) => s.gl)
+  const wheels = useMemo<Wheel[]>(() => [], [])
   const obj = useMemo(() => {
     const root = scene.clone(true)
     const drop: THREE.Object3D[] = []
@@ -70,30 +57,54 @@ export function NasaModel({ file, size, fit = 'max', yaw = 0, shadows = true }: 
     root.traverse((o) => {
       const m = o as THREE.Mesh
       if (m.isMesh) {
+        if (file === 'pragyan.glb' || file === 'yutu.glb') m.geometry = cleanPragyan(m.geometry)
         m.castShadow = shadows
         m.receiveShadow = shadows
-        const mats = (Array.isArray(m.material) ? m.material : [m.material]).map((mat) => lighten(mat as THREE.Material))
+        // Per-instance materials prevent an offscreen vehicle photograph from changing a live scene's light.
+        const mats = (Array.isArray(m.material) ? m.material : [m.material]).map((mat) => lighten(mat as THREE.Material).clone())
         m.material = Array.isArray(m.material) ? mats : mats[0]
         for (const mat of mats) {
           const sm = mat as THREE.MeshStandardMaterial
-          if (sm.isMeshStandardMaterial) { sm.envMap = modelEnv(gl); sm.envMapIntensity = 0.35 }
+          if (sm.isMeshStandardMaterial) { sm.envMap = null; sm.envMapIntensity = 0; sm.roughness = Math.max(.65, sm.roughness); sm.metalness = Math.min(.65, sm.metalness) }
         }
       }
     })
-    const box = new THREE.Box3().setFromObject(root)
+    const rawBox = new THREE.Box3().setFromObject(root, true)
+    const rawSize = rawBox.getSize(new THREE.Vector3())
+    // Yutu's chassis was authored at 60 degrees; its wide solar wings cannot define forward.
+    const turn = file === 'yutu.glb' ? Math.PI / 3 : rawSize.z > rawSize.x ? Math.PI / 2 : 0
+    const oriented = new THREE.Group()
+    oriented.add(root)
+    oriented.rotation.y = turn + yaw
+    // Precise bounds matter for a fused, rotated mesh: a transformed local AABB can extend below the wheels.
+    const box = new THREE.Box3().setFromObject(oriented, true)
     const e = box.getSize(new THREE.Vector3())
-    const turn = e.z > e.x ? Math.PI / 2 : 0       // longest horizontal axis -> +x
-    const len = Math.max(e.x, e.z)
-    const ref = fit === 'height' ? e.y : fit === 'length' ? len : Math.max(len, e.y)
+    const ref = fit === 'height' ? e.y : fit === 'length' ? e.x : Math.max(e.x, e.y, e.z)
     const s = size / (ref || 1)
     const c = box.getCenter(new THREE.Vector3())
     const inner = new THREE.Group()
-    root.position.set(-c.x, -box.min.y, -c.z)
-    inner.add(root)
-    inner.rotation.y = turn + yaw
+    oriented.position.set(-c.x, -box.min.y, -c.z)
+    inner.add(oriented)
     inner.scale.setScalar(s)
-    return inner
-  }, [scene, size, fit, yaw, shadows, gl])
+    wheels.length = 0
+    const model = motion ? rigWheels(inner, file, wheels) : inner
+    model.name = `vehicle-${file}`
+    model.userData.model = file
+    return model
+  }, [scene, file, size, fit, yaw, shadows, motion, wheels])
+  useFrame(() => { if (motion) rollWheels(wheels, motion.current) })
+  useEffect(() => () => {
+    const materials = new Set<THREE.Material>()
+    obj.traverse(o => {
+      const mesh = o as THREE.Mesh
+      if (mesh.isMesh) {
+        if (motion) mesh.geometry.dispose()
+        const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+        list.forEach(m => materials.add(m))
+      }
+    })
+    materials.forEach(m => m.dispose())
+  }, [obj, motion])
   return <primitive object={obj} />
 }
 

@@ -8,6 +8,7 @@ import VehiclePhoto from './VehiclePhoto'
 import ProbabilityPanel from './ProbabilityPanel'
 import { landerById } from '../vehicles'
 import SiteExtras, { type SiteCtx } from './SiteExtras'
+import SiteTimeline from './SiteTimeline'
 
 export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand, onDrive, onWalk, onAnalysis, history, onHistory, ctx }: {
   lander: string; history: boolean; onHistory: (v: boolean) => void; ctx?: SiteCtx | null
@@ -79,6 +80,7 @@ export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand
           </div>
         )}
         {ctx && <SiteExtras ctx={ctx} s={s} lang={lang} />}
+        {ctx && <SiteTimeline ctx={ctx} s={s} lang={lang} />}
         {pr && <p className="ph-stats-note">{tr
           ? `Aralıklar: ${pr.trials} simüle görevin %90’ı. Fırlatma gecikmesi iniş tarihini de kaydırır; yani bu, tek bir tarihin hata payı değil, görevin olası sonuçlarıdır (ufuk hatası, iniş alanında dağılım, batarya yıpranması dahil).`
           : `Ranges: 90 % of ${pr.trials} simulated missions. A launch slip also moves the landing date, so this is the spread of outcomes for the mission, not an error bar on one date (it includes horizon error, scatter across the landing zone and battery wear).`}</p>}

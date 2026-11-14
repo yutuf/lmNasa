@@ -67,7 +67,7 @@ export function Ticker({ eph, dsn, startUnix, lang, items }: { eph: Ephem; dsn: 
   const row = all.map((t, k) => <span key={k}>{t}</span>)
   return (
     <div className="ticker" aria-label={tr ? 'Canlı veriler' : 'Live data'}>
-      <span className="ticker-tag">LIVE</span>
+      <span className="ticker-tag">{tr ? 'CANLI' : 'LIVE'}</span>
       <div className="ticker-track"><div className="ticker-run">{row}{row}</div></div>
     </div>
   )

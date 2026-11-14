@@ -3,6 +3,12 @@ html.mission-film-open, html.mission-film-open body {
   height: 100%;
   max-height: 100dvh;
 }
+.film .film-stage { isolation: isolate; }
+.film .fs-rover-live, .film .fs-premount { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.film .fs-premount { visibility: hidden; pointer-events: none; }
+.film .fs-rover-live .drive, .film .fs-premount .drive { position: absolute; inset: 0; z-index: 0; }
+.film .drive.cinematic .compass { display: none; }
+.film .fs-note { max-width: min(440px, 40vw); text-align: right; }
 .film .film-sub {
   box-sizing: border-box;
   width: min(900px, calc(100% - 32px));
@@ -17,4 +23,11 @@ html.mission-film-open, html.mission-film-open body {
 }
 @media (max-width: 600px) {
   .film .film-sub { font-size: 14px; line-height: 1.4; padding: 10px 12px; }
+  .film .fs-note { top: 74px; right: 16px; max-width: 200px; font-size: 9px; }
+  .film .fx-hud-coast, .film .fx-hud-descent { top: 100px; left: 16px; right: auto; width: 185px; }
+  .film .s-launch .fs-boxes.left { top: 110px; left: 16px; max-width: 205px; }
+  .film .film-ctl { gap: 6px; padding: 0 12px; }
+  .film .film-ctl > button { width: 30px; height: 30px; flex: none; }
+  .film .fs-title .fx-meta { gap: 6px 12px; }
+  .film .fs-title .fx-meta b { font-size: 11px; }
 }

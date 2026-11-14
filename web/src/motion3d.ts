@@ -44,15 +44,15 @@ export function launchPosition(t: number, out: THREE.Vector3) {
   let a: number, radius: number
   if (u < .18) {
     const s = u / .18
-    a = .45 * s * s
+    a = Math.PI / 3 * s * s
     radius = 1 + .09 * Math.sin(s * Math.PI / 2)
   } else if (u < .72) {
-    a = .45 + (u - .18) / .54 * Math.PI * 2
+    a = Math.PI / 3 + (u - .18) / .54 * Math.PI * 2
     radius = r
   } else {
-    const s = (u - .72) / .28, a0 = .45 + Math.PI * 2
+    const s = (u - .72) / .28, a0 = Math.PI / 3 + Math.PI * 2
     // Depart tangentially; no artificial turn back into Earth after injection.
-    const along = 4.2 * s + 1.8 * s * s
+    const along = (.28 * r * Math.PI * 2 / .54) * s + 1.8 * s * s
     return out.set(Math.cos(a0) * r - Math.sin(a0) * along, Math.sin(a0) * r + Math.cos(a0) * along, 0)
   }
   return out.set(Math.cos(a) * radius, Math.sin(a) * radius, 0)

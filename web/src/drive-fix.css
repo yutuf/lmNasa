@@ -3,12 +3,25 @@
 .drive .hud.bottom-right {
   left: auto;
   width: max-content;
-  max-width: calc(100vw - 32px);
+  max-width: min(300px, calc(100vw - 32px));
   box-sizing: border-box;
   background: rgba(22, 22, 28, .88);
   border: 1px solid rgba(255, 255, 255, .22);
   padding: 12px;
   border-radius: var(--radius);
+}
+.drive .hud.bottom-right .keys { max-width: 266px; white-space: normal; overflow-wrap: anywhere; }
+.drive .hud.bottom-right .big { width: 100%; box-sizing: border-box; justify-content: flex-start; }
+.drive .drive-scene-note { position: absolute; z-index: 4; left: 16px; bottom: 16px; max-width: calc(100% - 32px); margin: 0; padding: 7px 10px; background: rgba(0,0,0,.85); color: #ccc; font-size: 11px; pointer-events: none; }
+.drive .landing-enter { top: 62px; }
+.drive.cinematic .drive-scene-note { bottom: 20%; }
+@media (max-width: 600px) {
+  .drive .hud.bottom-right { right: 10px; bottom: 10px; max-width: 220px; padding: 9px; }
+  .drive .hud.bottom-right .keys { font-size: 9px; line-height: 1.35; }
+  .drive .hud.bottom-right .big { min-height: 34px; }
+  .drive .hud.bottom-left { bottom: 12px; left: 10px; max-width: 138px; font-size: 10px; }
+  .drive .hud.bottom-left .flows { flex-wrap: wrap; gap: 4px; }
+  .drive .drive-scene-note { font-size: 10px; }
 }
 .drive .drive-value { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
 .drive .hud.objective .ico { display: block; }

@@ -1,135 +1,30 @@
 {
   "results": [
     {
-      "mode": "desktop-orbiter",
-      "fps": 59.83545250558735,
+      "mode": "desktop-satellite-elfo",
+      "fps": 37.349667587937674,
       "frames": [
-        "before\\desktop-orbiter-01.png",
-        "before\\desktop-orbiter-02.png",
-        "before\\desktop-orbiter-03.png",
-        "before\\desktop-orbiter-04.png",
-        "before\\desktop-orbiter-05.png",
-        "before\\desktop-orbiter-06.png"
+        "before\\desktop-satellite-elfo-01.png",
+        "before\\desktop-satellite-elfo-02.png",
+        "before\\desktop-satellite-elfo-03.png",
+        "before\\desktop-satellite-elfo-04.png",
+        "before\\desktop-satellite-elfo-05.png",
+        "before\\desktop-satellite-elfo-06.png"
       ],
       "hud": []
     },
     {
-      "mode": "desktop-route-chase",
-      "fps": 161.77755586069154,
+      "mode": "phone-satellite-elfo",
+      "fps": 91.92596098746779,
       "frames": [
-        "before\\desktop-route-chase-01.png",
-        "before\\desktop-route-chase-02.png",
-        "before\\desktop-route-chase-03.png",
-        "before\\desktop-route-chase-04.png",
-        "before\\desktop-route-chase-05.png",
-        "before\\desktop-route-chase-06.png"
-      ],
-      "hud": [
-        "Descent · 112 m · T−0.3 min"
-      ]
-    },
-    {
-      "mode": "desktop-route-pilot",
-      "fps": 94.66243724549496,
-      "frames": [
-        "before\\desktop-route-pilot-01.png",
-        "before\\desktop-route-pilot-02.png",
-        "before\\desktop-route-pilot-03.png",
-        "before\\desktop-route-pilot-04.png",
-        "before\\desktop-route-pilot-05.png",
-        "before\\desktop-route-pilot-06.png"
-      ],
-      "hud": [
-        "Descent · 508 m · T−0.6 min"
-      ]
-    },
-    {
-      "mode": "desktop-route-site",
-      "fps": 62.897791089467944,
-      "frames": [
-        "before\\desktop-route-site-01.png",
-        "before\\desktop-route-site-02.png",
-        "before\\desktop-route-site-03.png",
-        "before\\desktop-route-site-04.png",
-        "before\\desktop-route-site-05.png",
-        "before\\desktop-route-site-06.png"
-      ],
-      "hud": [
-        "Touchdown"
-      ]
-    },
-    {
-      "mode": "desktop-autopilot",
-      "fps": 26.149976340492746,
-      "frames": [
-        "before\\desktop-autopilot-01.png",
-        "before\\desktop-autopilot-02.png",
-        "before\\desktop-autopilot-03.png",
-        "before\\desktop-autopilot-04.png",
-        "before\\desktop-autopilot-05.png",
-        "before\\desktop-autopilot-06.png"
-      ],
-      "hud": [
-        ""
-      ]
-    },
-    {
-      "mode": "phone-orbiter",
-      "fps": 140.21494626332972,
-      "frames": [
-        "before\\phone-orbiter-01.png",
-        "before\\phone-orbiter-02.png",
-        "before\\phone-orbiter-03.png",
-        "before\\phone-orbiter-04.png",
-        "before\\phone-orbiter-05.png",
-        "before\\phone-orbiter-06.png"
+        "before\\phone-satellite-elfo-01.png",
+        "before\\phone-satellite-elfo-02.png",
+        "before\\phone-satellite-elfo-03.png",
+        "before\\phone-satellite-elfo-04.png",
+        "before\\phone-satellite-elfo-05.png",
+        "before\\phone-satellite-elfo-06.png"
       ],
       "hud": []
-    },
-    {
-      "mode": "phone-route-chase",
-      "fps": 155.72274851900914,
-      "frames": [
-        "before\\phone-route-chase-01.png",
-        "before\\phone-route-chase-02.png",
-        "before\\phone-route-chase-03.png",
-        "before\\phone-route-chase-04.png",
-        "before\\phone-route-chase-05.png",
-        "before\\phone-route-chase-06.png"
-      ],
-      "hud": [
-        "Descent · 446 m · T−0.6 min"
-      ]
-    },
-    {
-      "mode": "phone-route-pilot",
-      "fps": 156.77267961444232,
-      "frames": [
-        "before\\phone-route-pilot-01.png",
-        "before\\phone-route-pilot-02.png",
-        "before\\phone-route-pilot-03.png",
-        "before\\phone-route-pilot-04.png",
-        "before\\phone-route-pilot-05.png",
-        "before\\phone-route-pilot-06.png"
-      ],
-      "hud": [
-        "Descent · 774 m · T−0.8 min"
-      ]
-    },
-    {
-      "mode": "phone-route-site",
-      "fps": 155.37569944044776,
-      "frames": [
-        "before\\phone-route-site-01.png",
-        "before\\phone-route-site-02.png",
-        "before\\phone-route-site-03.png",
-        "before\\phone-route-site-04.png",
-        "before\\phone-route-site-05.png",
-        "before\\phone-route-site-06.png"
-      ],
-      "hud": [
-        "Touchdown"
-      ]
     }
   ],
   "errors": []

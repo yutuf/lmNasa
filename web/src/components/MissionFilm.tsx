@@ -8,7 +8,7 @@
 import { preloadModel } from './Models'
 import { landerFile, roverFile } from './VehicleModels'
 import { ROVERS } from '../vehicles'
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { ChevronRight, Footprints, Pause, Play, RotateCcw, Volume2, VolumeX, X } from 'lucide-react'
 import type { Lang } from '../i18n'
 import type { Chapter } from '../story'
@@ -22,8 +22,10 @@ import { FilmHud, SimGauge, SunSpark, TitleBackdrop } from './FilmHud'
 import { EllipseScene, OddsScene, WindowScene } from './FilmScenes'
 import '../film.css'
 import '../film-fix.css'
+import { MissionPlaybackContext, type MissionPlayback } from '../missionPlayback'
 
 const LaunchScene = lazy(() => import('./LaunchScene'))
+const TransferScene = lazy(() => import('./TransferScene'))
 
 type SceneId = 'title' | 'launch' | 'window' | 'coast' | 'descent' | 'landing' | 'site' | 'ellipse' | 'rover' | 'odds' | 'verdict'
 const DUR: Record<SceneId, number> = {
@@ -45,6 +47,7 @@ function useClock(paused: boolean) {
   const [t, setT] = useState(0)
   const origin = useRef(performance.now())
   const pausedAt = useRef<number | null>(null)
+  const seekRevision = useRef(0)
   useEffect(() => {
     if (paused) { pausedAt.current = performance.now(); return }
     if (pausedAt.current !== null) { origin.current += performance.now() - pausedAt.current; pausedAt.current = null }
@@ -55,8 +58,9 @@ function useClock(paused: boolean) {
     id = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(id)
   }, [paused])
-  const seek = (s: number) => { origin.current = performance.now() - s * 1000; if (pausedAt.current !== null) pausedAt.current = performance.now(); setT(s) }
-  return [t, seek] as const
+  const seek = useCallback((s: number) => { origin.current = performance.now() - s * 1000; if (pausedAt.current !== null) pausedAt.current = performance.now(); seekRevision.current++; setT(s) }, [])
+  const readTime = useCallback(() => ((pausedAt.current ?? performance.now()) - origin.current) / 1000, [])
+  return [t, seek, readTime, seekRevision.current] as const
 }
 
 function useReducedMotion() {
@@ -95,7 +99,8 @@ function wipeOf(local: number, dur: number, last: boolean, paused: boolean): { c
   return { cover: inC, mode: 'in' }
 }
 
-export default function MissionFilm({ lang, card, chapters, lander, roverName, missionName, launch, landing, globe, rover, touchdown, onClose, onWalk }: {
+export default function MissionFilm({ lang, card, chapters, lander, roverName, missionName, launch, landing, globe, rover, touchdown, onClose, onWalk, technical = true }: {
+  technical?: boolean
   touchdown: ((mode: 'landing' | 'rover') => ReactNode) | null
   lang: Lang; card: CardSite; chapters: Chapter[]; lander: Lander; roverName: string; missionName: string
   launch: Date; landing: Date
@@ -108,16 +113,18 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
     document.documentElement.classList.add('mission-film-open')
     return () => document.documentElement.classList.remove('mission-film-open')
   }, [])
-  const ellipseOn = !!card.ellipse && card.ellipse.points > 1
-  const oddsOn = !!card.prob && card.prob.trials > 0
-  const scenes = useMemo(() => (['title', 'launch', 'window', 'coast', 'descent', ...(touchdown ? ['landing' as const] : []), 'site', ...(ellipseOn ? ['ellipse' as const] : []), ...(rover ? ['rover' as const] : []), ...(oddsOn ? ['odds' as const] : []), 'verdict'] as SceneId[]), [rover, touchdown, ellipseOn, oddsOn])
+  const ellipseOn = technical && !!card.ellipse && card.ellipse.points > 1
+  const oddsOn = technical && !!card.prob && card.prob.trials > 0
+  // The default film tells the flight story; detailed diagnostics remain on
+  // the site page. Technical mode retains those inserts for engineering use.
+  const scenes = useMemo(() => (['title', 'launch', ...(technical ? ['window' as const] : []), 'coast', 'descent', ...(touchdown ? ['landing' as const] : []), 'site', ...(ellipseOn ? ['ellipse' as const] : []), ...(rover ? ['rover' as const] : []), ...(oddsOn ? ['odds' as const] : []), 'verdict'] as SceneId[]), [rover, touchdown, ellipseOn, oddsOn, technical])
   const starts = useMemo(() => scenes.reduce<number[]>((a, _s, k) => [...a, k ? a[k - 1] + DUR[scenes[k - 1]] : 0], []), [scenes])
   const total = starts[starts.length - 1] + DUR[scenes[scenes.length - 1]]
   const [paused, setPaused] = useState(false)
   const [voice, setVoice] = useState(false)
   const speech = useSpeechVoice(lang)
   const reduce = useReducedMotion()
-  const [time, setTime] = useClock(paused)
+  const [time, setTime, readTime, seekRevision] = useClock(paused)
   // decode the mission's lander and rover now, not on the first frame of the scenes that show them
   useEffect(() => {
     preloadModel(landerFile(lander.id))
@@ -129,6 +136,14 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
   const local = time - starts[k]
   const t = Math.min(1, Math.max(0, local / DUR[scene]))
   const ended = time >= total
+  const playback = useRef<MissionPlayback>({ scene, start: starts[k], duration: DUR[scene], paused, time: readTime })
+  playback.current.scene = scene
+  playback.current.start = starts[k]
+  playback.current.duration = DUR[scene]
+  playback.current.paused = paused || ended
+  playback.current.time = readTime
+  // Notify consumers at a cut or pause, sharing the mutable clock at full frame rate.
+  const playbackContext = useMemo(() => ({ current: playback.current }), [scene, paused, seekRevision]) // eslint-disable-line react-hooks/exhaustive-deps
   const wipe = wipeOf(local, DUR[scene], k === scenes.length - 1, paused || reduce)
   const img = useSiteImage(card)
   const ch = (tone: Chapter['tone']) => chapters.find((c) => c.tone === tone)?.text ?? ''
@@ -148,8 +163,8 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
         : `${fmtNum(win.go, 0, lang)} of ${fmtNum(win.total, 0, lang)} days work. Green is GO, dim is NO-GO. The ring is the chosen landing.`)
       : (tr ? `${fmtNum(win.go, 0, lang)} / ${fmtNum(win.total, 0, lang)} gün uygun. Gün gün liste yok; yalnızca seçilen tarih işaretli.`
         : `${fmtNum(win.go, 0, lang)} of ${fmtNum(win.total, 0, lang)} days work. The day-by-day list is not on this card; only the chosen date is marked.`),
-    coast: tr ? 'Yaklaşık 4,5 gün ve 384.000 km. Ay bizi bir kutup yörüngesine yakalar; seçilen nokta tam altımızdan geçer.'
-      : 'About 4.5 days and 384,000 km. The Moon captures us into a polar orbit whose track runs right over the chosen site.',
+    coast: tr ? 'Yaklaşık 4,5 gün, 6 saniyede. Ay ileri yönde hareket eder; rota Ay’ın varıştaki konumuna yönelir. Yörüngeye girmek için fren ateşlemesi gerekir.'
+      : 'About 4.5 days in 6 seconds. The Moon moves prograde; the route aims for its arrival position. A braking burn is needed to enter lunar orbit.',
     descent: tr ? 'Kutup yörüngesinden fren ateşlemesi başlar: saatte 6.000 km’den sıfıra, yaklaşık 12 dakikada.'
       : 'From the polar orbit the braking burn begins: from 6,000 km/h to zero in about 12 minutes.',
     landing: ch('land'),
@@ -158,8 +173,8 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
       ? (tr ? `Şema. Aynı iniş tarihi, ${kmTxt} km içindeki her ızgara noktası. Konumlar harita değil.`
         : `Schematic. Same landing date, every grid point within ${kmTxt} km. Positions are not the map.`)
       : '',
-    rover: tr ? `${roverName} rampadan iner ve güneşli bir rota planlar.${r.iceKm !== null ? ` Buz ${r.iceKm.toFixed(1)} km ötede.` : ''}`
-      : `${roverName} rolls off the ramp and plans a sunlit route.${r.iceKm !== null ? ` The ice is ${r.iceKm.toFixed(1)} km away.` : ''}`,
+    rover: tr ? `${roverName} için arazi ve güneş ışığına göre rota planlanır. Sürüş 30× hızlandırılmıştır.${r.iceKm !== null ? ` Buz ${r.iceKm.toFixed(1)} km ötede.` : ''}`
+      : `A route for ${roverName} is planned from terrain and sunlight. Driving is shown at 30× speed.${r.iceKm !== null ? ` The ice is ${r.iceKm.toFixed(1)} km away.` : ''}`,
     odds: card.prob
       ? (tr ? `${fmtNum(card.prob.trials, 0, lang)} simüle görev. Noktalar bildirilen paylara göre beş sonuca iner.`
         : `${fmtNum(card.prob.trials, 0, lang)} simulated missions. The dots fall into five outcomes, in the reported shares.`)
@@ -184,7 +199,7 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
 
   const launchBoxes = [
     { at: 0.02, k: 'T+0', v: tr ? 'KALKIŞ · Kennedy LC-39B · 28,6°K' : 'LIFTOFF · Kennedy LC-39B · 28.6°N' },
-    { at: 0.13, k: 'T+8 min', v: tr ? 'YÖRÜNGE · 185 km · 7,8 km/sn' : 'ORBIT · 185 km · 7.8 km/s' },
+    { at: 0.18, k: 'T+8 min', v: tr ? 'YÖRÜNGE · 185 km · 7,8 km/sn' : 'ORBIT · 185 km · 7.8 km/s' },
     { at: 0.7, k: 'T+1 h 30', v: tr ? 'AY’A TRANSFER ATEŞLEMESİ · +3,1 km/sn' : 'TRANS-LUNAR INJECTION · +3.1 km/s' },
     { at: 0.82, k: fmt(launch), v: tr ? 'AY’A DOĞRU · 10,9 km/sn' : 'BOUND FOR THE MOON · 10.9 km/s' },
   ]
@@ -201,7 +216,6 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
 
   // The 3D scenes are built once per scene, not on every clock tick: the film re-renders 60 times a second for its
   // text and counters, and rebuilding a react-three-fiber tree that often makes the 3D stutter.
-  const coastEl = useMemo(() => (scene === 'coast' ? globe('overview', 0) : null), [scene])      // eslint-disable-line react-hooks/exhaustive-deps
   const descentEl = useMemo(() => (scene === 'descent' ? globe('pilot', 0.5) : null), [scene])   // eslint-disable-line react-hooks/exhaustive-deps
   // one drive view for touchdown, site and rover: built once, hidden behind the 2D site scene, then switched to the
   // rover, so the rover scene needs no new 3D world (that rebuild froze the picture for seconds).
@@ -215,7 +229,7 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
   const roverEl = useMemo(() => (roverLive ? rover!() : null), [roverLive])          // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="film" role="dialog" aria-label={tr ? 'Görev filmi' : 'Mission film'}>
+    <MissionPlaybackContext.Provider value={playbackContext}><div className="film" role="dialog" aria-label={tr ? 'Görev filmi' : 'Mission film'}>
       <div className={`film-stage s-${scene}`}>
         {scene === 'title' && (
           /* Flex row, not a centered absolute. translateX(-50%) here once collapsed the title. */
@@ -238,18 +252,19 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
         )}
         {scene === 'launch' && (
           <>
-            <Suspense fallback={null}><LaunchScene t={t} /></Suspense>
+            <Suspense fallback={null}><LaunchScene t={t} launch={launch} /></Suspense>
             <div className="fs-boxes left">
               {launchBoxes.filter((b) => t >= b.at).map((b) => <div key={b.k} className="fs-box"><b>{b.k}</b><span>{b.v}</span></div>)}
             </div>
-            <span className="fs-note">{tr ? 'Gerçek olay sırası ve süreleri; çizim ölçeksiz.' : 'Real event sequence and timings; not to scale.'}</span>
+            <span className="fs-note">{tr ? 'Nominal profil · zaman sıkıştırılmış · ölçeksiz. Işık: fırlatma tarihi (yaklaşık).' : 'Nominal profile · time compressed · not to scale. Lighting: launch date (approximate).'}</span>
           </>
         )}
         {scene === 'window' && <WindowScene plan={win} landing={landing} t={t} lang={lang} reduce={reduce} />}
         {scene === 'coast' && (
           <>
-            {coastEl}
+            <Suspense fallback={null}><TransferScene launch={launch} /></Suspense>
             {hud('coast')}
+            <span className="fs-note">{tr ? 'Şema · 4,5 gün / 6 sn · boyutlar ve uzaklıklar ölçeksiz' : 'Schematic · 4.5 days / 6 s · sizes and distances not to scale'}</span>
           </>
         )}
         {scene === 'descent' && (
@@ -346,8 +361,8 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
       <div className="film-scene"><b>{String(k + 1).padStart(2, '0')}</b> {NAMES[scene][lang]}</div>
       {scene !== 'verdict' && <p className="film-sub" key={`sub-${scene}`}>{subtitle[scene]}</p>}
       <div className="film-ctl">
-        <button onClick={() => setPaused(!paused)} aria-label={paused ? 'Play' : 'Pause'}>{paused ? <Play size={16} /> : <Pause size={16} />}</button>
-        <button onClick={() => setTime(starts[Math.min(scenes.length - 1, k + 1)])} aria-label="Next"><ChevronRight size={16} /></button>
+        <button onClick={() => setPaused(!paused)} aria-label={paused ? (tr ? 'Oynat' : 'Play') : (tr ? 'Duraklat' : 'Pause')}>{paused ? <Play size={16} /> : <Pause size={16} />}</button>
+        <button onClick={() => setTime(starts[Math.min(scenes.length - 1, k + 1)])} aria-label={tr ? 'Sonraki' : 'Next'}><ChevronRight size={16} /></button>
         <div className="film-progress">
           {scenes.map((s, i) => (
             <button key={s} className={i < k ? 'done' : i === k ? 'on' : ''} onClick={() => setTime(starts[i])} title={NAMES[s][lang]}>
@@ -356,8 +371,8 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
           ))}
         </div>
         <button onClick={() => { if (voice) speechSynthesis.cancel(); setVoice(!voice) }} aria-label={voice ? 'Mute' : 'Narrate'}>{voice ? <Volume2 size={16} /> : <VolumeX size={16} />}</button>
-        <button onClick={onClose} aria-label="Close"><X size={16} /></button>
+        <button onClick={onClose} aria-label={tr ? 'Kapat' : 'Close'}><X size={16} /></button>
       </div>
-    </div>
+    </div></MissionPlaybackContext.Provider>
   )
 }

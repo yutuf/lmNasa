@@ -24,6 +24,22 @@ with sync_playwright() as p:
         }}}); out[file]=pts;
       } return out;
     }''')
+    for name in ['rover','pragyan','yutu','lrv']:
+        pg.evaluate("""async name => {
+          const T=await import('/node_modules/three/build/three.module.js');
+          const {GLTFLoader}=await import('/node_modules/three/examples/jsm/loaders/GLTFLoader.js');
+          const {DRACOLoader}=await import('/node_modules/three/examples/jsm/loaders/DRACOLoader.js');
+          const {scene:root}=await new GLTFLoader().setDRACOLoader(new DRACOLoader().setDecoderPath('/draco/')).loadAsync('/models/'+name+'.glb');
+          const drop=[];root.traverse(o=>{if(/^(floor|ground|plane|backdrop)/i.test(o.name))drop.push(o)});drop.forEach(o=>o.removeFromParent());
+          const box=new T.Box3().setFromObject(root),e=box.getSize(new T.Vector3()),c=box.getCenter(new T.Vector3());
+          root.position.set(-c.x,-box.min.y,-c.z);const g=new T.Group();g.add(root);if(e.z>e.x)g.rotation.y=Math.PI/2;g.scale.setScalar(2/Math.max(e.x,e.z));
+          const scene=new T.Scene();scene.background=new T.Color('#181818');scene.add(g);scene.add(new T.HemisphereLight(0xffffff,0x777777,3));
+          const light=new T.DirectionalLight(0xffffff,3);light.position.set(2,4,6);scene.add(light);
+          const camera=new T.PerspectiveCamera(40,1.4,.01,100);camera.position.set(2.4,1.5,3.3);camera.lookAt(0,.6,0);
+          const renderer=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setSize(700,500);
+          document.body.replaceChildren(renderer.domElement);document.body.style.margin='0';renderer.render(scene,camera);window.qaRenderer=renderer;
+        }""",name)
+        pg.locator('canvas').screenshot(path='qa/codex3d/model-'+name+'.png')
     b.close()
 Path('qa/codex3d/wheel-points.json').write_text(json.dumps(data),encoding='utf-8')
 im=Image.new('RGB',(1000,1100),'#111111'); d=ImageDraw.Draw(im)

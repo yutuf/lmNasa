@@ -1,0 +1,46 @@
+[
+  {
+    "id": "en-390x844-moon-results",
+    "shot": "143-en-390x844-moon-results.png",
+    "facts": {
+      "heads": [
+        "TOP LANDING SITES · AWAY FROM THE POLES Solar lander · 14 days · 1 Sept 2027 + 30 days MOST GOOD DAYS BEST ODDS",
+        "POLAR REGIONS Ranked apart: near the equator the Sun is up half the time, at the poles it skims the horizon"
+      ],
+      "cardCount": 14,
+      "cards": [
+        "16.5 km NW of Simpelius B Open terrain 01 GO 4/30 9 Sept 2027 40%",
+        "on Le Gentil A Open terrain 02 GO 3/30 12 Sept 2027 49%",
+        "20.1 km S of Pingre rim Open terrain 03 GO 3/30 15 Sept 2027 40%"
+      ],
+      "points": "41,276",
+      "overflow": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "clientWidth": 390
+      }
+    }
+  },
+  {
+    "id": "tr-390x844-moon-results",
+    "shot": "144-tr-390x844-moon-results.png",
+    "facts": {
+      "heads": [
+        "EN IYI INIŞ YERLERI · KUTUPLAR DIŞINDA Güneş enerjili iniş aracı · 14 gün · 1 Eyl 2027 + 30 gün EN ÇOK UYGUN GÜN EN YÜKSEK BAŞARI",
+        "KUTUP BÖLGELERI Ayrı sıralanır: ekvatorda Güneş zamanın yarısı görünür, kutuplarda ufku sıyırır"
+      ],
+      "cardCount": 14,
+      "cards": [
+        "Simpelius B 16,5 km KB Açık arazi 01 UYGUN 4/30 9 Eyl 2027 %40",
+        "Le Gentil A üzerinde Açık arazi 02 UYGUN 3/30 12 Eyl 2027 %49",
+        "Pingre kenarının 20,1 km G Açık arazi 03 UYGUN 3/30 15 Eyl 2027 %40"
+      ],
+      "points": "41.276",
+      "overflow": {
+        "scrollWidth": 390,
+        "innerWidth": 390,
+        "clientWidth": 390
+      }
+    }
+  }
+]

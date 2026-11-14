@@ -1,7 +1,9 @@
 // The landers and rovers in 3D: only real models (NASA 3D Resources, and CC-BY models from Sketchfab; see
 // public/models/CREDITS.md), at real size in metres. Forward is +x, up is +y.
-import { Suspense } from 'react'
+import { Suspense, type RefObject } from 'react'
 import { NasaModel, type ModelFile } from './Models'
+import { landerById } from '../vehicles'
+import type { RoverMotion } from '../modelRig'
 
 /** The model file behind each vehicle (for preloading). */
 export const landerFile = (id: string): ModelFile => (({ hls: 'starship.glb', vikram: 'vikram.glb' } as Record<string, ModelFile>)[id] ?? 'lander.glb')
@@ -12,15 +14,15 @@ export function LanderBody({ id }: { id: string }) {
   if (id === 'hls') return <Suspense fallback={null}><NasaModel file="starship.glb" size={50} fit="height" /></Suspense>
   if (id === 'vikram') return <Suspense fallback={null}><NasaModel file="vikram.glb" size={2} fit="height" /></Suspense>
   // NASA 3D Resources: Apollo Lunar Module (about 7 m tall)
-  return <Suspense fallback={null}><NasaModel file="lander.glb" size={7} fit="height" /></Suspense>
+  return <Suspense fallback={null}><NasaModel file="lander.glb" size={landerById(id).heightM} fit="height" /></Suspense>
 }
 
-export function RoverBody({ id }: { id: string }) {
-  if (id === 'lrv') return <Suspense fallback={null}><NasaModel file="lrv.glb" size={3.1} fit="length" /></Suspense>
-  if (id === 'yutu') return <Suspense fallback={null}><NasaModel file="yutu.glb" size={1.5} fit="length" /></Suspense>
-  if (id === 'pragyan') return <Suspense fallback={null}><NasaModel file="pragyan.glb" size={0.92} fit="length" /></Suspense>
-  // NASA 3D Resources: Mars 2020 Perseverance (3 m long), standing in for VIPER
-  return <Suspense fallback={null}><NasaModel file="rover.glb" size={3} fit="length" /></Suspense>
+export function RoverBody({ id, motion }: { id: string; motion?: RefObject<RoverMotion> }) {
+  if (id === 'lrv') return <Suspense fallback={null}><NasaModel file="lrv.glb" size={3.1} fit="length" motion={motion} /></Suspense>
+  if (id === 'yutu') return <Suspense fallback={null}><NasaModel file="yutu.glb" size={1.5} fit="length" motion={motion} /></Suspense>
+  if (id === 'pragyan') return <Suspense fallback={null}><NasaModel file="pragyan.glb" size={0.92} fit="length" motion={motion} /></Suspense>
+  // Perseverance is explicitly a VIPER proxy, fitted to VIPER's approximate 1.5 m height.
+  return <Suspense fallback={null}><NasaModel file="rover.glb" size={1.5} fit="height" motion={motion} /></Suspense>
 }
 
 /** Height of the lander's hatch / top deck (m), for the lander-view camera. */

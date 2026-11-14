@@ -1,0 +1,44 @@
+/* Release blockers from qa/grok2/PHONE_QA.md. Keep controls inside
+   fixed overlays: document-level overflow checks cannot catch those. */
+@media (max-width: 760px) {
+  html .app .nav { gap: 6px; padding-inline: 8px; }
+  html .app .nav-ws { width: 32px; min-width: 32px; padding: 0; justify-content: center; font-size: 0; gap: 0; }
+  html .app .nav-ws svg { width: 16px; min-width: 16px; }
+  html .app .nav .ui-switch { flex-shrink: 0; }
+  html .app .nav-r { gap: 4px; }
+  html .app .nav-story { flex-shrink: 0; }
+  html .profile .profile-body, html .profile .profile-body > * { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  html .profile .ph-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  html .profile .ph-actions .btn { min-width: 0; width: 100%; height: auto; min-height: 44px; padding: 8px; white-space: normal; }
+  html .profile .ph-cal { min-width: 0; }
+  html .profile .ph-cal i { min-width: 0; }
+  html .profile .sx, html .profile .sx-box { min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box; }
+  html .profile .sx-box { grid-template-columns: minmax(0, 1fr); }
+  html .profile .sx-box > * { min-width: 0; }
+  html .profile .sx-h { flex-wrap: wrap; min-width: 0; }
+  html .profile .sx-h span { min-width: 0; flex-basis: 100%; }
+  html .profile .sx-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html .profile .sx-grid > * { min-width: 0; }
+  html .profile .sx-cal-grid { min-width: 0; max-width: 100%; }
+  html .profile .sx-canvas { min-width: 0; overflow-x: auto; }
+  html .profile .sx-months { max-width: none; }
+  html .app .ticker-track { min-width: 0; }
+  html .app .legend { height: auto; flex-wrap: wrap; }
+  html .app .legend-note { white-space: normal; }
+  html .app .luna-fab { right: 8px; bottom: 8px; height: 32px; padding-inline: 10px; font-size: 11px; }
+  html .app .simple-shell { padding-bottom: 52px; }
+  html .app .table-wrap { max-width: 100%; overflow-x: auto; }
+  html .drive .stick { left: 16px; bottom: 18px; transform: none; z-index: 6; touch-action: none; }
+  html .drive .hud.bottom-left { left: 12px; bottom: 160px; width: calc(100% - 24px); box-sizing: border-box; max-height: 32vh; overflow-y: auto; }
+  html .drive .hud.bottom-right { right: 12px; bottom: 14px; max-width: calc(100% - 160px); padding: 8px; }
+  html .drive .hud.bottom-right .keys { display: none; }
+  html .drive .hud.bottom-right .big { min-height: 36px; padding: 6px 8px; white-space: normal; }
+  html .drive .hud.top-left { max-width: calc(100% - 24px); }
+  html .drive .hud.top-left .hud-sub { white-space: normal; }
+}
+@media (max-width: 380px) {
+  html .app .nav { gap: 4px; padding-inline: 6px; }
+  html .app .nav .ui-switch button { padding-inline: 6px; font-size: 10px; }
+  html .app .nav-ws { width: 28px; min-width: 28px; }
+  html .app .nav-story { width: 28px; }
+}

@@ -93,3 +93,17 @@ export const HIDDEN_ROVERS: Rover[] = []
 
 export const landerById = (id: string | undefined) => LANDERS.find((l) => l.id === id) ?? LANDERS[0]
 export const roverById = (id: string | undefined) => ROVERS.find((r) => r.id === id) ?? ROVERS[0]
+
+// Explicit pairing policy, not a payload-mass estimate: dry lander mass does
+// not describe its cargo bay, ramp, interfaces, or deployment capability.
+// HLS combinations are conceptual planning scenarios, not certified hardware.
+export function roverFitsLander(lander: string, rover: string) {
+  if (lander === 'vikram') return rover === 'pragyan'
+  if (lander === 'apollo') return rover === 'lrv'
+  if (lander === 'hls') return ROVERS.some((r) => r.id === rover)
+  return false
+}
+
+export function compatibleRover(lander: string, rover: string) {
+  return roverFitsLander(lander, rover) ? rover : lander === 'apollo' ? 'lrv' : lander === 'hls' ? 'viper' : 'pragyan'
+}
