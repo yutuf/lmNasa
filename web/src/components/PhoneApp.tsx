@@ -1,15 +1,15 @@
-// The phone app. Hold it up: the accelerometer tilts the view and the compass turns it,
+// The phone is a touch controller. Drag the picture or hold the pad to aim the view
 // from a point standing on the Moon. Pair it with the desktop and the same look drives the big screen,
-// and the phone can run the search.
+// and the phone can run the search. Motion sensors are not used: they flip when the hand rolls.
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
-import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react'
 import qrcode from 'qrcode-generator'
 import * as THREE from 'three'
 import { dataUrl } from '../data'
 import type { Lang } from '../i18n'
 import { directionMoonFixed, toThree } from '../geometry'
-import { blendGravity, eyePosition, followAngle, gravityInScreen, headingFromOrientation, poseFromGravity, SOUTH_POLE, writeLook, type Gravity, type Stand } from '../phoneLook'
+import { dragLook, eyePosition, nudgeLook, SOUTH_POLE, writeLook, type Stand } from '../phoneLook'
 import { openGuest, openHost, parsePhoneHash, phoneUrl, roomCode, standFrom, type LinkStatus } from '../phoneLink'
 import '../phone.css'
 
@@ -164,61 +164,59 @@ function Stage({ stand, tilt }: { stand: Stand; tilt: RefObject<Tilt> }) {
   )
 }
 
-async function askMotion(): Promise<boolean> {
-  const orientation = DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }
-  const motion = DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> }
-  try {
-    if (orientation.requestPermission && await orientation.requestPermission() !== 'granted') return false
-    if (motion.requestPermission && await motion.requestPermission() !== 'granted') return false
-    return true
-  } catch {
-    return false
+function applyStick(tilt: RefObject<Tilt>, dx: number, dy: number) {
+  const cur = tilt.current
+  if (!cur) return
+  const next = dragLook(cur, dx, dy)
+  cur.heading = next.heading
+  cur.alt = next.alt
+  cur.roll = 0
+}
+
+function useDragLook(tilt: RefObject<Tilt>, active: boolean) {
+  const on = useRef(active)
+  on.current = active
+  const last = useRef<{ x: number; y: number } | null>(null)
+  const onPointerDown = (e: ReactPointerEvent) => {
+    if (!on.current) return
+    if ((e.target as HTMLElement).closest('button, a, .phone-dock, .phone-top, .phone-pad')) return
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    last.current = { x: e.clientX, y: e.clientY }
   }
+  const onPointerMove = (e: ReactPointerEvent) => {
+    if (!on.current || !last.current) return
+    applyStick(tilt, e.clientX - last.current.x, e.clientY - last.current.y)
+    last.current = { x: e.clientX, y: e.clientY }
+  }
+  const end = () => { last.current = null }
+  return { onPointerDown, onPointerMove, onPointerUp: end, onPointerCancel: end }
 }
 
-function screenAngle(): number {
-  const angle = screen.orientation?.angle
-  return typeof angle === 'number' ? angle : 0
-}
-
-function useLocalTilt(on: boolean, tilt: RefObject<Tilt>) {
-  useEffect(() => {
-    if (!on || !tilt.current) return
-    let gravity: Gravity = { x: 0, y: 9.8, z: 0 }
-    let compass = false
-    let sawAbsolute = false
-    const onOri = (e: DeviceOrientationEvent) => {
-      if (!tilt.current) return
-      const ios = (e as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading
-      const h = headingFromOrientation(e.alpha, ios)
-      if (h == null) return
-      compass = true
-      // Cap the step. A compass glitch of 180° is what turns the ground onto the ceiling.
-      tilt.current.heading = followAngle(tilt.current.heading, h, 12)
+function Pad({ tilt }: { tilt: RefObject<Tilt> }) {
+  const hold = (dir: 'left' | 'right' | 'up' | 'down') => (e: ReactPointerEvent) => {
+    e.stopPropagation()
+    const step = () => {
+      const cur = tilt.current
+      if (!cur) return
+      const next = nudgeLook(cur, dir)
+      cur.heading = next.heading
+      cur.alt = next.alt
+      cur.roll = 0
     }
-    const onMotion = (e: DeviceMotionEvent) => {
-      const a = e.accelerationIncludingGravity
-      if (!a || a.x == null || a.y == null || a.z == null || !tilt.current) return
-      const sample = gravityInScreen({ x: a.x, y: a.y, z: a.z }, screenAngle())
-      gravity = blendGravity(gravity, sample, 0.42)
-      const pose = poseFromGravity(gravity)
-      tilt.current.alt = pose.alt
-      if (pose.rollOk) tilt.current.roll = pose.roll
-      if (!compass && e.rotationRate?.alpha) {
-        tilt.current.heading = followAngle(tilt.current.heading, tilt.current.heading + e.rotationRate.alpha * 0.016, 8)
-      }
-    }
-    const onAbs = (e: DeviceOrientationEvent) => { sawAbsolute = true; onOri(e) }
-    const onRel = (e: DeviceOrientationEvent) => { if (!sawAbsolute) onOri(e) }
-    addEventListener('deviceorientationabsolute', onAbs)
-    addEventListener('deviceorientation', onRel)
-    addEventListener('devicemotion', onMotion)
-    return () => {
-      removeEventListener('deviceorientationabsolute', onAbs)
-      removeEventListener('deviceorientation', onRel)
-      removeEventListener('devicemotion', onMotion)
-    }
-  }, [on, tilt])
+    step()
+    const id = window.setInterval(step, 90)
+    const up = () => { clearInterval(id); removeEventListener('pointerup', up); removeEventListener('pointercancel', up) }
+    addEventListener('pointerup', up)
+    addEventListener('pointercancel', up)
+  }
+  return (
+    <div className="phone-pad">
+      <button className="n" onPointerDown={hold('up')} aria-label="Look up">▲</button>
+      <button className="w" onPointerDown={hold('left')} aria-label="Turn left">◀</button>
+      <button className="e" onPointerDown={hold('right')} aria-label="Turn right">▶</button>
+      <button className="s" onPointerDown={hold('down')} aria-label="Look down">▼</button>
+    </div>
+  )
 }
 
 function QR({ text }: { text: string }) {
@@ -233,8 +231,7 @@ function QR({ text }: { text: string }) {
 
 const copy = {
   en: {
-    hold: 'Tilt it. Down is the ground ahead, up is Earth and the Sun.',
-    enable: 'Enable motion',
+    hold: 'Drag the picture, or use the pad. The big screen follows.',
     pair: 'Pair this phone',
     waiting: 'Open the code on the phone',
     live: 'Phone paired',
@@ -246,8 +243,7 @@ const copy = {
     failHost: 'Pairing failed',
   },
   tr: {
-    hold: 'Eğ. Aşağıda önündeki yer, yukarıda Dünya ve Güneş.',
-    enable: 'Hareketi aç',
+    hold: 'Görüntüyü sürükle ya da yastığı kullan. Büyük ekran onu izler.',
     pair: 'Bu telefonu eşle',
     waiting: 'Kodu telefonda aç',
     live: 'Telefon eşlendi',
@@ -277,12 +273,11 @@ export function PhoneGuest() {
   const parsed = parsePhoneHash(location.hash)
   const [lang, setLang] = useState<Lang>(parsed.lang)
   const t = copy[lang]
-  const [motion, setMotion] = useState(false)
   const [status, setStatus] = useState<LinkStatus>(parsed.code ? 'connecting' : 'waiting')
   const [stand, setStand] = useState<Stand>({ ...SOUTH_POLE, name: lang === 'tr' ? 'Güney kutbu' : SOUTH_POLE.name })
   const tilt = useRef<Tilt>({ heading: 0, alt: -22, roll: 0 })
   const send = useRef<((msg: { t: 'ori'; heading: number; alt: number; roll: number } | { t: 'cmd'; name: 'find' | 'best' }) => void) | null>(null)
-  useLocalTilt(motion, tilt)
+  const drag = useDragLook(tilt, true)
 
   useEffect(() => {
     const code = parsed.code
@@ -303,7 +298,7 @@ export function PhoneGuest() {
   }, [parsed.code, tilt])
 
   return (
-    <div className="phone-app">
+    <div className="phone-app" {...drag}>
       <Stage stand={stand} tilt={tilt} />
       <div className="phone-hud">
         <div className="phone-top">
@@ -315,15 +310,15 @@ export function PhoneGuest() {
         </div>
         <div className="phone-cross" />
         <Readout tilt={tilt} />
+        <Pad tilt={tilt} />
         <div className="phone-dock">
           <div className={`phone-status ${status === 'live' ? 'live' : ''} ${status === 'error' ? 'bad' : ''}`}>
             {status === 'live' ? t.live : status === 'error' ? t.fail : parsed.code ? t.waiting : t.solo}
           </div>
           <p className="phone-status">{t.hold}</p>
           <div className="phone-actions">
-            {!motion && <button className="primary" onClick={async () => setMotion(await askMotion())}>{t.enable}</button>}
             <button onClick={() => send.current?.({ t: 'cmd', name: 'find' })}>{t.find}</button>
-            <button onClick={() => send.current?.({ t: 'cmd', name: 'best' })}>{t.best}</button>
+            <button className="primary" onClick={() => send.current?.({ t: 'cmd', name: 'best' })}>{t.best}</button>
           </div>
         </div>
       </div>
@@ -351,6 +346,8 @@ export function PhoneHost({ lang, site, onClose, onFind, onBest }: {
   onBestRef.current = onBest
   siteRef.current = site
   const url = phoneUrl(location.origin, location.pathname, code, lang)
+  const localAim = status !== 'live'
+  const drag = useDragLook(tilt, localAim)
 
   useEffect(() => {
     let stop = () => {}
@@ -377,7 +374,7 @@ export function PhoneHost({ lang, site, onClose, onFind, onBest }: {
   }, [site.name, site.lat, site.lon])
 
   return (
-    <div className="phone-app">
+    <div className="phone-app" {...drag}>
       <Stage stand={site} tilt={tilt} />
       <div className="phone-hud">
         <div className="phone-top">

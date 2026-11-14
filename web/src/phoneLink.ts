@@ -1,4 +1,4 @@
-// Pair a phone with the desktop. The phone sends accelerometer look direction; the desktop
+// Pair a phone with the desktop. The phone is a touch controller: drag and the pad send the look; the desktop
 // can ask the phone to stand at the current site. Signaling goes through PeerJS's public broker.
 import type { DataConnection, Peer } from 'peerjs'
 import type { Stand } from './phoneLook'
