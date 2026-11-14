@@ -467,7 +467,7 @@ export default function App() {
                   <thead>
                     <tr>
                       <th className="c-cmp" title={S.compare[lang]}><ArrowLeftRight size={13} /></th>
-                      <th>#</th><th>{S.colSite[lang]}</th><th>{S.colGo[lang]}</th><th>{S.bestDate[lang]}</th>
+                      <th>#</th><th>{S.colSite[lang]}</th><th>{S.colGo[lang]}</th><th>{lang === 'tr' ? 'En iyi iniş' : 'Best landing'}</th>
                       <th className="num">{T.sunlight[lang]}</th><th className="num">{S.colEarth[lang]}</th><th className="num">{S.colSlope[lang]}</th>
                     </tr>
                   </thead>

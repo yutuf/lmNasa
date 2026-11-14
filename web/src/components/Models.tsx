@@ -3,7 +3,16 @@
 // centred on x/z and stood on y = 0.
 import { useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+
+// a small procedural environment for the models' metals (no HDR download; the terrain does not use it)
+let envTex: THREE.Texture | null = null
+function modelEnv(gl: THREE.WebGLRenderer) {
+  if (!envTex) { const pm = new THREE.PMREMGenerator(gl); envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose() }
+  return envTex
+}
 
 const DRACO = `${import.meta.env.BASE_URL}draco/`
 const modelUrl = (f: string) => `${import.meta.env.BASE_URL}models/${f}`
@@ -18,6 +27,7 @@ export interface ModelProps {
 
 export function NasaModel({ file, size, fit = 'max', yaw = 0, shadows = true }: ModelProps) {
   const { scene } = useGLTF(modelUrl(file), DRACO)
+  const gl = useThree((s) => s.gl)
   const obj = useMemo(() => {
     const root = scene.clone(true)
     root.traverse((o) => {
@@ -26,7 +36,10 @@ export function NasaModel({ file, size, fit = 'max', yaw = 0, shadows = true }: 
         m.castShadow = shadows
         m.receiveShadow = shadows
         const mats = Array.isArray(m.material) ? m.material : [m.material]
-        for (const mat of mats) if ((mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) (mat as THREE.MeshStandardMaterial).envMapIntensity = 0.4
+        for (const mat of mats) {
+          const sm = mat as THREE.MeshStandardMaterial
+          if (sm.isMeshStandardMaterial) { sm.envMap = modelEnv(gl); sm.envMapIntensity = 0.35 }
+        }
       }
     })
     const box = new THREE.Box3().setFromObject(root)
@@ -42,7 +55,7 @@ export function NasaModel({ file, size, fit = 'max', yaw = 0, shadows = true }: 
     inner.rotation.y = turn + yaw
     inner.scale.setScalar(s)
     return inner
-  }, [scene, size, fit, yaw, shadows])
+  }, [scene, size, fit, yaw, shadows, gl])
   return <primitive object={obj} />
 }
 

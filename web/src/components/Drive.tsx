@@ -15,6 +15,7 @@ import { dataUrl } from '../data'
 import { planRoute, type Route } from '../route'
 import { eclipseAt } from '../eclipse'
 import { NasaModel } from './Models'
+import { BatteryMedium, Car, Crosshair, Earth, LogOut, Navigation, PlaneLanding, Radio, Snowflake, Sun, Thermometer, Usb, Zap } from 'lucide-react'
 import { connectSerial, disconnectSerial, sendSky, serialConnected, serialSupported, skyLine } from '../serial'
 
 export type DriveMode = 'lander' | 'rover'
@@ -282,32 +283,32 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
       <LookDrag sim={sim} />
 
       <div className="hud top-left">
-        <div className="hud-title">{s.mode === 'lander' ? '🛬 ' + t('lander') : '🚙 ' + t('rover')}</div>
+        <div className="hud-title">{s.mode === 'lander' ? t('lander') : t('rover')}</div>
         <div className="hud-sub">{start.label}</div>
         <div className="hud-sub">{lat.toFixed(3)}°, {(((lon % 360) + 360) % 360).toFixed(2)}°E · {src ? `${t('terrain10')} · ${src.name}` : t('terrain200')}</div>
       </div>
 
       {s.mode === 'rover' && (
         <div className="hud objective">
-          {!tgt && <div>🧭 {t('noTarget')}</div>}
+          {!tgt && <div>{t('noTarget')}</div>}
           {tgt && s.phase === 'go' && (
             <>
-              <div><b>🎯 {t('target')}</b> · {tDist < 1000 ? `${Math.round(tDist)} m` : `${(tDist / 1000).toFixed(2)} km`} · {Math.round(tAz ?? 0)}°</div>
+              <div className="ico"><Crosshair size={13} /><b>{t('target')}</b> · {tDist < 1000 ? `${Math.round(tDist)} m` : `${(tDist / 1000).toFixed(2)} km`} · {Math.round(tAz ?? 0)}°</div>
               <div className="hud-sub">{t('inPsr')} · {t('iceIdx')} {tgt.ice.toFixed(2)}</div>
-              {tDist < 25 && <div className="drill">{s.drilled > 0 ? `⛏ ${t('drilling')} ${Math.round((s.drilled / 2) * 100)}%` : `⛏ ${t('drillHint')}`}</div>}
+              {tDist < 25 && <div className="drill">{s.drilled > 0 ? `${t('drilling')} ${Math.round((s.drilled / 2) * 100)}%` : t('drillHint')}</div>}
             </>
           )}
-          {s.phase === 'return' && <div className="drill">🧪 {t('bringBack')}</div>}
-          {s.phase === 'done' && <div className="done">✅ {t('complete')} · {(s.driven / 1000).toFixed(2)} km · {hrs(Math.round(s.doneHour - s.startHour))}</div>}
-          {here && here.psr > 0.5 && <div className="hud-sub psr">🌑 {t('psrHere')}</div>}
+          {s.phase === 'return' && <div className="drill">{t('bringBack')}</div>}
+          {s.phase === 'done' && <div className="done">{t('complete')} · {(s.driven / 1000).toFixed(2)} km · {hrs(Math.round(s.doneHour - s.startHour))}</div>}
+          {here && here.psr > 0.5 && <div className="hud-sub psr">{t('psrHere')}</div>}
           {therm && (
-            <div className="hud-sub">🌡 {lang === 'tr' ? 'Yüzey ort.' : 'Surface avg'} {degC(therm.avgK)} · {lang === 'tr' ? 'en sıcak' : 'max'} {degC(therm.maxK)} ·{' '}
+            <div className="hud-sub ico"><Thermometer size={12} /> {lang === 'tr' ? 'Yüzey ort.' : 'Surface avg'} {degC(therm.avgK)} · {lang === 'tr' ? 'en sıcak' : 'max'} {degC(therm.maxK)} ·{' '}
               {therm.iceM === null ? (lang === 'tr' ? 'kalıcı buz yok' : 'no stable ice') : `${lang === 'tr' ? 'buz kararlı' : 'ice stable below'} ${Math.round(therm.iceM * 100)} cm`}</div>
           )}
           {s.phase !== 'done' && (
             <div className="route-row">
               <button className="mini" disabled={planning === 'busy'} onClick={plan}>
-                🧭 {planning === 'busy' ? t('planning') : `${t('plan')}${s.phase === 'return' || !tgt ? ` (${t('toLander')})` : ''}`}
+                <Navigation size={12} /> {planning === 'busy' ? t('planning') : `${t('plan')}${s.phase === 'return' || !tgt ? ` (${t('toLander')})` : ''}`}
               </button>
               {s.route && <button className={`mini ${s.autopilot ? 'on' : ''}`} onClick={() => { s.autopilot = !s.autopilot; s.playing = true }}>{s.autopilot ? '⏸' : '▶'} {t('auto')}</button>}
               {s.route && <button className="mini" onClick={() => { s.route = null; s.autopilot = false; s.routeVer++ }}>{t('clearRoute')}</button>}
@@ -315,7 +316,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
           )}
           {planning === 'none' && !s.route && <div className="hud-sub bad">{t('noRoute')}</div>}
           {s.route && (
-            <div className="hud-sub">🧭 {t('route')} {(s.route.lengthM / 1000).toFixed(2)} km · {hrs(Math.round(s.route.lengthM / ROVER.maxSpeed / 3600))} {t('driving')} ·{' '}
+            <div className="hud-sub">{t('route')} {(s.route.lengthM / 1000).toFixed(2)} km · {hrs(Math.round(s.route.lengthM / ROVER.maxSpeed / 3600))} {t('driving')} ·{' '}
               {(s.route.darkM / 1000).toFixed(2)} km {t('inShadow')} · {t('steepest')} {s.route.maxSlopeDeg.toFixed(0)}°</div>
           )}
         </div>
@@ -338,36 +339,36 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
 
       <div className="hud bottom-left">
         <div className={`gauge ${pct < 0.2 ? 'low' : ''}`}>
-          <span>🔋 {t('battery')}</span><b>{Math.round(pct * 100)}%</b>
+          <span className="ico"><BatteryMedium size={13} /> {t('battery')}</span><b>{Math.round(pct * 100)}%</b>
           <i style={{ width: `${pct * 100}%` }} />
         </div>
         <div className="flows">
-          <span className="in">☀ {t('solar')} +{Math.round(s.solarW)} W</span>
-          <span className="out">⚙ {t('use')} −{Math.round(s.useW)} W</span>
+          <span className="in ico"><Zap size={12} /> {t('solar')} +{Math.round(s.solarW)} W</span>
+          <span className="out">{t('use')} −{Math.round(s.useW)} W</span>
         </div>
         <div className={`status ${(c?.sunFrac ?? 0) >= 0.5 ? 'ok' : 'bad'}`}>
-          ☀ {t('sun')}: {c ? `${Math.round(c.sunFrac * 100)}% · ${c.sun.alt.toFixed(1)}°` : '—'}
+          <Sun size={12} /> {t('sun')}: {c ? `${Math.round(c.sunFrac * 100)}% · ${c.sun.alt.toFixed(1)}°` : '—'}
           {next && <em> · {next.sunUp ? t('sets') : t('rises')} {hrs(next.sunH)}</em>}
-          {s.ecl > 0 && <b className="ecl"> · 🌘 {lang === 'tr' ? 'tutulma' : 'eclipse'} {Math.round(s.ecl * 100)}%</b>}
+          {s.ecl > 0 && <b className="ecl"> · {lang === 'tr' ? 'tutulma' : 'eclipse'} {Math.round(s.ecl * 100)}%</b>}
         </div>
         <div className={`status ${c?.earthUp ? 'ok' : 'bad'}`}>
-          🌍 {t('earth')}: {c ? (c.earthUp ? t('up') : t('down')) + ` · ${c.earth.alt.toFixed(1)}°` : '—'}
+          <Earth size={12} /> {t('earth')}: {c ? (c.earthUp ? t('up') : t('down')) + ` · ${c.earth.alt.toFixed(1)}°` : '—'}
           {next && <em> · {next.earthUp ? t('sets') : t('rises')} {hrs(next.earthH)}</em>}
         </div>
-        <div className={`status ${link ? 'ok' : 'bad'}`}>📡 {t('link')}: {link ? t('dsnOk') : c?.earthUp ? t('noDsn') : '—'}</div>
+        <div className={`status ${link ? 'ok' : 'bad'}`}><Radio size={12} /> {t('link')}: {link ? t('dsnOk') : c?.earthUp ? t('noDsn') : '—'}</div>
         {s.mode === 'rover' && <div className="hud-sub">{t('driven')} {(s.driven / 1000).toFixed(2)} km · {(s.speed * 100).toFixed(0)} cm/s</div>}
       </div>
 
       <div className="hud bottom-right">
         {s.mode === 'lander'
-          ? <button className="big" onClick={() => { s.mode = 'rover'; s.warp = 60; s.playing = true; s.pitch = -0.12; s.yaw = 0 }}>🚙 {t('deploy')}</button>
-          : <button className="big ghost" onClick={() => { s.mode = 'lander'; s.x = start.x + PARK[0]; s.y = start.y + PARK[1]; s.yaw = 0; s.pitch = 0.02; s.profileAt = { x: NaN, y: NaN } }}>🛬 {t('back')}</button>}
+          ? <button className="big" onClick={() => { s.mode = 'rover'; s.warp = 60; s.playing = true; s.pitch = -0.12; s.yaw = 0 }}><Car size={14} /> {t('deploy')}</button>
+          : <button className="big ghost" onClick={() => { s.mode = 'lander'; s.x = start.x + PARK[0]; s.y = start.y + PARK[1]; s.yaw = 0; s.pitch = 0.02; s.profileAt = { x: NaN, y: NaN } }}><PlaneLanding size={14} /> {t('back')}</button>}
         {serialSupported() && (
           <button className={`big ghost ${serialOn ? 'on' : ''}`} onClick={async () => {
             if (serialOn) { await disconnectSerial(); setSerialOn(false) } else setSerialOn(await connectSerial())
-          }}>🔌 {serialOn ? t('compassOn') : t('compass')}</button>
+          }}><Usb size={14} /> {serialOn ? t('compassOn') : t('compass')}</button>
         )}
-        <button className="big ghost" onClick={onExit}>✕ {t('exit')}</button>
+        <button className="big ghost" onClick={onExit}><LogOut size={14} /> {t('exit')}</button>
         <p className="keys">{s.mode === 'lander' ? t('keysLander') : t('keys')}</p>
         <p className="keys">{t('model')}</p>
       </div>
@@ -378,10 +379,10 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
                  onChange={(e) => { s.hour = +e.target.value; s.playing = false }} />
         </div>
       )}
-      {s.mode === 'rover' && s.steep && !s.dead && <div className="toast">⛰ {t('steep')}</div>}
+      {s.mode === 'rover' && s.steep && !s.dead && <div className="toast">{t('steep')}</div>}
       {s.dead && (
         <div className="gameover">
-          <h2>❄ {t('dead')}</h2>
+          <h2><Snowflake size={20} /> {t('dead')}</h2>
           <p>{t('driven')} {(s.driven / 1000).toFixed(2)} km · {t('survived')} {hrs(Math.round(s.hour - s.startHour))}</p>
           <button className="big" onClick={restart}>{t('restart')}</button>
         </div>
@@ -706,7 +707,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
       if (s.mode === 'rover') rover.current.quaternion.setFromRotationMatrix(basis)
     }
     if (lander.current) { lander.current.position.copy(toV(start.x, start.y)); lander.current.rotation.y = landerYaw.current }
-    if (ambient.current) ambient.current.intensity = s.science ? 0.9 : 0.04
+    if (ambient.current) ambient.current.intensity = s.science ? 0.9 : 0.55 * Math.max(0.12, c ? c.sunFrac * (1 - s.ecl) : 0)
     const rk = `${s.routeVer}:${s.origin.x}:${s.origin.y}`
     if (routeKey.current !== rk) {
       routeKey.current = rk
@@ -785,7 +786,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
   const earthR = 250000 * Math.tan((0.95 * Math.PI) / 180)
   return (
     <>
-      <hemisphereLight ref={ambient} args={['#9fb4d6', '#000000', 0.04]} />
+      <hemisphereLight ref={ambient} args={['#0b0d12', '#7d7468', 0.3]} />
       <directionalLight ref={sun} castShadow intensity={4} color="#fff6e6"
                         shadow-mapSize={[4096, 4096]} shadow-bias={-0.0004} shadow-normalBias={0.6}
                         shadow-camera-left={-700} shadow-camera-right={700} shadow-camera-top={700} shadow-camera-bottom={-700}
