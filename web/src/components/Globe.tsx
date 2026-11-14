@@ -1,9 +1,10 @@
 import { Html, OrbitControls, Stars, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { dataUrl } from '../data'
 import { surfacePoint, toThree } from '../geometry'
+import { NasaModel } from './Models'
 
 export interface PoleCapInfo { albedo: string; normal: string; r_max_m: number; edge_lat: number }
 export interface Overlay { texture: THREE.Texture; rMaxM: number; edgeLat: number }
@@ -109,6 +110,46 @@ function CameraFlight({ target }: { target: THREE.Vector3 | null }) {
   return null
 }
 
+/** NASA's Lunar Reconnaissance Orbiter in a polar orbit (size and altitude not to scale). */
+function Orbiter() {
+  const g = useRef<THREE.Group>(null)
+  const ring = useMemo(() => {
+    const pts = Array.from({ length: 129 }, (_, k) => {
+      const a = (k / 128) * Math.PI * 2
+      return new THREE.Vector3(Math.cos(a) * 1.16 * Math.cos(0.5), Math.sin(a) * 1.16, Math.cos(a) * 1.16 * Math.sin(0.5))
+    })
+    return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#a1a1aa', transparent: true, opacity: 0.25 }))
+  }, [])
+  useFrame(({ clock }) => {
+    if (!g.current) return
+    const a = clock.elapsedTime * 0.12
+    const p = new THREE.Vector3(Math.cos(a) * 1.16 * Math.cos(0.5), Math.sin(a) * 1.16, Math.cos(a) * 1.16 * Math.sin(0.5))
+    const v = new THREE.Vector3(-Math.sin(a) * Math.cos(0.5), Math.cos(a), -Math.sin(a) * Math.sin(0.5))
+    g.current.position.copy(p)
+    g.current.lookAt(p.clone().add(v))
+  })
+  return (
+    <>
+      <primitive object={ring} />
+      <group ref={g}>
+        <Suspense fallback={null}><NasaModel file="lro.glb" size={0.06} shadows={false} /></Suspense>
+        <Html center className="tag" style={{ transform: 'translateY(-18px)' }}>LRO</Html>
+      </group>
+    </>
+  )
+}
+
+function EarthBall() {
+  const map = useTexture(`${import.meta.env.BASE_URL}data/earth.jpg`)
+  map.colorSpace = THREE.SRGBColorSpace
+  return (
+    <mesh rotation={[0.41, 0, 0]}>
+      <sphereGeometry args={[0.28, 64, 32]} />
+      <meshStandardMaterial map={map} roughness={0.75} emissive="#0b1e3d" emissiveIntensity={0.35} />
+    </mesh>
+  )
+}
+
 export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthDir, earthLabel, onPick }: Props) {
   const sun = useMemo(() => toThree(sunDir).normalize(), [sunDir])
   const earth = useMemo(() => toThree(earthDir).normalize(), [earthDir])
@@ -116,7 +157,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
     [selected])
   return (
     <Canvas camera={{ position: [0.6, -3.6, 2.2], fov: 36, near: 0.01, far: 200 }} dpr={[1, 2]}>
-      <color attach="background" args={['#04060c']} />
+      <color attach="background" args={['#000000']} />
       <Stars radius={60} depth={30} count={4000} factor={3} fade speed={0.3} />
       <ambientLight intensity={0.05} />
       <directionalLight position={sun.clone().multiplyScalar(20)} intensity={3.2} color="#fff6e8" />
@@ -124,10 +165,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
       {poleCap && <PoleCap cap={poleCap} />}
       {overlay && <OverlayCap overlay={overlay} />}
       <group position={earth.clone().multiplyScalar(5.2)}>
-        <mesh>
-          <sphereGeometry args={[0.28, 48, 24]} />
-          <meshStandardMaterial color="#3d7bd9" emissive="#123a7a" emissiveIntensity={0.6} roughness={0.6} />
-        </mesh>
+        <Suspense fallback={null}><EarthBall /></Suspense>
         <Html center className="tag tag-earth">{earthLabel}</Html>
       </group>
       {pins.map((p, k) => (
@@ -150,6 +188,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
           <Html center className="tag tag-spot">{selected.label}</Html>
         </group>
       )}
+      <Orbiter />
       <OrbitControls makeDefault enablePan={false} minDistance={1.06} maxDistance={8} rotateSpeed={0.5} zoomSpeed={0.6} />
       <CameraFlight target={target} />
     </Canvas>
