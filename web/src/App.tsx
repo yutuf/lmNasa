@@ -483,7 +483,9 @@ export default function App() {
   const sunOverlay: Overlay | null = useMemo(() => {
     if (mapMode !== 'sun' || !atlas || !eph) return null
     const lit = sunlitMap(atlas, eph, mapHour)
-    return paintOverlay(atlas, (i) => (lit[i] >= 0.5 ? [245, 196, 70, Math.round(70 + 80 * lit[i])] : [12, 20, 48, 215]))
+    // shaded by how much of the Sun's disk is up (0..1), not lit / unlit: grazing light blends instead of stair-stepping
+    const mix = (f: number): [number, number, number, number] => [Math.round(12 + 233 * f), Math.round(20 + 176 * f), Math.round(48 + 22 * f), Math.round(215 - 75 * f)]
+    return paintOverlay(atlas, (i) => mix(Math.min(1, Math.max(0, lit[i]))))
   }, [mapMode, atlas, eph, mapHour])
   // nearby alternatives: points within 8 km that pass on more landing dates than the pick
   const nearby = useMemo(() => {
