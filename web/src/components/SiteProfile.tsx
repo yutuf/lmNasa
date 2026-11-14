@@ -27,7 +27,7 @@ export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand
   // uncertainty: the 5th-95th percentile across the success simulation's missions (launch slip, horizon error, scatter
   // across the landing zone, battery wear); for map values, where the number comes from
   const pr = s.prob
-  const range = (x: [number, number, number] | undefined, unit: string) => (x ? `${tr ? 'aralık' : 'range'} ${Math.round(x[0])}–${Math.round(x[2])}${unit}` : undefined)
+  const range = (x: [number, number, number] | undefined, unit: string) => (x ? `${tr ? 'simülasyonlarda' : 'across simulations'} ${Math.round(x[0])}–${Math.round(x[2])}${unit}` : undefined)
   const stats: [string, string, string?, string?][] = [
     [tr ? 'Uygun iniş tarihi' : 'GO landing dates', `${r.goDates}/${r.windowDays}`],
     [tr ? 'En iyi iniş' : 'Best landing', s.bestDate],
@@ -76,17 +76,17 @@ export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand
               <div><span>{tr ? 'En az güneş' : 'Least sunlight'}</span><b>{s.ellipse.worstSun}%</b></div>
               <div><span>{tr ? 'En az Dünya bağlantısı' : 'Least Earth contact'}</span><b>{s.ellipse.worstEarth}%</b></div>
               <div><span>{tr ? 'En uzun karanlık' : 'Longest darkness'}</span><b>{s.ellipse.worstDarkH} h</b></div>
-              <div><span>{tr ? 'En dik nokta' : 'Steepest point'}</span><b>{s.ellipse.worstSlope.toFixed(1)}°</b></div>
+              <div><span>{tr ? 'En dik nokta (400 m ölçekli)' : 'Steepest point (400 m scale)'}</span><b>{s.ellipse.worstSlope.toFixed(1)}°</b></div>
             </div>
           </div>
         )}
         {ctx && <SiteExtras ctx={ctx} s={s} lang={lang} />}
         {pr && <p className="ph-stats-note">{tr
-          ? `Aralıklar: ${pr.trials} simüle görevin %90’ı (fırlatma gecikmesi, ufuk hatası, iniş alanındaki dağılım, batarya yıpranması).`
-          : `Ranges: 90 % of ${pr.trials} simulated missions (launch slip, horizon error, scatter across the landing zone, battery wear).`}</p>}
+          ? `Aralıklar: ${pr.trials} simüle görevin %90’ı. Fırlatma gecikmesi iniş tarihini de kaydırır; yani bu, tek bir tarihin hata payı değil, görevin olası sonuçlarıdır (ufuk hatası, iniş alanında dağılım, batarya yıpranması dahil).`
+          : `Ranges: 90 % of ${pr.trials} simulated missions. A launch slip also moves the landing date, so this is the spread of outcomes for the mission, not an error bar on one date (it includes horizon error, scatter across the landing zone and battery wear).`}</p>}
         <div className="ph-strips">
           <div><span>{tr ? 'Her iniş tarihi' : 'Every landing date in the window'}</span>
-            <div className="ph-cal">{r.perStart.map((g, k) => <i key={k} className={g ? 'go' : 'nogo'} />)}</div></div>
+            <div className="ph-cal marks" role="list">{r.perStart.map((g, k) => <i key={k} role="listitem" className={g ? 'go' : 'nogo'} title={`${tr ? 'Gün' : 'Day'} ${k + 1}: ${g ? 'GO' : 'NO-GO'}`} aria-label={`${tr ? 'Gün' : 'Day'} ${k + 1}: ${g ? 'GO' : 'NO-GO'}`} />)}</div></div>
           <div><span>{tr ? 'Gün gün güneş' : 'Sun, day by day'}</span>
             <div className="ph-cal">{r.sunDaily.map((v, k) => <i key={k} style={{ background: `rgba(255,200,61,${0.12 + 0.88 * v})` }} />)}</div></div>
           <div><span>{tr ? 'Gün gün Dünya bağlantısı' : 'Earth link, day by day'}</span>

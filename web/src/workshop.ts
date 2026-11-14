@@ -141,3 +141,17 @@ export const ORBIT_PRESETS = [
   { id: 'elfo', name: 'Elliptical frozen orbit (relay, like Queqiao-2)', periKm: 200, apoKm: 16000, incDeg: 55 },
   { id: 'nrho', name: 'Near-rectilinear halo (Gateway, approximated)', periKm: 3000, apoKm: 70000, incDeg: 90 },
 ]
+
+// A rough radio link budget (order of magnitude): S-band (2.2 GHz), a small low-gain antenna on the lander (6 dBi), RF
+// power about a quarter of the radio's electrical power, 3 dB of losses, Eb/N0 of 2.5 dB plus a 3 dB margin.
+// Direct to Earth: a 34 m Deep Space Network dish (55 % efficient, 40 K system noise) at the Earth-Moon distance.
+// Via relay: a 1.5 m dish on the relay (300 K: it looks at the warm Moon) at the relay's farthest point, 16,000 km.
+export interface LinkBudget { dteBps: number; relayBps: number }
+export function linkBudget(d: Design): LinkBudget {
+  const c = 299792458, f = 2.2e9, lam = c / f, kB = 1.380649e-23
+  const dish = (diam: number, eff: number) => eff * ((Math.PI * diam) / lam) ** 2
+  const gTx = 10 ** 0.6, loss = 10 ** -0.3, need = 10 ** ((2.5 + 3) / 10)
+  const pTx = 0.25 * (d.comms === 'dte' ? K.dteW : K.relayW)
+  const rate = (gRx: number, rangeM: number, tSys: number) => (pTx * gTx * gRx * loss * (lam / (4 * Math.PI * rangeM)) ** 2) / (kB * tSys) / need
+  return { dteBps: rate(dish(34, 0.55), 384400e3, 40), relayBps: rate(dish(1.5, 0.55), 16000e3, 300) }
+}

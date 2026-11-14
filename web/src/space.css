@@ -914,3 +914,9 @@ body.no-scroll { overflow: hidden; }
 .jp-feat-art { width: 100%; height: 176px; margin: 0 0 8px; object-fit: contain; background: none; }
 .jp-feats div { overflow: hidden; }
 @media (max-width: 640px) { .s-goal-why { flex-direction: column; align-items: flex-start; } .s-goal-art { width: 100%; max-width: 440px; height: 200px; } }
+.ws-link { margin: 2px 0 0; font-size: 12px; color: var(--text-3); }
+/* GO / NO-GO readable without colour: a tick or a cross inside each date cell */
+.ph-cal.marks i { display: grid; place-items: center; font: 900 9px/1 Inter, sans-serif; }
+.ph-cal.marks i.go::after { content: '✓'; color: #06140c; }
+.ph-cal.marks i.nogo::after { content: '×'; color: rgba(255, 255, 255, .4); }
+.msg-trace { display: block; margin-top: 6px; padding-top: 5px; border-top: 1px solid rgba(255, 255, 255, .1); font-size: 10.5px; line-height: 1.4; color: var(--text-3); }

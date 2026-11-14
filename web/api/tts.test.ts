@@ -137,3 +137,11 @@ describe('Read-aloud', () => {
     }
   })
 })
+
+describe('ElevenLabs errors', () => {
+  it('passes on the reason ElevenLabs gives, without the key', async () => {
+    const fake = (async () => new Response(JSON.stringify({ detail: { status: 'quota_exceeded', message: 'This request exceeds your quota.' } }), { status: 401 })) as unknown as typeof fetch
+    await expect(synthesize('Hi', DEFAULT_VOICE_ID, 'SECRET-KEY', fake)).rejects.toThrow(/401 \(quota_exceeded: This request exceeds your quota\.\)/)
+    await expect(synthesize('Hi', DEFAULT_VOICE_ID, 'SECRET-KEY', fake)).rejects.not.toThrow(/SECRET/)
+  })
+})

@@ -39,3 +39,12 @@ describe('orbitStats', () => {
     expect(s.visiblePct).toBeLessThan(25)
   })
 })
+
+describe('linkBudget', () => {
+  it('direct to Earth gives Mbit/s and the relay at 16,000 km some hundred kbit/s (S-band, small antenna)', async () => {
+    const { linkBudget } = await import('./workshop')
+    const lb = linkBudget(DEFAULT_DESIGN)
+    expect(lb.dteBps).toBeGreaterThan(5e5); expect(lb.dteBps).toBeLessThan(5e7)
+    expect(lb.relayBps).toBeGreaterThan(2e4); expect(lb.relayBps).toBeLessThan(5e6)
+  })
+})

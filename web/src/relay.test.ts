@@ -14,3 +14,11 @@ describe('relayMask', () => {
     expect(frac(relayMask(80, 0, 1000, 24 * 14))).toBeLessThan(frac(relayMask(-80, 0, 1000, 24 * 14)))
   })
 })
+
+describe('relayMask with terrain', () => {
+  it('a ridge higher than the relay blocks it; no ridge changes nothing', () => {
+    const open = relayMask(-89, 0, 1000, 24 * 14)
+    expect(relayMask(-89, 0, 1000, 24 * 14, 10, () => 0)).toEqual(open)
+    expect(relayMask(-89, 0, 1000, 24 * 14, 10, () => 90).reduce((a, b) => a + b, 0)).toBe(0)
+  })
+})

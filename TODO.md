@@ -3,11 +3,25 @@
 Updated by the agents as work lands. `[x]` done and verified · `[~]` in progress (who) · `[ ]` not started.
 Rules: test with `npm test` + `npx tsc -b` in `web/`; show the owner locally before committing; never push `main` without asking.
 
+## In progress
+- [~] **Countdowns** (sunset/Earthset, "right now"), **launch-slip what-if**, **nearest dates that work** (Grok #8)
+- [~] **Drop a pin / type coordinates** anywhere on the Moon (Grok #9)
+- [~] **Full QA pass** of the production build, every feature, EN/TR, desktop/phone; report only (Grok #7) → then fixes (Claude)
+
 ## Not started
+- [ ] **Final speed check** of the film and 3D scenes on a quiet machine (production build)
+- [ ] **Publish today's later work** (art fix, phone mode, QA fixes) the same way: one new commit on top of `main`, no force push
+- [ ] **Refresh the Drive presentation kit** (guide updated locally; new screenshots; add the 7-slide deck)
 - [ ] **Owner, Vercel keys:** the live `/api/ask` still answers 503 `GEMINI_API_KEY missing`. Add `GEMINI_API_KEY` and `ELEVENLABS_API_KEY` in Vercel → Settings → Environment Variables (Production), then redeploy. There is no key in the repo.
 - [ ] **New demo video** recorded from the app. The 7-slide deck is the submission. A project video longer than 30 seconds is not eligible for Global Judging, so keep any recording local.
 
 ## Done (this session)
+- [x] Rescan fixes: ellipse follows the landing zone; "400 m scale" slope label; relay checked against the terrain horizon; ranges relabelled "across simulations"; the 7.6 M figure explained (flat-enough points × every hour)
+- [x] Keep-out 2 km around 16 landed craft; rough S-band link budget in the Workshop; PDF report with QR + provenance; Luna "Data used" line; ✓/× marks on the GO strip
+- [x] Phone weight: entry file 1.6 MB → 2 KB (lazy overlays and routes, 3D libraries split and cached), no 3D vehicle row on the phone judges page
+- [x] Illustrations with Grok Imagine: 17 engineering-line drawings (goal diagrams, "What next?" cards, judges page), transparent WebP, 0.5 MB total (Grok #6 + review)
+- [x] Mission interview chatbot (Grok #5), wired in via Luna "Plan a mission with me"
+- [x] Phone mode (tilt-to-look viewer paired with the desktop; added by the other agent, compiles and tests pass)
 - [x] **Demo deck**: `presentation-kit/LunaNav-demo.pptx`, 7 English slides, from `presentation-kit/screenshots/`
 - [x] **Go live**: the reviewed hackathon tree is published on `main` as one new commit on the previous live history. `main` was not force-pushed. The phone screen stays in the working tree and is not in this publish.
 - [x] Space UI: page background `#000000`; the 3D moon has no card frame and runs to the edges of the view
