@@ -19,9 +19,11 @@ OUT = ROOT / "web" / "public" / "data" / "sites"
 NAMES = {
     "Site01": "Connecting ridge", "Site04": "Shackleton rim", "Site06": "Nobile rim 1", "Site07": "Peak near Shackleton",
     "Site11": "de Gerlache rim", "Site20v2": "Leibnitz beta plateau", "Site23": "Malapert massif",
-    "Site42": "de Gerlache–Kocher massif", "DM1": "DM1", "DM2": "Nobile rim 2", "SL2": "SL2",
+    "Site42": "de Gerlache–Kocher massif", "DM1": "DM1", "DM2": "Nobile rim 2", "SL2": "Connecting ridge extension",
+    "SL3": "de Gerlache rim 2", "LM7": "Faustini", "Haworth": "Haworth", "Shoemaker": "Shoemaker",
 }
 SCALE = 0.25  # m per int16 step: ±8 km range
+CROP_M = 12000  # keep the central 12 km x 12 km of each site (about 2.9 MB at 10 m); beyond it the app uses 200 m
 
 
 def export(site: str) -> dict | None:
@@ -38,6 +40,12 @@ def export(site: str) -> dict | None:
     z[~np.isfinite(z) | (np.abs(z) > 20000)] = np.nan
     if np.isnan(z).any():  # fill the few gaps with the mean so int16 stays valid
         z[np.isnan(z)] = np.nanmean(z)
+    # crop to the central CROP_M square (in whole 2x2 blocks), then shift the bounds to match
+    keep = int(CROP_M / res) // 2 * 2
+    r0 = max(0, (z.shape[0] - keep) // 2 // 2 * 2)
+    c0 = max(0, (z.shape[1] - keep) // 2 // 2 * 2)
+    z = z[r0:r0 + keep, c0:c0 + keep]
+    b = rasterio.coords.BoundingBox(b.left + c0 * res, b.top - (r0 + z.shape[0]) * res, b.left + (c0 + z.shape[1]) * res, b.top - r0 * res)
     h, w = (z.shape[0] // 2) * 2, (z.shape[1] // 2) * 2
     z = z[:h, :w].reshape(h // 2, 2, w // 2, 2).mean(axis=(1, 3))
     m = res * 2
@@ -51,15 +59,15 @@ def export(site: str) -> dict | None:
     lat = -90 + 2 * np.degrees(np.arctan(np.hypot(cx, cy) / (2 * 1737400)))
     lon = float(np.degrees(np.arctan2(cx, cy)) % 360)
     return {"id": site.lower(), "name": NAMES.get(site, site), "file": f"sites/{site.lower()}.bin", "m_per_px": m,
-            "bounds_m": [b.left, b.bottom, b.right, b.top], "center": [round(float(lat), 4), round(lon, 3)],
+            "bounds_m": [round(b.left), round(b.bottom), round(b.right), round(b.top)], "center": [round(float(lat), 4), round(lon, 3)],
             "z_range_m": [round(float(z.min())), round(float(z.max()))]}
 
 
 def main():
     sites = [s for s in (export(k) for k in NAMES) if s]
-    meta = {"source": "LOLA 5 m/px site maps, Barker et al. 2021 (NASA GSFC PGDA product 78), averaged to 10 m",
+    meta = {"source": "LOLA 5 m/px site maps, Barker et al. 2021 (NASA GSFC PGDA product 78), averaged to 10 m, central 12 km of each site",
             "sites": sites}
-    (OUT.parent / "sites.json").write_text(json.dumps(meta, indent=1))
+    (OUT.parent / "sites.json").write_text(json.dumps(meta, indent=1, ensure_ascii=False), encoding="utf-8")
     for s in sites:
         print(s["id"], s["name"], s["center"], s["z_range_m"])
 

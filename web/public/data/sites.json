@@ -1,5 +1,5 @@
 {
- "source": "LOLA 5 m/px site maps, Barker et al. 2021 (NASA GSFC PGDA product 78), averaged to 10 m",
+ "source": "LOLA 5 m/px site maps, Barker et al. 2021 (NASA GSFC PGDA product 78), averaged to 10 m, central 12 km of each site",
  "sites": [
   {
    "id": "site01",
@@ -7,17 +7,17 @@
    "file": "sites/site01.bin",
    "m_per_px": 10.0,
    "bounds_m": [
-    -19000.0,
-    -20000.0,
-    -3000.0,
-    -4000.0
+    -17000,
+    -18000,
+    -5000,
+    -6000
    ],
    "center": [
     -89.4632,
     222.51
    ],
    "z_range_m": [
-    -522,
+    120,
     1959
    ]
   },
@@ -27,18 +27,38 @@
    "file": "sites/site04.bin",
    "m_per_px": 10.0,
    "bounds_m": [
-    -9000.0,
-    -15000.0,
-    7000.0,
-    1000.0
+    -7000,
+    -13000,
+    5000,
+    -1000
    ],
    "center": [
     -89.7668,
     188.13
    ],
    "z_range_m": [
-    -2847,
-    1805
+    -2600,
+    1739
+   ]
+  },
+  {
+   "id": "site06",
+   "name": "Nobile rim 1",
+   "file": "sites/site06.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    78000,
+    104000,
+    90000,
+    116000
+   ],
+   "center": [
+    -85.4381,
+    37.367
+   ],
+   "z_range_m": [
+    2623,
+    6798
    ]
   },
   {
@@ -47,18 +67,238 @@
    "file": "sites/site07.bin",
    "m_per_px": 10.0,
    "bounds_m": [
-    22000.0,
-    -28000.0,
-    38000.0,
-    -12000.0
+    24000,
+    -26000,
+    36000,
+    -14000
    ],
    "center": [
     -88.811,
     123.69
    ],
    "z_range_m": [
-    -418,
+    29,
     1649
+   ]
+  },
+  {
+   "id": "site11",
+   "name": "de Gerlache rim",
+   "file": "sites/site11.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    -43000,
+    9000,
+    -31000,
+    21000
+   ],
+   "center": [
+    -88.6834,
+    292.068
+   ],
+   "z_range_m": [
+    -397,
+    1815
+   ]
+  },
+  {
+   "id": "site20v2",
+   "name": "Leibnitz beta plateau",
+   "file": "sites/site20v2.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    67000,
+    112000,
+    79000,
+    124000
+   ],
+   "center": [
+    -85.4266,
+    31.743
+   ],
+   "z_range_m": [
+    3815,
+    6464
+   ]
+  },
+  {
+   "id": "site23",
+   "name": "Malapert massif",
+   "file": "sites/site23.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    -6500,
+    115500,
+    5500,
+    127500
+   ],
+   "center": [
+    -85.9948,
+    359.764
+   ],
+   "z_range_m": [
+    2733,
+    5173
+   ]
+  },
+  {
+   "id": "site42",
+   "name": "de Gerlache–Kocher massif",
+   "file": "sites/site42.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    -119400,
+    -62100,
+    -107400,
+    -50100
+   ],
+   "center": [
+    -85.8296,
+    243.678
+   ],
+   "z_range_m": [
+    389,
+    2956
+   ]
+  },
+  {
+   "id": "dm1",
+   "name": "DM1",
+   "file": "sites/dm1.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    158000,
+    55500,
+    170000,
+    67500
+   ],
+   "center": [
+    -84.2287,
+    69.444
+   ],
+   "z_range_m": [
+    -1179,
+    842
+   ]
+  },
+  {
+   "id": "dm2",
+   "name": "Nobile rim 2",
+   "file": "sites/dm2.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    151000,
+    89000,
+    163000,
+    101000
+   ],
+   "center": [
+    -83.954,
+    58.822
+   ],
+   "z_range_m": [
+    -691,
+    1636
+   ]
+  },
+  {
+   "id": "sl2",
+   "name": "Connecting ridge extension",
+   "file": "sites/sl2.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    -54500,
+    17000,
+    -42500,
+    29000
+   ],
+   "center": [
+    -88.23,
+    295.372
+   ],
+   "z_range_m": [
+    -1317,
+    1580
+   ]
+  },
+  {
+   "id": "sl3",
+   "name": "de Gerlache rim 2",
+   "file": "sites/sl3.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    -34700,
+    -12100,
+    -22700,
+    -100
+   ],
+   "center": [
+    -89.0324,
+    258.001
+   ],
+   "z_range_m": [
+    -343,
+    1557
+   ]
+  },
+  {
+   "id": "lm7",
+   "name": "Faustini",
+   "file": "sites/lm7.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    58000,
+    -6000,
+    70000,
+    6000
+   ],
+   "center": [
+    -87.8897,
+    90.0
+   ],
+   "z_range_m": [
+    -1525,
+    579
+   ]
+  },
+  {
+   "id": "haworth",
+   "name": "Haworth",
+   "file": "sites/haworth.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    -44000,
+    84500,
+    -32000,
+    96500
+   ],
+   "center": [
+    -86.7639,
+    337.223
+   ],
+   "z_range_m": [
+    849,
+    2180
+   ]
+  },
+  {
+   "id": "shoemaker",
+   "name": "Shoemaker",
+   "file": "sites/shoemaker.bin",
+   "m_per_px": 10.0,
+   "bounds_m": [
+    70000,
+    33000,
+    82000,
+    45000
+   ],
+   "center": [
+    -87.1835,
+    62.835
+   ],
+   "z_range_m": [
+    -276,
+    713
    ]
   }
  ]
