@@ -1,4 +1,11 @@
 .phone-app { position: fixed; inset: 0; z-index: 82; background: #000; color: #fff; overflow: hidden; touch-action: none; user-select: none; }
+.phone-remote { display: flex; flex-direction: column; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); background: radial-gradient(ellipse at 50% 38%, #241910 0%, #0b090c 52%, #000 100%); }
+.phone-remote .phone-top, .phone-remote .phone-dock { position: relative; z-index: 1; }
+.phone-wheel-wrap { flex: 1; display: grid; place-items: center; touch-action: none; }
+.phone-wheel { width: min(78vw, 340px); aspect-ratio: 1; border-radius: 50%; border: 12px solid rgba(255,255,255,.88); box-shadow: inset 0 0 0 22px rgba(225,6,0,.42), 0 24px 60px rgba(0,0,0,.5); position: relative; }
+.phone-wheel i { position: absolute; left: 50%; top: 16px; width: 10px; height: 48px; margin-left: -5px; background: var(--red, #e10600); border-radius: 5px; }
+.phone-wheel b { position: absolute; inset: 0; display: grid; place-items: center; font: 800 64px/1 var(--display); font-stretch: 118%; }
+.phone-visor { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 42%, rgba(0,0,0,.45) 74%, rgba(0,0,0,.78) 100%); box-shadow: inset 0 0 90px rgba(0,0,0,.55); }
 .phone-app canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .phone-hud { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
 .phone-top, .phone-dock { pointer-events: auto; }

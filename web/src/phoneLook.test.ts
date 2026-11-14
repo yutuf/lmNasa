@@ -83,12 +83,17 @@ describe('phone look', () => {
 
   it('turns the view from the phone yaw and pitch, and holds still when the hand does', () => {
     const opts = { dead: 0, gain: 1 }
-    expect(stepSlew({ heading: 10, alt: -22 }, { alpha: 400, beta: 0, gamma: 0 }, 0.04, opts)).toEqual({ heading: 10, alt: -22 })
+    expect(stepSlew({ heading: 10, alt: -22 }, { alpha: 400, beta: 0, gamma: 0 }, 0.04, opts).heading).toBeCloseTo(354, 5)
     expect(stepSlew({ heading: 10, alt: 0 }, { alpha: 0, beta: 0, gamma: 500 }, 0.04, opts).heading).toBeCloseTo(30, 5)
     expect(stepSlew({ heading: 0, alt: 0 }, { alpha: 0, beta: 500, gamma: 0 }, 0.04, opts).alt).toBeCloseTo(-20, 5)
     expect(stepSlew({ heading: 4, alt: -8 }, { alpha: 1, beta: 1, gamma: 1 }, 0.04)).toEqual({ heading: 4, alt: -8 })
     expect(stepSlew({ heading: 4, alt: -8 }, { alpha: 0, beta: 0, gamma: 80 }, 0.2, opts)).toEqual({ heading: 4, alt: -8 })
     expect(stepSlew({ heading: 0, alt: 70 }, { alpha: 0, beta: -500, gamma: 0 }, 0.04, opts).alt).toBe(75)
+    const wheeled = stepSlew({ heading: 0, alt: 0 }, { alpha: 500, beta: 0, gamma: 100 }, 0.04, opts)
+    expect(wheeled.heading).toBeCloseTo(340, 5)
+    const west = toThree(enu(0, 0).e).normalize()
+    const look = (heading: number) => new THREE.Vector3(0, 0, -1).applyQuaternion(lookQuaternion(0, 0, heading, 0, 0))
+    expect(look(wheeled.heading).dot(west)).toBeLessThan(-0.15)
     const turned = stepSlew({ heading: 0, alt: 0 }, { alpha: 0, beta: 0, gamma: 400 }, 0.04, opts)
     const east = toThree(enu(0, 0).e).normalize()
     const fwd = (heading: number, alt: number) => new THREE.Vector3(0, 0, -1).applyQuaternion(lookQuaternion(0, 0, heading, alt, 0))
