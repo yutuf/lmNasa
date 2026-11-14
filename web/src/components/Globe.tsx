@@ -31,6 +31,7 @@ interface Props {
 function Moon() {
   const [albedo, normal] = useTexture([dataUrl('moon_albedo.jpg'), dataUrl('moon_normal.jpg')])
   albedo.colorSpace = THREE.SRGBColorSpace
+  albedo.anisotropy = 8                      // stays sharp where the sphere is seen at a grazing angle
   albedo.anisotropy = 8
   return (
     <mesh>
@@ -76,6 +77,7 @@ function capGeometry(edgeLat: number, rMaxM: number, radius: number) {
 function PoleCap({ cap }: { cap: PoleCapInfo }) {
   const [albedo, normal] = useTexture([dataUrl(cap.albedo), dataUrl(cap.normal)])
   albedo.colorSpace = THREE.SRGBColorSpace
+  albedo.anisotropy = 8                      // stays sharp where the sphere is seen at a grazing angle
   albedo.anisotropy = 8
   const geometry = useMemo(() => capGeometry(cap.edge_lat, cap.r_max_m, 1.0006), [cap])
   return (
@@ -199,6 +201,7 @@ function Atmosphere({ radius }: { radius: number }) {
 function EarthBall() {
   const map = useTexture(`${import.meta.env.BASE_URL}data/earth.jpg`)
   map.colorSpace = THREE.SRGBColorSpace
+  map.anisotropy = 8                      // stays sharp where the sphere is seen at a grazing angle
   return (
     <mesh rotation={[0.41, 0, 0]}>
       <sphereGeometry args={[0.28, 64, 32]} />

@@ -10,6 +10,7 @@ import { dataUrl } from '../data'
 function Horizon() {
   const [albedo, normal] = useTexture([dataUrl('moon_albedo.jpg'), dataUrl('moon_normal.jpg')])
   albedo.colorSpace = THREE.SRGBColorSpace
+  albedo.anisotropy = 8                      // stays sharp where the sphere is seen at a grazing angle
   const m = useRef<THREE.Mesh>(null)
   useFrame((_, dt) => { if (m.current) m.current.rotation.x += dt * 0.004 })
   return (
@@ -35,6 +36,7 @@ const sunGlow = glowTexture('rgba(255,236,200,0.9)', 'rgba(255,150,90,0.22)')
 function Earth() {
   const map = useTexture(dataUrl('earth.jpg'))
   map.colorSpace = THREE.SRGBColorSpace
+  map.anisotropy = 8                      // stays sharp where the sphere is seen at a grazing angle
   const e = useRef<THREE.Mesh>(null)
   useFrame((_, dt) => { if (e.current) e.current.rotation.y += dt * 0.05 })
   return (
