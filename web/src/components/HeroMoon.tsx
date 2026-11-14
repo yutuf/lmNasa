@@ -1,8 +1,9 @@
 // The Simple view's backdrop: an Earthrise. The real Moon (LRO albedo + normal map) fills the bottom as a curved
 // horizon, back-lit by a low Sun so its edge glows; Earth rises above it; stars and a coloured sky (CSS) behind.
-import { Suspense, useRef } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
+import { useOverlayOpen } from '../overlayState'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Stars, useTexture } from '@react-three/drei'
+import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { dataUrl } from '../data'
 
@@ -48,16 +49,26 @@ function Earth() {
 }
 
 export default function HeroMoon() {
+  // render only while on screen and not covered by an overlay
+  const box = useRef<HTMLDivElement>(null)
+  const [seen, setSeen] = useState(true)
+  const covered = useOverlayOpen()
+  useEffect(() => {
+    const el = box.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(([e]) => setSeen(e.isIntersecting))
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
   return (
-    <div className="hero-sky" aria-hidden="true">
-      <Canvas camera={{ position: [0, 0, 0], fov: 40 }} dpr={[1, 1.5]} gl={{ alpha: true, antialias: true }}
-        onCreated={({ camera }) => camera.lookAt(0, 0.35, -10)}>
-        <hemisphereLight args={['#6a5cff', '#120a1e', 0.35]} />
+    <div className="hero-sky" aria-hidden="true" ref={box}>
+      <Canvas camera={{ position: [0, 0, 0], fov: 40 }} dpr={[1, 1.25]} gl={{ alpha: true, antialias: true }} frameloop={seen && !covered ? 'always' : 'never'}
+        onCreated={({ camera, gl }) => { gl.debug.checkShaderErrors = false; camera.lookAt(0, 0.35, -10) }}>
+        <hemisphereLight args={['#2a2a2a', '#000000', 0.2]} />
         {/* the Sun low on the left: rakes across the horizon (long shadows) and lights Earth's left half */}
         <directionalLight position={[-10, 1.4, -3]} intensity={4.4} color="#ffe2c4" />
         <directionalLight position={[5, 2, 4]} intensity={0.35} color="#7aa6ff" />
         <sprite position={[-12, 0.3, -16]} scale={[8, 8, 1]}><spriteMaterial map={sunGlow} transparent depthWrite={false} blending={THREE.AdditiveBlending} /></sprite>
-        <Stars radius={80} depth={40} count={2600} factor={3} saturation={0.4} fade speed={0.3} />
         <Suspense fallback={null}>
           <Horizon />
           <Earth />

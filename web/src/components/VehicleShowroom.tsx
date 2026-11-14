@@ -16,6 +16,8 @@ const ASSETS = [
     en: 'Pragyan rover', tr: 'Pragyan gezgini', origin: 'ISRO · Moon rover · model by Core.anim8 (CC-BY)', originTr: 'ISRO · Ay gezgini · model: Core.anim8 (CC-BY)' },
   { id: 'yutu', file: 'yutu.glb' as const, size: 1.5, fit: 'length' as const,
     en: 'Yutu-2 rover', tr: 'Yutu-2 gezgini', origin: 'CNSA · Moon rover · model by tashtego (CC-BY)', originTr: 'CNSA · Ay gezgini · model: tashtego (CC-BY)' },
+  { id: 'lrv', file: 'lrv.glb' as const, size: 3.1, fit: 'length' as const,
+    en: 'Lunar Roving Vehicle (Apollo 15-17)', tr: 'Ay Gezgin Aracı (Apollo 15-17)', origin: 'NASA / Boeing · rebuilt from laser scans · Deutsches Museum (CC BY-SA)', originTr: 'NASA / Boeing · lazer taramasından · Deutsches Museum (CC BY-SA)' },
   { id: 'starship', file: 'starship.glb' as const, size: 50, fit: 'height' as const,
     en: 'Starship HLS', tr: 'Starship HLS', origin: 'SpaceX · crewed Moon lander · model by MartianDays (CC-BY)', originTr: 'SpaceX · insanlı Ay iniş aracı · model: MartianDays (CC-BY)' },
   { id: 'lro', file: 'lro.glb' as const, size: 4, fit: 'max' as const,

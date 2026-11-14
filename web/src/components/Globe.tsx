@@ -1,4 +1,4 @@
-import { Html, OrbitControls, Stars, useTexture } from '@react-three/drei'
+import { Html, OrbitControls, useTexture } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
@@ -9,7 +9,7 @@ import { flightPath, type Approach } from '../flight'
 
 export interface PoleCapInfo { albedo: string; normal: string; r_max_m: number; edge_lat: number }
 export interface Overlay { texture: THREE.Texture; rMaxM: number; edgeLat: number; sphere?: boolean }
-export interface Target { id: string; name: string; lat: number; lon: number; colour: string; selected: boolean }
+export interface Target { id: string; name: string; lat: number; lon: number; colour: string; selected: boolean; label?: boolean }
 export interface Pin { lat: number; lon: number; label: string; good: boolean }
 
 interface Props {
@@ -25,6 +25,7 @@ interface Props {
   targets?: Target[]
   onTarget?: (id: string) => void
   labels?: boolean        // floating HTML labels (off in the film)
+  orbit?: { periKm: number; apoKm: number; incDeg: number } | null   // a satellite designed in the Workshop
 }
 
 function Moon() {
@@ -338,7 +339,40 @@ function Flight({ lat, lon, approach, earthDir, labels, view, start = 0, showLab
   )
 }
 
-export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthDir, earthLabel, onPick, flight, targets, onTarget, labels = true }: Props) {
+/** A satellite's orbit around the Moon at true scale (Moon radius = 1), with the satellite moving along it in Kepler
+ *  time-lapse (one revolution in about 12 s). Periapsis over the north, apoapsis over the south, as in the Workshop. */
+function OrbitPath({ orbit }: { orbit: { periKm: number; apoKm: number; incDeg: number } }) {
+  const R = 1737.4
+  const { line, at } = useMemo(() => {
+    const rp = (R + Math.min(orbit.periKm, orbit.apoKm)) / R, ra = (R + Math.max(orbit.periKm, orbit.apoKm)) / R
+    const a = (rp + ra) / 2, e = (ra - rp) / (ra + rp), inc = (orbit.incDeg * Math.PI) / 180, w = Math.PI / 2
+    const pos = (nu: number) => {
+      const r = (a * (1 - e * e)) / (1 + e * Math.cos(nu)), u = nu + w
+      return toThree([r * Math.cos(u), r * Math.sin(u) * Math.cos(inc), r * Math.sin(u) * Math.sin(inc)])
+    }
+    const pts = Array.from({ length: 361 }, (_, k) => pos((k / 360) * 2 * Math.PI))
+    const geo = new THREE.BufferGeometry().setFromPoints(pts)
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: '#ffb020', transparent: true, opacity: 0.85 }))
+    // mean anomaly -> true anomaly, so the satellite speeds up near the Moon and lingers at the high point
+    const at = (frac: number) => {
+      const M = 2 * Math.PI * frac
+      let E = M
+      for (let i = 0; i < 8; i++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E))
+      return pos(2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2)))
+    }
+    return { line, at }
+  }, [orbit])
+  const sat = useRef<THREE.Mesh>(null)
+  useFrame(({ clock }) => { if (sat.current) sat.current.position.copy(at((clock.elapsedTime / 12) % 1)) })
+  return (
+    <>
+      <primitive object={line} />
+      <mesh ref={sat}><sphereGeometry args={[0.035, 16, 12]} /><meshBasicMaterial color="#ffd27a" toneMapped={false} /></mesh>
+    </>
+  )
+}
+
+export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthDir, earthLabel, onPick, flight, targets, onTarget, labels = true, paused = false, orbit = null }: Props & { paused?: boolean }) {
   const closeUp = !!flight && flight.view !== 'overview'
   const sun = useMemo(() => toThree(sunDir).normalize(), [sunDir])
   const earth = useMemo(() => toThree(earthDir).normalize(), [earthDir])
@@ -351,14 +385,13 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
     return { earth: earth.clone().multiplyScalar(5.2), normal: n }
   }, [flat, flon, earth.x, earth.y, earth.z])  // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <Canvas camera={{ position: [0.6, -3.6, 2.2], fov: 36, near: 0.01, far: 200 }} dpr={[1, 2]}>
-      <color attach="background" args={['#000000']} />
-      <Stars radius={60} depth={30} count={5000} factor={3.2} saturation={0.7} fade speed={0.3} />
+    <Canvas style={{ touchAction: 'pan-y' }} camera={{ position: [0.6, -3.6, 2.2], fov: 36, near: 0.01, far: 200 }} dpr={[1, 1.5]} frameloop={paused ? 'never' : 'always'} gl={{ alpha: true }} onCreated={({ gl, scene }) => { gl.debug.checkShaderErrors = import.meta.env.DEV; scene.background = null; gl.setClearColor(0x000000, 0) }}>
       <SunGlow dir={sun} />
       <ambientLight intensity={0.05} />
       <hemisphereLight args={['#6d7cff', '#000000', 0.12]} />
       <directionalLight position={sun.clone().multiplyScalar(20)} intensity={3.2} color="#fff6e8" />
       <Moon />
+      {orbit && <OrbitPath orbit={orbit} />}
       {poleCap && <PoleCap cap={poleCap} />}
       {overlay && !closeUp && <OverlayCap overlay={overlay} />}
       <group position={earth.clone().multiplyScalar(5.2)}>
@@ -371,9 +404,11 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
             <octahedronGeometry args={[t.selected ? 0.016 : 0.01, 0]} />
             <meshBasicMaterial color={t.colour} />
           </mesh>
-          <Html center zIndexRange={[40, 0]} className={`sci-tag ${t.selected ? 'on' : ''}`} style={{ ['--k' as string]: t.colour }}>
-            <span onClick={() => onTarget?.(t.id)}>{t.name}</span>
-          </Html>
+          {t.label !== false && (
+            <Html center zIndexRange={[40, 0]} className={`sci-tag ${t.selected ? 'on' : ''}`} style={{ ['--k' as string]: t.colour }}>
+              <span onClick={() => onTarget?.(t.id)}>{t.name}</span>
+            </Html>
+          )}
         </group>
       ))}
       {!closeUp && pins.map((p, k) => (
@@ -382,9 +417,12 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
             <sphereGeometry args={[0.009, 12, 12]} />
             <meshBasicMaterial color={p.good ? '#4ade80' : '#ff6b6b'} />
           </mesh>
-          <Html center zIndexRange={[40, 0]} className={`pin-num ${p.good ? 'good' : 'bad'}`}>
-            <span onClick={() => onPick?.(k)}>{p.label}</span>
-          </Html>
+          {/* numbers only on the top three: ten overlapping badges at the pole were unreadable; the rest stay dots */}
+          {k < 3 && (
+            <Html center zIndexRange={[40, 0]} className={`pin-num ${p.good ? 'good' : 'bad'}`}>
+              <span onClick={() => onPick?.(k)}>{p.label}</span>
+            </Html>
+          )}
         </group>
       ))}
       {selected && !closeUp && (
@@ -397,7 +435,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
         </group>
       )}
       {flight ? <Flight {...flight} earthDir={earth} showLabel={labels} /> : <Orbiter />}
-      <OrbitControls makeDefault enabled={!flight || flight.view === 'overview'} enablePan={false} minDistance={1.06} maxDistance={flight ? 16 : 8} rotateSpeed={0.5} zoomSpeed={0.6} />
+      <OrbitControls makeDefault enabled={!flight || flight.view === 'overview'} enablePan={false} enableZoom={false} minDistance={1.06} maxDistance={flight ? 16 : 8} rotateSpeed={0.5} />
       {(!flight || flight.view === 'overview') && <CameraFlight target={target} wide={wide} />}
     </Canvas>
   )

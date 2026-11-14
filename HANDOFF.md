@@ -4,7 +4,7 @@ NASA Space Apps 2026 (14–15 Nov 2026), challenge **Lunar Landing Site Navigato
 
 ## What it is
 
-LunaNav is a web app that finds where and when a lander can land on the Moon and survive. For every candidate point it computes the Sun and Earth over the real terrain horizon, hour by hour, for every landing date in a window. The points are 21,856 south-polar points on a 2 km grid and 41,276 points across the whole Moon about 30 km apart. It uses NASA LOLA terrain, JPL ephemerides and Deep Space Network (DSN) visibility, then checks sunlight, Earth contact, longest darkness, battery, slope, landing-zone roughness and distance to ice. The output is ranked GO/NO-GO sites with dates, 3D terrain renders and a Monte Carlo mission success probability. A decision model re-ranks the sites by weighted criteria. There is also a lander/rover drive and walking mode, a cinematic "Tell me the mission" film, a workshop to design your own vehicle, and an AI assistant ("Luna", Gemini). Everything runs in the browser except the Gemini call.
+LunaNav is a web app that finds where and when a lander can land on the Moon and survive. For every candidate point it computes the Sun and Earth over the real terrain horizon, hour by hour, for every landing date in a window. The points are 21,856 south-polar points on a 2 km grid and 41,276 points across the whole Moon about 30 km apart. It uses NASA LOLA terrain, JPL ephemerides and Deep Space Network (DSN) visibility, then checks sunlight, Earth contact, longest darkness, battery, slope, landing-zone roughness and distance to ice. The output is ranked GO/NO-GO sites with dates, 3D terrain renders and a Monte Carlo mission success probability. A decision model re-ranks the sites by weighted criteria. There is also a lander/rover drive and walking mode, a cinematic "Tell me the mission" film, a workshop to design your own vehicle, and an AI assistant ("Luna", Gemini). Everything runs in the browser except the Gemini call (`api/ask`) and read-aloud (`api/tts`, ElevenLabs).
 
 ## Architecture
 
@@ -18,6 +18,7 @@ docs/         DEMO.md, DEMO_WEB.md, EDUCATORS.md, HACKATHON_PLAN.md, screenshots
 hardware/     KiCad files (side project, not used by the web app)
 web/          THE PRODUCT: Vite + React 19 + TypeScript + three.js (@react-three/fiber, drei)
   api/ask.ts        Vercel serverless function: Luna's Gemini call (GEMINI_API_KEY, optional GEMINI_MODEL, default gemini-2.5-flash)
+  api/tts.ts        Vercel serverless function: read-aloud via ElevenLabs (ELEVENLABS_API_KEY, optional ELEVENLABS_VOICE_ID / ELEVENLABS_VOICE_ID_TR). Browser voice if the key is missing.
   public/data/      Prebuilt binaries: atlas.bin (polar horizons), global_atlas.bin (whole Moon), global_dem.bin (whole-Moon heights,
                     8 px/deg), pole_dem.bin, ephem.bin (2026-11-01 to 2045-12-31 hourly), dsn.bin, hazard.bin, psr.bin, science.bin,
                     thermal.bin, features.json (IAU names), manifest.json, textures
@@ -48,7 +49,7 @@ npm test             # vitest (about 231 tests)
 npm run lint
 npm run build        # tsc -b && vite build -> web/dist
 ```
-Luna (the AI chat) needs `GEMINI_API_KEY` in `web/.env.local` locally or in the Vercel project env. `GEMINI_MODEL` is optional. Without the key, Luna answers from a local rule-based fallback (`src/lunaLocal.ts`). Never commit the key.
+Luna (the AI chat) needs `GEMINI_API_KEY` in `web/.env.local` locally or in the Vercel project env. `GEMINI_MODEL` is optional. Without the key, Luna answers from a local rule-based fallback (`src/lunaLocal.ts`). Read-aloud needs `ELEVENLABS_API_KEY` in the same place (`ELEVENLABS_VOICE_ID` and `ELEVENLABS_VOICE_ID_TR` are optional). Without it, the app uses the browser's voice. Names and empty values are in `web/.env.example`. Never commit the keys.
 
 ```bash
 # Python side
@@ -76,7 +77,7 @@ Screenshots: `scripts/web_screenshots.py` (Playwright; on Windows it uses `chann
 
 ## Deploy
 
-Vercel project **"lunanav"**, Root Directory **`web`**, auto-deploys from **`main`**, protected with **Vercel Authentication**. The `api/ask.ts` function needs `GEMINI_API_KEY` in the project env. Work since `e616415` is on branch **`hackathon`**: merge it into `main` to deploy. Tag `pre-hackathon` = `e616415` marks what existed before the event.
+Vercel project **"lunanav"**, Root Directory **`web`**, auto-deploys from **`main`**, protected with **Vercel Authentication**. The `api/ask.ts` function needs `GEMINI_API_KEY` in the project env, and `api/tts.ts` needs `ELEVENLABS_API_KEY` (optional `ELEVENLABS_VOICE_ID` and `ELEVENLABS_VOICE_ID_TR`). Work since `e616415` is on branch **`hackathon`**: merge it into `main` to deploy. Tag `pre-hackathon` = `e616415` marks what existed before the event.
 
 ## Done features
 

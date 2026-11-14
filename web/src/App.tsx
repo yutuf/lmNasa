@@ -13,7 +13,7 @@ import YearView from './components/YearView'
 import { download, reportHtml, siteRow, toCsv, type SiteRow } from './report'
 import HorizonView from './components/HorizonView'
 import Luna, { type LunaAction } from './components/Luna'
-import { AlertTriangle, ArrowLeftRight, CheckCircle2, Footprints, Sparkles, Wrench, MoonStar as NightIcon, Snowflake, Timer, Users, Hourglass, Satellite, Droplets, FlaskConical, Rocket, X, Mountain, Link2, MapPin, Pause, Play, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Printer, QrCode, Scale, Sun } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, CheckCircle2, Footprints, Sparkles, Wrench, MoonStar as NightIcon, Snowflake, Timer, Users, Hourglass, Satellite, Droplets, FlaskConical, Rocket, X, Mountain, Link2, MapPin, Pause, Play, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Orbit, Printer, QrCode, Scale, Sun } from 'lucide-react'
 import type { FlightView, Overlay, Pin, Target } from './components/Globe'
 import type { DriveMode, DriveStart } from './components/Drive'
 
@@ -26,9 +26,19 @@ import SimpleView from './components/SimpleView'
 import { MissionBar, Ticker, type NextWindow } from './components/MissionBar'
 import SiteProfile from './components/SiteProfile'
 import MissionStory from './components/MissionStory'
+import MissionInterview from './components/MissionInterview'
+import type { InterviewResult } from './interview'
 import MissionFilm from './components/MissionFilm'
 import Workshop from './components/Workshop'
 import DecisionLab from './components/DecisionLab'
+import SourcesPage from './components/SourcesPage'
+import HistoryPanel from './components/HistoryPanel'
+import GuidedTour from './components/GuidedTour'
+import LibrationExplainer from './components/LibrationExplainer'
+import OrbitPanel, { scenarioHtml } from './components/OrbitPanel'
+import { snapOf, type MissionSnap } from './components/MissionCompare'
+import type { ClpsMission } from './clps'
+import { setOverlayOpen } from './overlayState'
 import { ellipseCheck } from './ellipse'
 import type { Budget, Design } from './workshop'
 import { successProbability } from './probability'
@@ -194,7 +204,7 @@ function readHash(): { ui: 'simple' | 'advanced'; lang: Lang; p: Params } {
       earth: num('earth', DEF.earth), shadow: num('shadow', DEF.shadow), batt: num('batt', DEF.batt), slope: num('slope', 8),
       zone: [num('zone', DEF.zone)].map((z) => ([0, 100, 250, 500, 1000].includes(z) ? z : DEF.zone))[0], zslope: num('zslope', DEF.zslope),
       ice: [num('ice', DEF.ice)].map((v) => ([0, 2, 5, 10].includes(v) ? v : 0))[0], dsn: q.get('dsn') !== '0', relay: q.get('relay') === '1',
-      lander: landerById(q.get('lander') ?? 'nova').id, rover: ROVERS.find((r) => r.id === q.get('rover'))?.id ?? 'viper',
+      lander: landerById(q.get('lander') ?? 'vikram').id, rover: ROVERS.find((r) => r.id === q.get('rover'))?.id ?? 'viper',
       landing: q.get('landing') === 'rough' ? 'rough' : 'soft',
       scope: q.get('scope') === 'moon' ? 'moon' : 'pole', target: targetSites(q.get('target') ?? '').length ? q.get('target')! : '' },
   }
@@ -206,9 +216,17 @@ export default function App() {
   const [ui, setUi] = useState<'simple' | 'advanced'>(init.ui)
   const [profile, setProfile] = useState<CardSite | null>(null)
   const [story, setStory] = useState(false)
+  const [interview, setInterview] = useState(false)
   const [film, setFilm] = useState(() => /(^|[#&])film=1/.test(location.hash))
   const [workshop, setWorkshop] = useState(false)
   const [lab, setLab] = useState(false)
+  const [sources, setSources] = useState(false)
+  const [orbitPanel, setOrbitPanel] = useState(false)
+  const [historyPanel, setHistoryPanel] = useState(false)
+  const [tour, setTour] = useState(() => /(^|[#&])tour=1/.test(location.hash))
+  const [libration, setLibration] = useState(false)
+  const [pinnedMission, setPinnedMission] = useState<MissionSnap | null>(null)
+  const [satOrbit, setSatOrbit] = useState<Design['orbit'] | null>(null)
   const [customName, setCustomName] = useState<string | null>(null)
   const [withRecord, setWithRecord] = useState(true)
   const [rankBy, setRankBy] = useState<'go' | 'prob'>('go')   // include the landing record in the success probability
@@ -470,6 +488,9 @@ export default function App() {
       .sort((a, b) => b.r.goCount - a.r.goCount || a.d - b.d).slice(0, 3)
   }, [pick, results, atlas])
 
+  // a full-screen overlay pauses the canvases behind it (see overlayState.ts)
+  const overlayOpen = film || workshop || lab || story || interview || sources || orbitPanel || historyPanel || libration || !!profile || !!drive
+  useEffect(() => { setOverlayOpen(overlayOpen) }, [overlayOpen])
   if (!m || !atlas || !atlasPole) return <><div className="loading"><Patch size={72} />LunaNav<small>{lang === 'tr' ? 'NASA verisi yükleniyor…' : 'loading NASA data…'}</small></div></>
   const startDate = (s: number) => new Date(Date.parse(ran!.q.start + 'T00:00:00Z') + s * 86400e3)
   const fmtDate = (d: Date) => d.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' })
@@ -553,23 +574,71 @@ export default function App() {
     const next: Params = { ...p, target: t?.id ?? '', scope: t ? (inPoleGrid(t) ? 'pole' : 'moon') : p.scope }
     setP(next); run(next)
   }
+  // a real CLPS delivery in one click: its published target, an illustrative window in its planned year
+  const runClps = (cm: ClpsMission) => {
+    const site = SCIENCE_SITES.find((s) => s.id === cm.target)
+    if (!site) return
+    const next: Params = { ...p, target: site.id, scope: inPoleGrid(site) ? 'pole' : 'moon', start: cm.start, days: cm.days, relay: cm.relay }
+    setCustomName(cm.name); setP(next); run(next)
+    setTimeout(() => document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' }), 300)
+  }
+  const runInterview = (m: InterviewResult) => {
+    // Keep the page's window, slope and DSN settings. The interview already copied sunlight, Earth,
+    // darkness and battery from a preset, so withLander must not replace them.
+    const next: Params = {
+      ...p,
+      start: m.start,
+      days: m.days,
+      sun: m.sun,
+      earth: m.earth,
+      shadow: m.shadow,
+      batt: m.batt,
+      lander: m.lander,
+      rover: m.rover,
+      scope: m.scope,
+      relay: m.relay,
+      target: m.target ?? (m.goal ? `kind:${m.goal}` : ''),
+    }
+    setCustomName(m.name)
+    setP(next)
+    setInterview(false)
+    run(next)
+    setTimeout(() => document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' }), 400)
+  }
   const chooseGoal = (k: ScienceKind | null) => {
     const sites = k ? SCIENCE_SITES.filter((s) => s.kind === k) : []
-    const next: Params = { ...p, target: k ? `kind:${k}` : '', scope: k ? (sites.every(inPoleGrid) ? 'pole' : 'moon') : p.scope }
+    // Artemis III regions sit at the edge of the 2 km polar grid: search that grid (points near them still count)
+    const next: Params = { ...p, target: k ? `kind:${k}` : '', scope: k ? (k === 'artemis' || sites.every(inPoleGrid) ? 'pole' : 'moon') : p.scope }
     setP(next); run(next)
   }
   const scopeTarget = <ScopeTarget lang={lang} scope={p.scope} target={p.target} onScope={chooseScope} onTarget={chooseTarget} />
   const applyScenario = (sc: (typeof SCENARIOS)[number]): Params =>
     withLander({ ...p, days: sc.days, sun: sc.sun, earth: sc.earth, shadow: sc.shadow, batt: sc.batt, zone: sc.zone, zslope: sc.zslope, ice: sc.ice, dsn: sc.dsn }, landerById(p.lander))
 
+  // globe markers: only the sites of the current goal or target (all 44 at once, with names, piled up into an
+  // unreadable heap around the pole)
+  const goalKind = p.target.startsWith('kind:') ? p.target.slice(5) : null
+  const globeTargets = SCIENCE_SITES.filter((s) => s.id === p.target || s.kind === goalKind).map((s): Target => ({
+    id: s.id, name: s.name, lat: s.lat, lon: s.lon, colour: SCIENCE_KIND[s.kind].colour, selected: s.id === p.target,
+    label: s.id === p.target || s.kind === goalKind }))
+  // the report: ranked sites, the orbit scenarios, sources; opens the browser's print dialog to save it as a PDF
+  const pdfReport = () => {
+    if (!ran) return
+    const w = window.open('', '_blank')
+    if (!w) return
+    const html = reportHtml(cmpRows.length >= 2 ? cmpRows : rows, ran.q, constraints(ran.q)!, m.sources, lang)
+      .replace('</body></html>', `${results ? scenarioHtml(results, (r) => place(r) ?? coords(r), lang) : ''}<script>setTimeout(() => print(), 400)</script></body></html>`)
+    w.document.write(html); w.document.close()
+  }
+  const missionLabel = ran ? `${customName ?? matchScenario(ran.asked)?.name[lang] ?? (lang === 'tr' ? 'Özel görev' : 'Custom mission')} · ${fmtDate(new Date(ran.q.start + 'T00:00:00Z'))} + ${ran.q.windowDays} ${S.days[lang]}` : ''
   const globeCard = (
           <section className="card map-card">
             <div className="map">
               <Suspense fallback={null}>
-                <Globe poleCap={m.pole_cap} overlay={sunOverlay ?? overlay} pins={pins} earthLabel={lang === 'tr' ? 'Dünya' : 'Earth'}
+                <Globe poleCap={m.pole_cap} overlay={sunOverlay ?? overlay} pins={pins} earthLabel={lang === 'tr' ? 'Dünya' : 'Earth'} paused={overlayOpen} orbit={satOrbit}
                        selected={pick ? { lat: pick.lat, lon: pick.lon, label: `#${sel + 1}` } : null}
                        sunDir={sunDir} earthDir={earthDir} onPick={setSel}
-                       targets={SCIENCE_SITES.map((s): Target => ({ id: s.id, name: s.name, lat: s.lat, lon: s.lon, colour: SCIENCE_KIND[s.kind].colour, selected: s.id === p.target }))}
+                       targets={globeTargets}
                        onTarget={(id) => chooseTarget(SCIENCE_SITES.find((s) => s.id === id) ?? null)}
                        flight={mapMode === 'route' && pick && approach ? { lat: pick.lat, lon: pick.lon, approach,
                          labels: [S.phCoast[lang], S.phOrbit[lang], S.phDescent[lang], S.phLanded[lang]], view: flightView } : null} />
@@ -686,14 +755,16 @@ export default function App() {
               polarCards={rankBy === 'prob' ? [...polarCards].sort((a, b) => (b.prob?.p ?? 0) - (a.prob?.p ?? 0)).map((c, i) => ({ ...c, rank: i + 1 })) : polarCards}
               targetName={targetSite?.name ?? (targets.length ? SCIENCE_KIND[targets[0].kind].label[lang] : null)}
               scope={p.scope} goal={p.target.startsWith('kind:') ? (p.target.slice(5) as ScienceKind) : null} onScope={chooseScope} onGoal={chooseGoal}
-              windowLabel={ran ? `${customName ?? matchScenario(ran.asked)?.name[lang] ?? (lang === 'tr' ? 'Özel görev' : 'Custom mission')} · ${fmtDate(new Date(ran.q.start + 'T00:00:00Z'))} + ${ran.q.windowDays} ${S.days[lang]}` : ''}
+              windowLabel={missionLabel}
               lander={p.lander} rover={p.rover}
               onLander={(l) => { const next = withLander(p, l); setP(next); run(next) }}
               onRover={(id) => set('rover', id)}
               onScenario={(sc) => { const next = applyScenario(sc); setCustomName(null); setP(next); run(next) }}
               onStart={(d) => set('start', d)} onRun={() => run(p)} onOpen={setProfile}
               onAdvanced={() => { setUi('advanced'); scrollTo({ top: 0 }) }} onStory={() => setFilm(true)}
-              onDecide={() => setLab(true)} onWorkshop={() => setWorkshop(true)} />
+              onDecide={() => setLab(true)} onWorkshop={() => setWorkshop(true)} onSources={() => setSources(true)} onMission={runClps} onOrbits={() => setOrbitPanel(true)} onHistory={() => setHistoryPanel(true)} onTour={() => setTour(true)} onLibration={() => setLibration(true)}
+              pinned={pinnedMission} current={snapOf(missionLabel, cards[0])}
+              onPin={() => setPinnedMission(snapOf(missionLabel, cards[0]))} onClearPin={() => setPinnedMission(null)} />
             {globeCard}
           </main>
         </div>
@@ -851,10 +922,8 @@ export default function App() {
                 </div>
                 <div className="actions">
                   <button className="btn" onClick={() => download(`lunanav-${ran.q.start}.csv`, toCsv(rows))}><Download size={14} /> CSV</button>
-                  <button className="btn" onClick={() => {
-                    const w = window.open('', '_blank')
-                    if (w) { w.document.write(reportHtml(cmpRows.length >= 2 ? cmpRows : rows, ran.q, constraints(ran.q)!, m.sources, lang)); w.document.close() }
-                  }}><Printer size={14} /> {S.report[lang]}</button>
+                  <button className="btn" onClick={pdfReport}><Printer size={14} /> {S.report[lang]}</button>
+                  <button className="btn" onClick={() => setOrbitPanel(true)}><Orbit size={14} /> {lang === 'tr' ? 'Yörünge' : 'Orbits'}</button>
                 </div>
               </div>
               {top.length === 0 || top[0].goCount === 0 ? <div className="empty">{S.nothing[lang]}</div> : null}
@@ -1072,6 +1141,7 @@ export default function App() {
       {profile && (
         <SiteProfile s={cards.find((c) => c.r.index === profile.r.index) ?? polarCards.find((c) => c.r.index === profile.r.index) ?? profile}
           history={withRecord} onHistory={setWithRecord} lang={lang} lander={p.lander} onClose={() => setProfile(null)}
+          ctx={ran && eph && dsn ? { atlas, eph, dsn, c: constraints(ran.q)!, firstHour: firstHour(ran.q), days: ran.q.days, needDsn: ran.q.dsn, relay: ran.q.relay, startUnix: m.start_unix } : null}
           onWatch={() => { setPinned(profile.r); setProfile(null); watchLanding() }}
           onStand={() => { setPinned(profile.r); setPendingDrive('lander'); setProfile(null) }}
           onDrive={() => { setPinned(profile.r); setPendingDrive('rover'); setProfile(null) }}
@@ -1086,9 +1156,16 @@ export default function App() {
           onWalk={(c) => { setStory(false); setPinned(c.r); setPendingDrive('walk') }}
           onOpen={(c) => { setStory(false); setProfile(c) }} />
       )}
+      {sources && <SourcesPage lang={lang} onClose={() => setSources(false)} />}
+      {historyPanel && <HistoryPanel lang={lang} onClose={() => setHistoryPanel(false)} />}
+      {libration && <LibrationExplainer lang={lang} onClose={() => setLibration(false)} />}
+      {tour && ui === 'simple' && results && <GuidedTour lang={lang} onClose={() => setTour(false)} />}
+      {orbitPanel && results && <OrbitPanel results={results} name={(r) => place(r) ?? coords(r)} lang={lang} onClose={() => setOrbitPanel(false)} onPdf={pdfReport} />}
       {lab && <DecisionLab cards={cards} lang={lang} onClose={() => setLab(false)} onOpen={(c) => { setLab(false); setProfile(c) }} />}
       {workshop && (
         <Workshop lang={lang} onClose={() => setWorkshop(false)} onLaunch={(d: Design, b: Budget) => {
+          // a satellite goes into orbit on the globe; landers and rovers run a landing-site search
+          if (d.type === 'orbiter') { setSatOrbit(d.orbit); setWorkshop(false); setTimeout(() => document.querySelector('.map-card')?.scrollIntoView({ behavior: 'smooth' }), 300); return }
           // the design's budgets become the search: battery, sunlight, darkness, Earth contact, landing zone and slope
           const snap = (z: number) => [100, 250, 500, 1000].reduce((best, v) => (Math.abs(v - z) < Math.abs(best - z) ? v : best), 1000)
           const goalSites = d.goal ? SCIENCE_SITES.filter((s) => s.kind === d.goal) : []
@@ -1121,8 +1198,8 @@ export default function App() {
                          labels: [S.phCoast[lang], S.phOrbit[lang], S.phDescent[lang], S.phLanded[lang]] }} />
               </Suspense>
             )}
-            touchdown={polar ? () => (
-              <Suspense fallback={null}><Drive start={ds} eph={eph} dsn={dsn} lang={lang} initialMode="landing" onExit={() => {}} cinematic /></Suspense>
+            touchdown={polar ? (mode: 'landing' | 'rover') => (
+              <Suspense fallback={null}><Drive start={ds} eph={eph} dsn={dsn} lang={lang} initialMode="landing" filmMode={mode} onExit={() => {}} cinematic /></Suspense>
             ) : null}
             rover={polar ? () => (
               <Suspense fallback={null}><Drive start={ds} eph={eph} dsn={dsn} lang={lang} initialMode="rover" onExit={() => {}} cinematic /></Suspense>
@@ -1131,7 +1208,8 @@ export default function App() {
             onWalk={polar ? () => { setFilm(false); setPinned(c.r); setPendingDrive('walk') } : null} />
         )
       })()}
-      <Luna lang={lang} context={lunaContext} onAction={onLuna} onPlan={() => setStory(true)} />
+      {interview && <MissionInterview lang={lang} onRun={runInterview} onClose={() => setInterview(false)} />}
+      <Luna lang={lang} context={lunaContext} onAction={onLuna} onPlan={() => setInterview(true)} />
     </div>
     </>
   )

@@ -35,7 +35,7 @@ export const K = {
   arrayWPerKg: 100,          // W per kg of solar array
   battWhPerKg: 150,          // Wh per kg of space-rated Li-ion
   avionicsW: 80, heatersW: 60, dteW: 45, relayW: 25,
-  instrumentW: { '': 0, ice: 90, volcanic: 50, impact: 50, magnetic: 30, pit: 70, history: 20 } as Record<string, number>,
+  instrumentW: { '': 0, ice: 90, volcanic: 50, impact: 50, magnetic: 30, pit: 70, history: 20, artemis: 60 } as Record<string, number>,
   roverKg: { viper: 430, lrv: 210, yutu: 140, pragyan: 26 } as Record<string, number>,
 }
 

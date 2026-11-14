@@ -2,7 +2,7 @@
 // cards. Vehicles and the search area sit behind "More options"; every requirement, table and chart is in the
 // advanced interface.
 import { useEffect, useState } from 'react'
-import { Box, CalendarCheck, CalendarDays, Car, ChevronDown, Clapperboard, Eye, Flag, Flame, Globe2, Hourglass, Info, Magnet, MoonStar, Percent, Rocket, Scale, ShieldCheck, SlidersHorizontal, Snowflake, Target, Telescope, Tent, Timer, Users, Wrench, Zap, type LucideIcon } from 'lucide-react'
+import { Box, CalendarCheck, History, Orbit, PlayCircle, CalendarDays, Car, ChevronDown, Clapperboard, Eye, Flag, Flame, Globe2, Hourglass, Info, Magnet, MoonStar, Percent, Rocket, Scale, ShieldCheck, SlidersHorizontal, Snowflake, Target, Telescope, Tent, Timer, Users, Wrench, Zap, type LucideIcon } from 'lucide-react'
 import type { Lang } from '../i18n'
 import { SCENARIOS, type Scenario } from '../scenarios'
 import { LANDERS, ROVERS, type Lander } from '../vehicles'
@@ -10,12 +10,16 @@ import { GOALS, SCIENCE_KIND, SCIENCE_SITES, type ScienceKind } from '../science
 import { polarXY } from '../places'
 import { renderSite } from '../siteRender'
 import HeroMoon from './HeroMoon'
+import { CLPS, type ClpsMission } from '../clps'
+import MissionCompare, { type MissionSnap } from './MissionCompare'
 import SiteCard, { type CardSite } from './SiteCard'
 import VehiclePhoto from './VehiclePhoto'
 import VehicleShowroom from './VehicleShowroom'
 
 type T = Record<Lang, string>
-const GOAL_ICON: Record<ScienceKind | 'safe', LucideIcon> = { safe: ShieldCheck, ice: Snowflake, volcanic: Flame, impact: Target, magnetic: Magnet, pit: Tent, history: Flag }
+// line illustrations (public/art). Transparent webps, one handbook line style.
+const art = (name: string) => `${import.meta.env.BASE_URL}art/${name}.webp`
+const GOAL_ICON: Record<ScienceKind | 'safe', LucideIcon> = { safe: ShieldCheck, ice: Snowflake, volcanic: Flame, impact: Target, magnetic: Magnet, pit: Tent, history: Flag, artemis: Rocket }
 const SCENARIO_ICON: Record<string, LucideIcon> = { lander: Rocket, crew: Users, rover: Car, long: Hourglass, sprint: Zap, night: MoonStar }
 // one line on why each goal matters, shown under the chips
 const GOAL_WHY: Record<ScienceKind | 'safe', T> = {
@@ -26,10 +30,11 @@ const GOAL_WHY: Record<ScienceKind | 'safe', T> = {
   magnetic: { en: 'Swirls of bright soil sit where the Moon still has patches of magnetism. Nobody knows why.', tr: 'Parlak toprak girdapları Ay’ın hâlâ manyetik olduğu yerlerde. Nedeni bilinmiyor.' },
   pit: { en: 'Lava-tube pits are natural shelters from radiation and temperature swings.', tr: 'Lav tüpü çukurları radyasyona ve sıcaklık farkına karşı doğal sığınaklar.' },
   history: { en: 'Land near Apollo and other historic landing sites.', tr: 'Apollo ve diğer tarihi iniş yerlerinin yakınına in.' },
+  artemis: { en: 'NASA’s nine candidate regions for Artemis III, the first crewed landing since 1972. LunaNav finds the best spot and date near each.', tr: 'NASA’nın Artemis III için dokuz aday bölgesi; 1972’den beri ilk insanlı iniş. LunaNav her birinin yakınındaki en iyi yeri ve tarihi bulur.' },
 }
 
 // an example place for each goal, rendered from the real terrain next to the goal's explanation
-const GOAL_EXAMPLE: Record<ScienceKind | 'safe', string> = { safe: 'shackleton', ice: 'shackleton', volcanic: 'aristarchus', impact: 'tycho', magnetic: '', pit: '', history: '' }
+const GOAL_EXAMPLE: Record<ScienceKind | 'safe', string> = { safe: 'a3_malapert_massif', ice: 'faustini', volcanic: 'aristarchus', impact: 'tycho', magnetic: '', pit: '', history: '', artemis: 'a3_mons_mouton' }
 
 function GoalRender({ goal, lang }: { goal: ScienceKind | null; lang: Lang }) {
   const site = SCIENCE_SITES.find((s) => s.id === GOAL_EXAMPLE[goal ?? 'safe']) ?? SCIENCE_SITES.find((s) => s.kind === goal)
@@ -39,8 +44,9 @@ function GoalRender({ goal, lang }: { goal: ScienceKind | null; lang: Lang }) {
     let live = true
     const polar = site.lat < -84.6
     const [x0, y0] = polar ? polarXY(site.lat, site.lon) : [0, 0]
-    const [x, y] = [x0 + (polar ? 9 : 0), y0]
-    renderSite(`goal:${site.id}`, x, y, site.lon, polar ? 60 : 110, polar ? 4 : 18, site.lat, polar ? 22 : 60).then((url) => { if (live) setImg({ id: site.id, url }) }).catch(() => {})
+    const [x, y] = [x0, y0]
+    // 60 km across near the pole: whole craters and massifs fit the frame
+    renderSite(`goal:${site.id}`, x, y, site.lon, polar ? 60 : 110, polar ? 4 : 18, site.lat, polar ? 30 : 60).then((url) => { if (live) setImg({ id: site.id, url }) }).catch(() => {})
     return () => { live = false }
   }, [site])
   if (!site) return null
@@ -50,17 +56,18 @@ function GoalRender({ goal, lang }: { goal: ScienceKind | null; lang: Lang }) {
       {img?.id === site.id ? <img src={img.url} alt="" /> : <span className="s-goal-wait" />}
       <figcaption>
         <b>{site.name}</b>
-        <span>{site.lat < -84.6 ? (tr ? 'Gerçek LOLA arazisi · 44 km' : 'Real LOLA terrain · 44 km across') : (tr ? 'Gerçek LOLA arazisi · 120 km' : 'Real LOLA terrain · 120 km across')}</span>
+        <span>{site.lat < -84.6 ? (tr ? 'Gerçek LOLA arazisi · 60 km' : 'Real LOLA terrain · 60 km across') : (tr ? 'Gerçek LOLA arazisi · 120 km' : 'Real LOLA terrain · 120 km across')}</span>
       </figcaption>
     </figure>
   )
 }
 
-export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, busy, progress, cards, windowLabel, onScenario, onStart, onRun, onOpen, onAdvanced, lander, rover, onLander, onRover, onStory, onDecide, onWorkshop, polarCards, points, targetName, scope, goal, onScope, onGoal, rankBy, onRankBy }: {
+export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, busy, progress, cards, windowLabel, onScenario, onStart, onRun, onOpen, onAdvanced, lander, rover, onLander, onRover, onStory, onDecide, onWorkshop, onSources, onMission, onOrbits, onHistory, onTour, onLibration, pinned, current, onPin, onClearPin, polarCards, points, targetName, scope, goal, onScope, onGoal, rankBy, onRankBy }: {
   rankBy: 'go' | 'prob'; onRankBy: (v: 'go' | 'prob') => void
   polarCards: CardSite[]; points: number; targetName: string | null
   scope: 'pole' | 'moon'; goal: ScienceKind | null; onScope: (s: 'pole' | 'moon') => void; onGoal: (k: ScienceKind | null) => void
-  onStory: () => void; onDecide: () => void; onWorkshop: () => void
+  onStory: () => void; onDecide: () => void; onWorkshop: () => void; onSources: () => void; onMission: (m: ClpsMission) => void; onOrbits: () => void; onHistory: () => void; onTour: () => void; onLibration: () => void
+  pinned: MissionSnap | null; current: MissionSnap | null; onPin: () => void; onClearPin: () => void
   lander: string; rover: string; onLander: (l: Lander) => void; onRover: (id: string) => void
   lang: Lang; scenarioId: string | null; start: string; minDate: string; maxDate: string; busy: boolean; progress: number | null
   cards: CardSite[]; windowLabel: string; onScenario: (s: Scenario) => void; onStart: (d: string) => void; onRun: () => void
@@ -81,6 +88,10 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
         <p>{tr
           ? `Üç soruyu cevapla. LunaNav ${points.toLocaleString('tr-TR')} noktayı her gün ve her saat için NASA verisiyle kontrol eder ve en iyi iniş yerlerini gösterir.`
           : `Answer three questions. LunaNav checks ${points.toLocaleString('en-US')} points for every day and hour on NASA data and shows you the best places to land.`}</p>
+        <div className="s-hero-links">
+          <button onClick={onTour}><PlayCircle size={16} /> {tr ? '1 dakikalık tura katıl' : 'Take the 1-minute tour'}</button>
+          <button onClick={onLibration}><Globe2 size={16} /> {tr ? 'Dünya gökyüzünde neden sallanır?' : 'Why does Earth wobble in the sky?'}</button>
+        </div>
         </div>
       </section>
       <section className="s-build">
@@ -97,7 +108,10 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
                 </button>
               ))}
             </div>
-            <p className="s-help"><Info size={15} />{GOAL_WHY[goal ?? 'safe'][lang]}</p>
+            <div className="s-goal-why">
+              <img key={goal ?? 'safe'} className="s-goal-art" src={art(`goal-${goal ?? 'safe'}`)} alt="" />
+              <p className="s-help"><Info size={15} />{GOAL_WHY[goal ?? 'safe'][lang]}</p>
+            </div>
           </li>
 
           <li className="s-step" style={{ ['--acc' as string]: '#ff4fa3' }}>
@@ -125,6 +139,18 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
             <p className="s-help"><Info size={15} />{tr ? 'Sonraki birkaç hafta içindeki her iniş günü denenir.' : 'Every landing day in the following weeks is tried.'}</p>
           </li>
         </ol>
+
+        <div className="s-clps">
+          <span><Rocket size={15} /> {tr ? 'Ya da gerçek bir NASA CLPS görevini dene:' : 'Or try a real NASA CLPS mission:'}</span>
+          <div>{CLPS.map((m) => {
+            const site = SCIENCE_SITES.find((x) => x.id === m.target)
+            return (
+              <button key={m.id} onClick={() => onMission(m)} title={m.note[lang]}>
+                <b>{m.name}</b><small>{m.company} · {m.year} · {site?.name}</small>
+              </button>
+            )
+          })}</div>
+        </div>
 
         <button className={`s-more${more ? ' open' : ''}`} onClick={() => setMore(!more)} aria-expanded={more}>
           <SlidersHorizontal size={15} />
@@ -203,16 +229,20 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
           </>
         )}
 
+        {cards.length > 0 && <MissionCompare a={pinned} b={pinned ? current : current} lang={lang} onPin={onPin} onClear={onClearPin} />}
         {cards.length > 0 && (
           <div className="s-next">
             <h3>{tr ? 'Sonra ne yapabilirsin?' : 'What next?'}</h3>
             <div className="s-next-grid">
-              <button onClick={onStory}><Clapperboard size={22} /><b>{tr ? 'Görevi izle' : 'Watch the mission'}</b><span>{tr ? 'Fırlatmadan inişe, en iyi yerde kısa bir film.' : 'A short film from launch to landing at the best site.'}</span></button>
-              <button onClick={onDecide}><Scale size={22} /><b>{tr ? 'Yerleri karşılaştır' : 'Compare the sites'}</b><span>{tr ? 'Neyin önemli olduğunu seç; model en iyisini bulsun.' : 'Choose what matters; the model picks the best one.'}</span></button>
-              <button onClick={onWorkshop}><Wrench size={22} /><b>{tr ? 'Kendi aracını yap' : 'Build your own lander'}</b><span>{tr ? 'Panel, batarya, bacaklar: tasarımın nereye inebileceğini belirler.' : 'Panels, battery, legs: your design decides where it can land.'}</span></button>
+              <button onClick={onStory}><img className="s-next-art" src={art('next-film')} alt="" /><Clapperboard size={22} /><b>{tr ? 'Görevi izle' : 'Watch the mission'}</b><span>{tr ? 'Fırlatmadan inişe, en iyi yerde kısa bir film.' : 'A short film from launch to landing at the best site.'}</span></button>
+              <button onClick={onDecide}><img className="s-next-art" src={art('next-compare')} alt="" /><Scale size={22} /><b>{tr ? 'Yerleri karşılaştır' : 'Compare the sites'}</b><span>{tr ? 'Neyin önemli olduğunu seç; model en iyisini bulsun.' : 'Choose what matters; the model picks the best one.'}</span></button>
+              <button onClick={onHistory}><img className="s-next-art" src={art('next-history')} alt="" /><History size={22} /><b>{tr ? 'Gerçek inişlerle sına' : 'Test against real landings'}</b><span>{tr ? 'Chandrayaan-3, IM-1, SLIM, Chang’e 6, Blue Ghost 1: model ne dedi, ne oldu.' : 'Chandrayaan-3, IM-1, SLIM, Chang’e 6, Blue Ghost 1: what the model says vs what happened.'}</span></button>
+              <button onClick={onOrbits}><img className="s-next-art" src={art('next-orbits')} alt="" /><Orbit size={22} /><b>{tr ? 'Yörünge ve PDF rapor' : 'Orbits & PDF report'}</b><span>{tr ? 'Hangi yörünge buraya ulaşır? Raporu indir.' : 'Which orbit can reach this site? Download the report.'}</span></button>
+              <button onClick={onWorkshop}><img className="s-next-art" src={art('next-workshop')} alt="" /><Wrench size={22} /><b>{tr ? 'Kendi aracını yap' : 'Build your own lander'}</b><span>{tr ? 'Panel, batarya, bacaklar: tasarımın nereye inebileceğini belirler.' : 'Panels, battery, legs: your design decides where it can land.'}</span></button>
             </div>
           </div>
         )}
+        <button className="s-adv s-src" onClick={onSources}>{tr ? 'Kaynaklar ve sınırlar: veriler, yöntem, LunaNav’ın yapmadıkları →' : 'Sources & limits: the data, the method, and what LunaNav does not do →'}</button>
         <button className="s-adv" onClick={onAdvanced}>{tr ? 'Gelişmiş arayüz: tüm gereksinimler, grafikler, Artemis karşılaştırması, dışa aktarma →' : 'Advanced interface: every requirement, charts, the Artemis comparison, exports →'}</button>
       </section>
     </div>

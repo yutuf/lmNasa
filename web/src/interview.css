@@ -1,0 +1,115 @@
+/* Mission interview. A side panel on a desktop, a full-screen sheet on a phone.
+   Same broadcast palette as the rest of LunaNav: black page, Saira, one red. */
+
+.mi-root { position: fixed; inset: 0; z-index: 85; }
+.mi-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .48); }
+.mi-panel {
+  position: absolute; top: 0; right: 0; bottom: 0; z-index: 1; width: min(440px, 100%);
+  display: flex; flex-direction: column; background: var(--surface, #1c1c26); color: #fff;
+  border-left: 1px solid #474754; box-shadow: -24px 0 60px rgba(0, 0, 0, .55);
+  border-top: 3px solid #e10600;
+}
+.mi-head {
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px 12px; border-bottom: 1px solid #33333f;
+  background-image: repeating-linear-gradient(115deg, rgba(255, 255, 255, .03) 0 2px, transparent 2px 9px);
+}
+.mi-badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  background: #e10600; color: #fff; font: 900 12px var(--display, 'Saira', system-ui, sans-serif);
+  font-stretch: 118%; letter-spacing: .06em; text-transform: uppercase;
+}
+.mi-title { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.mi-title b {
+  font: 800 15px var(--display, 'Saira', system-ui, sans-serif); font-stretch: 118%;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.mi-title small {
+  color: #b7b7c6; font: 700 10px var(--display, 'Saira', system-ui, sans-serif);
+  letter-spacing: .14em; text-transform: uppercase;
+}
+.mi-x {
+  width: 32px; height: 32px; display: grid; place-items: center; border-radius: 6px; cursor: pointer;
+  background: transparent; color: #c9c9d3; border: 1px solid #474754;
+}
+.mi-x:hover { color: #fff; border-color: #fff; }
+
+.mi-log {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 16px; display: grid; gap: 10px; align-content: start;
+}
+.mi-turn { display: grid; gap: 10px; min-width: 0; }
+.mi-bubble { display: flex; max-width: 92%; }
+.mi-bubble p { margin: 0; padding: 10px 13px; border-radius: 10px; line-height: 1.45; font-size: 14px; }
+.mi-bubble.luna { justify-self: start; }
+.mi-bubble.luna p { background: #24242f; border-left: 3px solid #e10600; }
+.mi-bubble.you { justify-self: end; }
+.mi-bubble.you p { background: #fff; color: #000000; font-weight: 600; }
+.mi-typing p { display: flex; gap: 4px; align-items: center; min-width: 52px; }
+.mi-typing i {
+  width: 6px; height: 6px; border-radius: 50%; background: #fff; display: block;
+  animation: mi-blink 1s infinite;
+}
+.mi-typing i:nth-child(2) { animation-delay: .15s; }
+.mi-typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes mi-blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+.mi-card {
+  justify-self: stretch; display: grid; gap: 10px; padding: 14px; border-radius: 10px;
+  background: var(--surface-2, #2a2a36); border: 1px solid var(--border, #454556); border-top: 3px solid #e10600;
+}
+.mi-card h3 {
+  margin: 0; font: 800 16px var(--display, 'Saira', system-ui, sans-serif); font-stretch: 118%;
+  letter-spacing: .03em; text-transform: uppercase;
+}
+.mi-card .mi-body { margin: 0; color: #c9c9d3; font-size: 13.5px; line-height: 1.5; }
+.mi-rows { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mi-rows div { background: var(--surface-3, #363644); padding: 8px 10px; border: 1px solid var(--border, #454556); border-top: 2px solid #e10600; }
+.mi-rows small {
+  display: block; color: #b7b7c6; font: 700 10px var(--display, 'Saira', system-ui, sans-serif);
+  letter-spacing: .12em; text-transform: uppercase;
+}
+.mi-rows b { display: block; margin-top: 2px; font: 650 13px/1.3 var(--display, 'Saira', system-ui, sans-serif); font-stretch: 112%; }
+
+.mi-foot { display: grid; gap: 8px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border, #454556); background: var(--surface, #1c1c26); }
+.mi-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.mi-chip {
+  display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; max-width: 100%;
+  padding: 8px 12px; border-radius: 6px; cursor: pointer; text-align: left;
+  background: #24242f; border: 1px solid #474754; color: #fff; font-size: 13px; line-height: 1.35;
+}
+.mi-chip b { font-weight: 650; }
+.mi-chip small { color: #b7b7c6; font-size: 11px; font-weight: 600; }
+.mi-chip:hover { border-color: #fff; }
+.mi-chip.rec { border-color: #e10600; box-shadow: inset 0 0 0 1px #e10600; }
+.mi-chip:disabled { opacity: .5; cursor: default; }
+.mi-form { display: flex; gap: 8px; }
+.mi-form input {
+  flex: 1; min-width: 0; height: 40px; padding: 0 12px; border-radius: 6px;
+  border: 1px solid var(--border-2, #5e5e72); background: var(--surface-2, #2a2a36); color: #fff; font: 15px/1.2 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+.mi-form input:focus { outline: 2px solid #ff5a4f; outline-offset: 1px; }
+.mi-form button, .mi-go, .mi-ghost, .mi-back {
+  border-radius: 6px; cursor: pointer; font: 800 13px var(--display, 'Saira', system-ui, sans-serif);
+  font-stretch: 112%; letter-spacing: .04em; text-transform: uppercase;
+}
+.mi-form button {
+  width: 40px; border: 0; background: #e10600; color: #fff; display: grid; place-items: center;
+}
+.mi-form button:disabled { opacity: .4; cursor: default; }
+.mi-go, .mi-ghost, .mi-back {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 42px; padding: 0 14px; width: 100%;
+}
+.mi-go { background: #e10600; border: 1px solid #e10600; color: #fff; }
+.mi-go:hover { background: #ff1a10; border-color: #ff1a10; }
+.mi-ghost, .mi-back { background: transparent; border: 1px solid #474754; color: #fff; }
+.mi-ghost:hover, .mi-back:hover { border-color: #fff; }
+.mi-note { margin: 0; color: #b7b7c6; font-size: 11.5px; line-height: 1.4; }
+
+@media (max-width: 760px) {
+  .mi-scrim { display: none; }
+  .mi-panel { width: 100%; border-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mi-typing i { animation: none; opacity: .7; }
+}

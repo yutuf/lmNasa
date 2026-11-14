@@ -62,10 +62,11 @@
 .film .fs-verdict.nogo h1 { color: #ff5a5a; text-shadow: 0 0 36px rgba(255, 90, 90, .32); }
 
 .fx-frame {
-  position: relative; margin: 0; width: min(100%, calc(38vh * 1.6)); aspect-ratio: 16 / 10;
+  position: relative; margin: 0; width: 100%; max-height: 38vh; aspect-ratio: 16 / 10;
   border: 1px solid rgba(255, 255, 255, .38); border-top: 3px solid var(--team, #fff);
   background: #07070c; overflow: hidden; box-shadow: 0 18px 40px rgba(0, 0, 0, .45);
 }
+.film .fs-boxes.grid { max-width: min(52vw, 560px); }
 .fx-frame > img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fx-wait {
   display: grid; place-items: center; height: 100%; min-height: 160px;
@@ -77,10 +78,10 @@
 .fx-br-tr { top: 7px; right: 7px; border-top-width: 2px; border-right-width: 2px; }
 .fx-br-bl { bottom: 7px; left: 7px; border-bottom-width: 2px; border-left-width: 2px; }
 .fx-br-br { bottom: 7px; right: 7px; border-bottom-width: 2px; border-right-width: 2px; }
-.fx-frame figcaption { position: absolute; left: 12px; bottom: 10px; display: grid; gap: 2px; max-width: 58%; text-shadow: 0 1px 8px #000; }
+.fx-frame figcaption { position: absolute; z-index: 2; left: 12px; bottom: 10px; display: grid; gap: 2px; max-width: 54%; text-shadow: 0 1px 8px #000; }
 .fx-frame figcaption b { font: 800 16px var(--display); font-stretch: 112%; }
 .fx-frame figcaption span { font-size: 12px; color: rgba(255, 255, 255, .82); }
-.fx-ship { position: absolute; right: 0; bottom: 0; max-width: 44%; max-height: 76%; width: auto; height: auto; object-fit: contain; filter: drop-shadow(0 14px 16px rgba(0, 0, 0, .8)); }
+.fx-ship { position: absolute; z-index: 1; right: 0; bottom: 0; max-width: 42%; max-height: 76%; width: auto; height: auto; object-fit: contain; filter: drop-shadow(0 14px 16px rgba(0, 0, 0, .8)); }
 
 .fx-v-lower { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 14px; align-items: center; }
 .fx-v-lower .fx-spark { grid-column: 1 / -1; margin-top: 0; }
@@ -116,7 +117,7 @@
 
 @media (max-width: 860px) {
   .film .fs-verdict { grid-template-columns: 1fr; overflow: auto; align-content: start; padding-top: 11vh; }
-  .fx-frame { width: min(100%, calc(26vh * 1.6)); }
+  .fx-frame { max-height: 26vh; }
   .fx-hud { width: min(280px, 86vw); }
   .fx-hud-coast, .fx-hud-site { right: 12px; }
   .fx-hud-descent { left: 12px; }
@@ -131,8 +132,99 @@
   .film .fs-verdict h1 { font-size: 68px; }
   .fx-blurb { -webkit-line-clamp: 2; }
   .fx-gauge svg { width: 92px; height: 92px; }
-  .fx-frame { width: min(100%, calc(28vh * 1.6)); }
+  .fx-frame { max-height: 28vh; }
 }
 @media (prefers-reduced-motion: reduce) {
   .fx-wipe { display: none; }
+}
+/* a scene mounted early, out of sight, so it is ready when the film cuts to it */
+.fs-premount { position: absolute; inset: 0; visibility: hidden; pointer-events: none; z-index: -1; }
+.fs-rover-live { position: absolute; inset: 0; }
+
+/* landing window, Monte Carlo, landing ellipse — 2D scenes */
+.fs-window, .fs-odds, .fs-ellipse {
+  position: absolute; inset: 0; z-index: 1;
+  display: grid; align-content: center; justify-items: center;
+  gap: 12px; padding: 12vh 5vw 16vh;
+  background: radial-gradient(ellipse at 50% 42%, #141820 0%, #000 68%);
+}
+.fx-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.fx-scene-h { display: grid; justify-items: center; gap: 4px; text-align: center; }
+.fx-win-count {
+  margin: 0; font: 900 clamp(28px, 4.6vw, 64px)/.95 var(--display); font-stretch: 125%;
+  letter-spacing: -.02em; text-transform: uppercase;
+}
+.fx-win-count b { color: #4ef08f; font-variant-numeric: tabular-nums; }
+.fx-win-pick { margin: 0; display: flex; gap: 10px; align-items: baseline; font: 700 16px var(--display); font-stretch: 112%; }
+.fx-win-pick span { font: 800 11px var(--display); letter-spacing: .14em; text-transform: uppercase; color: rgba(255, 255, 255, .55); }
+.fx-cal-wrap { position: relative; width: min(980px, 94vw); padding-top: 14px; }
+.fx-scan {
+  position: absolute; top: 14px; bottom: 0; width: 2px; margin-left: -1px;
+  background: #fff; box-shadow: 0 0 12px rgba(255, 255, 255, .75); pointer-events: none;
+}
+.fx-cal { display: flex; flex-wrap: nowrap; gap: 3px; width: 100%; }
+.fx-day {
+  position: relative;
+  flex: 1 1 0; width: auto; min-width: 0; height: 34px;
+  display: grid; place-items: center; border-radius: 3px;
+  background: #14141c; color: rgba(255, 255, 255, .28);
+  font: 700 10px var(--display); font-variant-numeric: tabular-nums; font-style: normal;
+}
+.fx-day[data-month]::before {
+  content: attr(data-month); position: absolute; left: 0; top: -13px;
+  font: 800 9px var(--display); letter-spacing: .12em; text-transform: uppercase;
+  color: rgba(255, 255, 255, .5); pointer-events: none;
+}
+.fx-day.on.go { background: #2fd27a; color: #062214; }
+.fx-day.on.nogo { background: #2a2a34; color: rgba(255, 255, 255, .55); }
+.fx-day.on.unk { background: #24242f; color: rgba(255, 255, 255, .7); }
+.fx-day.best { box-shadow: inset 0 0 0 2px #fff; }
+.fx-day.on.go.best { box-shadow: inset 0 0 0 2px #fff, 0 0 12px rgba(47, 210, 122, .55); }
+.fx-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 0; font: 800 11px var(--display); letter-spacing: .12em; text-transform: uppercase; color: rgba(255, 255, 255, .62); }
+.fx-legend i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; font-style: normal; }
+.fx-legend i.go { background: #2fd27a; }
+.fx-legend i.nogo { background: #2a2a34; }
+.fx-legend i.best { background: transparent; box-shadow: inset 0 0 0 2px #fff; }
+.fx-note { margin: 0; max-width: 68ch; text-align: center; font-size: 12.5px; line-height: 1.4; color: rgba(255, 255, 255, .55); }
+
+.fs-odds { grid-template-rows: auto minmax(160px, 1fr) auto auto; align-content: stretch; justify-items: center; }
+.fx-odds-pc { margin: 0; font: 900 clamp(56px, 8vw, 108px)/.84 var(--display); font-stretch: 125%; font-variant-numeric: tabular-nums; }
+.fx-odds-range { margin: 0; font: 700 16px var(--display); font-stretch: 112%; letter-spacing: .03em; color: rgba(255, 255, 255, .8); font-variant-numeric: tabular-nums; }
+.fx-odds-plot { width: min(960px, 94vw); height: 100%; min-height: 160px; max-height: 42vh; align-self: stretch; }
+.fx-odds-canvas { width: 100%; height: 100%; display: block; }
+.fx-odds-bins { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; width: min(960px, 94vw); }
+.fx-odds-bin { display: grid; gap: 2px; border-top: 2px solid var(--c, #fff); padding-top: 6px; min-width: 0; }
+.fx-odds-bin span { font: 800 10px var(--display); letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .62); }
+.fx-odds-bin b { font: 900 clamp(16px, 2vw, 26px)/1 var(--display); font-stretch: 118%; font-variant-numeric: tabular-nums; }
+.fx-odds-bin em { font-style: normal; font: 700 11px var(--display); color: rgba(255, 255, 255, .45); font-variant-numeric: tabular-nums; }
+
+.fs-ellipse {
+  grid-template-columns: minmax(240px, 1.05fr) minmax(240px, .95fr);
+  justify-items: stretch; align-items: center; gap: 4vw;
+  background: radial-gradient(ellipse at 28% 48%, #141820 0%, #000 70%);
+}
+.fx-ell-fig { margin: 0; display: grid; justify-items: center; align-content: center; gap: 8px; min-width: 0; }
+.fx-ell-fig svg { width: min(100%, 440px); height: auto; }
+.fx-ell-ring { fill: rgba(255, 255, 255, .03); stroke: rgba(255, 255, 255, .72); stroke-width: 1.2; }
+.fx-ell-ring-in { fill: none; stroke: rgba(255, 255, 255, .22); stroke-dasharray: 2 4; }
+.fx-ell-hair { stroke: rgba(255, 255, 255, .28); stroke-width: 1; }
+.fx-ell-fig figcaption { font: 700 14px/1.35 var(--display); font-stretch: 112%; text-align: center; max-width: 42ch; }
+.fx-ell-side { display: grid; align-content: center; gap: 12px; min-width: 0; }
+.fx-ell-go { margin: 0; display: grid; gap: 2px; }
+.fx-ell-go b { font: 900 clamp(40px, 5vw, 72px)/.9 var(--display); font-stretch: 125%; font-variant-numeric: tabular-nums; }
+.fx-ell-go span { font: 800 12px var(--display); letter-spacing: .14em; text-transform: uppercase; color: rgba(255, 255, 255, .62); }
+
+@media (max-height: 800px) {
+  .fs-window, .fs-odds, .fs-ellipse { align-content: start; overflow: auto; padding-top: 11vh; }
+}
+@media (max-width: 760px) {
+  .fx-day { height: 22px; font-size: 8px; }
+  .fx-day[data-month]::before { content: none; }
+  .fx-odds-bins { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .fs-ellipse { grid-template-columns: 1fr; padding-top: 11vh; overflow: auto; align-content: start; }
+  .fx-ell-fig svg { width: min(100%, 280px); }
+  .fx-metrics { grid-template-columns: 1fr 1fr; }
 }

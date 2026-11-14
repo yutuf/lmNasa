@@ -205,6 +205,7 @@ export function pointSky(atlas: Atlas, ephem: Ephem, dsn: ArrayLike<boolean>, in
     const eu = (d0 * u[0] + d1 * u[1] + d2 * u[2]) / len
     const eAlt = Math.asin(Math.min(Math.max(eu, -1), 1)) / RAD
     const eAz = Math.atan2(d0 * e[0] + d1 * e[1] + d2 * e[2], d0 * nn[0] + d1 * nn[1] + d2 * nn[2]) / RAD
+    // Earth counts by the centre of its ~1 deg disk, as in the Python reference this engine is tested against
     earthVisible[k] = (eAlt > horizonAt(atlas.horizon, off, atlas.nAz, eAz) && (!needDsn || !!dsn[h])) || (viaRelay !== null && viaRelay[k] === 1)
   }
   return { lat, lon, sunFraction, earthVisible }

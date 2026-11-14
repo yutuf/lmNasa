@@ -87,7 +87,7 @@ function Craft({ t }: { t: number }) {
 
 export default function LaunchScene({ t }: { t: number }) {
   return (
-    <Canvas camera={{ position: [1.2, 1.2, 1.6], fov: 40, near: 0.01, far: 200 }} dpr={[1, 2]}>
+    <Canvas camera={{ position: [1.2, 1.2, 1.6], fov: 40, near: 0.01, far: 200 }} dpr={[1, 1.5]} onCreated={({ gl }) => { gl.debug.checkShaderErrors = import.meta.env.DEV }}>
       <color attach="background" args={['#000']} />
       <ambientLight intensity={0.35} />
       <hemisphereLight args={['#9cc4ff', '#000000', 0.35]} />

@@ -4,7 +4,7 @@
 import type { Lang } from './i18n'
 
 type T = Record<Lang, string>
-export type ScienceKind = 'ice' | 'volcanic' | 'impact' | 'magnetic' | 'pit' | 'history'
+export type ScienceKind = 'ice' | 'volcanic' | 'impact' | 'magnetic' | 'pit' | 'history' | 'artemis'
 
 export interface ScienceSite { id: string; name: string; lat: number; lon: number; kind: ScienceKind; why: T }
 
@@ -16,6 +16,7 @@ export const GOALS: Record<ScienceKind, T> = {
   magnetic: { en: 'Solve a magnetic mystery', tr: 'Manyetik gizemi çöz' },
   pit: { en: 'Find caves for a base', tr: 'Üs için mağara bul' },
   history: { en: 'Visit history', tr: 'Tarihi ziyaret et' },
+  artemis: { en: 'Land where Artemis III will', tr: 'Artemis III’ün ineceği yere in' },
 }
 
 /** The target a search goes for: one site, or every site serving a goal ("kind:ice"). */
@@ -32,9 +33,29 @@ export const SCIENCE_KIND: Record<ScienceKind, { colour: string; label: T }> = {
   magnetic: { colour: '#7cf29a', label: { en: 'Magnetic', tr: 'Manyetik' } },
   pit: { colour: '#ffd23f', label: { en: 'Lava tubes', tr: 'Lav tüpleri' } },
   history: { colour: '#e2e2ea', label: { en: 'History', tr: 'Tarih' } },
+  artemis: { colour: '#ff3b30', label: { en: 'Artemis III', tr: 'Artemis III' } },
 }
 
 export const SCIENCE_SITES: ScienceSite[] = [
+  // NASA's nine Artemis III candidate regions: centres of the official USGS outlines (data/artemis_regions.json)
+  { id: 'a3_haworth', name: 'Artemis III: Haworth', lat: -86.745, lon: -22.77, kind: 'artemis',
+    why: { en: 'NASA candidate landing region for Artemis III, the first crewed landing since 1972.', tr: 'Artemis III için NASA aday iniş bölgesi; 1972’den beri ilk insanlı iniş.' } },
+  { id: 'a3_malapert_massif', name: 'Artemis III: Malapert Massif', lat: -86.003, lon: -0.46, kind: 'artemis',
+    why: { en: 'NASA candidate landing region for Artemis III, the first crewed landing since 1972.', tr: 'Artemis III için NASA aday iniş bölgesi; 1972’den beri ilk insanlı iniş.' } },
+  { id: 'a3_mons_mouton', name: 'Artemis III: Mons Mouton', lat: -85.442, lon: 31.62, kind: 'artemis',
+    why: { en: 'NASA candidate landing region for Artemis III, the first crewed landing since 1972.', tr: 'Artemis III için NASA aday iniş bölgesi; 1972’den beri ilk insanlı iniş.' } },
+  { id: 'a3_mons_mouton_plateau', name: 'Artemis III: Mons Mouton Plateau', lat: -84.335, lon: 30.38, kind: 'artemis',
+    why: { en: 'NASA candidate landing region for Artemis III, the first crewed landing since 1972.', tr: 'Artemis III için NASA aday iniş bölgesi; 1972’den beri ilk insanlı iniş.' } },
+  { id: 'a3_nobile_rim_1', name: 'Artemis III: Nobile Rim 1', lat: -85.431, lon: 37.06, kind: 'artemis',
+    why: { en: 'NASA candidate landing region for Artemis III, the first crewed landing since 1972.', tr: 'Artemis III için NASA aday iniş bölgesi; 1972’den beri ilk insanlı iniş.' } },
+  { id: 'a3_nobile_rim_2', name: 'Artemis III: Nobile Rim 2', lat: -83.958, lon: 58.58, kind: 'artemis',
+    why: { en: 'NASA candidate landing region for Artemis III, the first crewed landing since 1972.', tr: 'Artemis III için NASA aday iniş bölgesi; 1972’den beri ilk insanlı iniş.' } },
+  { id: 'a3_peak_near_cabeus_b', name: 'Artemis III: Peak near Cabeus B', lat: -83.632, lon: -68.65, kind: 'artemis',
+    why: { en: 'NASA candidate landing region for Artemis III, the first crewed landing since 1972.', tr: 'Artemis III için NASA aday iniş bölgesi; 1972’den beri ilk insanlı iniş.' } },
+  { id: 'a3_slater_plain', name: 'Artemis III: Slater Plain', lat: -87.191, lon: 125.39, kind: 'artemis',
+    why: { en: 'NASA candidate landing region for Artemis III, the first crewed landing since 1972.', tr: 'Artemis III için NASA aday iniş bölgesi; 1972’den beri ilk insanlı iniş.' } },
+  { id: 'a3_de_gerlache_rim_2', name: 'Artemis III: de Gerlache Rim 2', lat: -88.206, lon: -64.88, kind: 'artemis',
+    why: { en: 'NASA candidate landing region for Artemis III, the first crewed landing since 1972.', tr: 'Artemis III için NASA aday iniş bölgesi; 1972’den beri ilk insanlı iniş.' } },
   { id: 'shackleton', name: 'Shackleton crater', lat: -89.66, lon: 129.2, kind: 'ice',
     why: { en: 'A crater at the very pole whose floor has not seen sunlight in billions of years: a cold trap for water ice.', tr: 'Tam kutupta, tabanı milyarlarca yıldır güneş görmeyen bir krater: su buzu için soğuk tuzak.' } },
   { id: 'faustini', name: 'Faustini crater', lat: -87.3, lon: 77.0, kind: 'ice',

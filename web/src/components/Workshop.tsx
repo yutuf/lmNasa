@@ -226,6 +226,7 @@ export default function Workshop({ lang, onClose, onLaunch }: { lang: Lang; onCl
                 <div><span>{t('passes')}</span><b>{orbit.passesPerDay.toFixed(1)}</b></div>
               </div>
               <p className="ws-model">{tr ? 'Bir röle olarak kutuptaki bir iniş aracı, Dünya görünmese de bu sürede eve ulaşabilir.' : 'As a relay, a lander at the pole could reach home this much of the time, even when Earth is below its horizon.'}</p>
+              <button className="btn primary ws-launch" onClick={() => onLaunch(d, b)}><Rocket size={16} /> {tr ? 'Yörüngeye yerleştir' : 'Put it in orbit'}</button>
             </>
           ) : (
             <>

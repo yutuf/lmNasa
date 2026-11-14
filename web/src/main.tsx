@@ -17,6 +17,11 @@ function Root() {
   return judges ? <JudgesPage onOpen={(h) => { location.hash = h; scrollTo({ top: 0 }) }} /> : <App />
 }
 
+// offline support (production only): keeps the app, the NASA data and the models it used (public/sw.js)
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}) })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Root />
