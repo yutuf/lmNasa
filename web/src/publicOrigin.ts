@@ -1,7 +1,7 @@
-// The name judges and phones should open. Loopback and the old Vercel host both rewrite to it.
-export const PUBLIC_ORIGIN = 'https://adaptlabs.us'
+// The host a phone can open today. adaptlabs.us has no public DNS record yet, so it is not used.
+export const PUBLIC_ORIGIN = 'https://lunanav-theta.vercel.app'
 
-const REWRITE = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1', 'lunanav-theta.vercel.app'])
+const REWRITE = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1'])
 
 export function shareOrigin(origin: string): string {
   try {
