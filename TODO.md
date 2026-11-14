@@ -3,6 +3,24 @@
 Updated by the agents as work lands. `[x]` done and verified · `[~]` in progress (who) · `[ ]` not started.
 Rules: test with `npm test` + `npx tsc -b` in `web/`; show the owner locally before committing; never push `main` without asking.
 
+## Live-site problems found 14 Nov ~23:45 (next session: start here)
+- [ ] **Slow first load ("doesn't load")**: before anything shows, the app downloads ~9 MB (atlas 4.1, ephem 4.7 MB) while the
+      card renders pull pole_dem 4.6 MB, psr 6.4 MB, thermal 4.8 MB in parallel; measured 0.3–0.5 MB/s from the live server,
+      so the first screen takes over a minute. Fixes: (1) `web/vercel.json` cache headers (added, repeat visits fast);
+      (2) gzip the .bin files at build (psr → 35 %, thermal → 40 %, atlas → 57 %) and inflate with `DecompressionStream`;
+      (3) do not start psr/thermal/pole_dem until the first results are on screen; (4) show the page shell while loading.
+- [ ] **Phone layout collapses**: on a 390 px phone the page is 461 px wider than the screen (find the overflowing element;
+      likely the header nav with the new Phone button or the ticker) — fix with wrapping/hiding in the 390 px breakpoint.
+- [ ] **Rough Earth and Moon textures**: `moon_albedo.jpg` is only 0.31 MB (low resolution), used close-up in the Earthrise
+      backdrop and the globe. Proposal: NASA SVS "CGI Moon Kit" LROC colour map (4k/8k, public domain) and a 4k Earth
+      (NASA Blue Marble) → resize to 4k JPEG (~1.5 MB each). Needs the owner's OK to download (AGENTS.md rule).
+- [ ] **Luna on the live site**: `GEMINI_API_KEY` is still missing in Vercel (`/api/ask` → 503). ElevenLabs works (key set).
+- [ ] **adaptlabs.us** does not resolve (DNS: non-existent domain); nothing in the code points to it any more.
+- [ ] Grok #8 (`SiteTimeline.tsx`: countdowns, slip what-if, nearest dates) and #9 (`CoordinateSearch.tsx` + `pinSite.ts`)
+      finished their files: review, then mount (SiteTimeline in `SiteProfile` next to `SiteExtras`; CoordinateSearch in
+      `SimpleView` under the steps, evaluating the point with `searchPoint` and opening its site page).
+- [ ] Grok #7 QA report: `C:/Users/kayma/AppData/Local/Temp/claude/.../scratchpad/qa/REPORT.md` (if it finished).
+
 ## In progress
 - [~] **Countdowns** (sunset/Earthset, "right now"), **launch-slip what-if**, **nearest dates that work** (Grok #8)
 - [~] **Drop a pin / type coordinates** anywhere on the Moon (Grok #9)
