@@ -8,6 +8,59 @@ export type ScienceKind = 'ice' | 'volcanic' | 'impact' | 'magnetic' | 'pit' | '
 
 export interface ScienceSite { id: string; name: string; lat: number; lon: number; kind: ScienceKind; why: T }
 
+/** Turkish labels. IAU proper nouns stay; the descriptive word is translated. `name` stays English for ids and logs. */
+const NAME_TR: Record<string, string> = {
+  a3_haworth: 'Artemis III: Haworth',
+  a3_malapert_massif: 'Artemis III: Malapert Masifi',
+  a3_mons_mouton: 'Artemis III: Mons Mouton',
+  a3_mons_mouton_plateau: 'Artemis III: Mons Mouton Platosu',
+  a3_nobile_rim_1: 'Artemis III: Nobile Kenarı 1',
+  a3_nobile_rim_2: 'Artemis III: Nobile Kenarı 2',
+  a3_peak_near_cabeus_b: 'Artemis III: Cabeus B yakınındaki tepe',
+  a3_slater_plain: 'Artemis III: Slater Ovası',
+  a3_de_gerlache_rim_2: 'Artemis III: de Gerlache Kenarı 2',
+  shackleton: 'Shackleton krateri',
+  faustini: 'Faustini krateri',
+  haworth: 'Haworth krateri',
+  cabeus: 'Cabeus (LCROSS çarpması)',
+  degerlache: 'de Gerlache krateri',
+  schrodinger: 'Schrödinger havzası',
+  spa: 'Güney Kutbu–Aitken havzası',
+  tycho: 'Tycho merkez tepesi',
+  aristarchus: 'Aristarchus platosu',
+  gruithuisen: 'Gruithuisen kubbeleri',
+  ina: 'Ina',
+  compton: 'Compton–Belkovich',
+  reinergamma: 'Reiner Gamma',
+  marius: 'Marius Tepeleri çukuru',
+  tranquillitatis: 'Mare Tranquillitatis çukuru',
+  apollo11: 'Apollo 11',
+  apollo17: 'Apollo 17',
+  change4: 'Chang’e 4',
+  sverdrup: 'Sverdrup krateri',
+  nobile: 'Nobile krateri',
+  amundsen: 'Amundsen krateri',
+  hermite: 'Hermite krateri (kuzey kutbu)',
+  rumker: 'Mons Rümker',
+  mariusdomes: 'Marius Tepeleri kubbeleri',
+  lassell: 'Lassell masifi',
+  orientale: 'Orientale havzası',
+  copernicus: 'Copernicus krateri',
+  moscoviense: 'Mare Moscoviense',
+  ingenii: 'Mare Ingenii girdapları',
+  descartes: 'Descartes anomalisi',
+  ingeniipit: 'Mare Ingenii çukuru',
+  mortis: 'Lacus Mortis çukuru',
+  apollo15: 'Apollo 15 (Hadley)',
+  lunokhod1: 'Lunokhod 1',
+  chandrayaan3: 'Chandrayaan-3 (Shiv Shakti)',
+}
+
+/** The name to show. English `name` is unchanged so ids, logs and untranslated screens keep working. */
+export function siteLabel(s: ScienceSite, lang: Lang): string {
+  return lang === 'tr' ? (NAME_TR[s.id] ?? s.name) : s.name
+}
+
 /** Plain goals for the simple interface: what the mission is for, not where. */
 export const GOALS: Record<ScienceKind, T> = {
   ice: { en: 'Find water ice', tr: 'Su buzu bul' },

@@ -1,0 +1,16 @@
+.drive > div:has(> canvas) { position: absolute !important; inset: 0; z-index: 0; }
+.drive .hud { z-index: 3; }
+.drive .hud.bottom-right {
+  left: auto;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  background: rgba(22, 22, 28, .88);
+  border: 1px solid rgba(255, 255, 255, .22);
+  padding: 12px;
+  border-radius: var(--radius);
+}
+.drive .drive-value { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+.drive .hud.objective .ico { display: block; }
+.drive .descent-exit { position: absolute; z-index: 5; right: 16px; top: 16px; background: #14141c; }
+.drive .hud.bottom-right .keys { max-width: 240px; margin: 0; text-align: right; white-space: normal; }

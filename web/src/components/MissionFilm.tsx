@@ -21,6 +21,7 @@ import { useSpeechVoice } from '../speech'
 import { FilmHud, SimGauge, SunSpark, TitleBackdrop } from './FilmHud'
 import { EllipseScene, OddsScene, WindowScene } from './FilmScenes'
 import '../film.css'
+import '../film-fix.css'
 
 const LaunchScene = lazy(() => import('./LaunchScene'))
 
@@ -103,6 +104,10 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
   onClose: () => void; onWalk: (() => void) | null
 }) {
   const tr = lang === 'tr'
+  useEffect(() => {
+    document.documentElement.classList.add('mission-film-open')
+    return () => document.documentElement.classList.remove('mission-film-open')
+  }, [])
   const ellipseOn = !!card.ellipse && card.ellipse.points > 1
   const oddsOn = !!card.prob && card.prob.trials > 0
   const scenes = useMemo(() => (['title', 'launch', 'window', 'coast', 'descent', ...(touchdown ? ['landing' as const] : []), 'site', ...(ellipseOn ? ['ellipse' as const] : []), ...(rover ? ['rover' as const] : []), ...(oddsOn ? ['odds' as const] : []), 'verdict'] as SceneId[]), [rover, touchdown, ellipseOn, oddsOn])

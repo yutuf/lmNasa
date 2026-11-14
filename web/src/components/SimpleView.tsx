@@ -3,14 +3,14 @@
 // advanced interface.
 import { useEffect, useState } from 'react'
 import { Box, CalendarCheck, History, Orbit, PlayCircle, CalendarDays, Car, ChevronDown, Clapperboard, Eye, Flag, Flame, Globe2, Hourglass, Info, Magnet, MoonStar, Percent, Rocket, Scale, ShieldCheck, SlidersHorizontal, Snowflake, Target, Telescope, Tent, Timer, Users, Wrench, Zap, type LucideIcon } from 'lucide-react'
-import type { Lang } from '../i18n'
+import { fmtPercent, type Lang } from '../i18n'
 import { SCENARIOS, type Scenario } from '../scenarios'
 import { LANDERS, ROVERS, type Lander } from '../vehicles'
-import { GOALS, SCIENCE_KIND, SCIENCE_SITES, type ScienceKind } from '../scienceSites'
+import { GOALS, SCIENCE_KIND, SCIENCE_SITES, siteLabel, type ScienceKind } from '../scienceSites'
 import { polarXY } from '../places'
 import { renderSite } from '../siteRender'
 import HeroMoon from './HeroMoon'
-import { CLPS, type ClpsMission } from '../clps'
+import { CLPS, clpsChipWhen, type ClpsMission } from '../clps'
 import MissionCompare, { type MissionSnap } from './MissionCompare'
 import SiteCard, { type CardSite } from './SiteCard'
 import VehiclePhoto from './VehiclePhoto'
@@ -51,12 +51,15 @@ function GoalRender({ goal, lang }: { goal: ScienceKind | null; lang: Lang }) {
   }, [site])
   if (!site) return null
   const tr = lang === 'tr'
+  const example = goal == null
+  const label = siteLabel(site, lang)
+  const span = site.lat < -84.6 ? (tr ? 'Gerçek LOLA arazisi · 60 km' : 'Real LOLA terrain · 60 km across') : (tr ? 'Gerçek LOLA arazisi · 120 km' : 'Real LOLA terrain · 120 km across')
   return (
     <figure className="s-goal-render">
       {img?.id === site.id ? <img src={img.url} alt="" /> : <span className="s-goal-wait" />}
       <figcaption>
-        <b>{site.name}</b>
-        <span>{site.lat < -84.6 ? (tr ? 'Gerçek LOLA arazisi · 60 km' : 'Real LOLA terrain · 60 km across') : (tr ? 'Gerçek LOLA arazisi · 120 km' : 'Real LOLA terrain · 120 km across')}</span>
+        <b>{example ? (tr ? 'Örnek arazi' : 'Example terrain') : label}</b>
+        <span>{example ? (tr ? `${label}: bu bir örnek, arama sonucu değil. ` : `${label}: an example, not the search result. `) : ''}{span}</span>
       </figcaption>
     </figure>
   )
@@ -133,7 +136,7 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
               <label className="s-date"><span><CalendarDays size={13} /> {tr ? 'Şu tarihten itibaren' : 'From'}</span>
                 <input type="date" value={start} min={minDate} max={maxDate} onChange={(e) => e.target.value && onStart(e.target.value)} /></label>
               <button className="btn primary s-run" onClick={onRun} disabled={busy}>
-                {busy ? `${tr ? 'Aranıyor' : 'Searching'} ${Math.round((progress ?? 0) * 100)}%` : <><Rocket size={17} /> {tr ? 'İniş yerlerini bul' : 'Find landing sites'}</>}
+                {busy ? `${tr ? 'Aranıyor' : 'Searching'} ${fmtPercent(Math.round((progress ?? 0) * 100), lang)}` : <><Rocket size={17} /> {tr ? 'İniş yerlerini bul' : 'Find landing sites'}</>}
               </button>
             </div>
             <p className="s-help"><Info size={15} />{tr ? 'Sonraki birkaç hafta içindeki her iniş günü denenir.' : 'Every landing day in the following weeks is tried.'}</p>
@@ -146,7 +149,7 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
             const site = SCIENCE_SITES.find((x) => x.id === m.target)
             return (
               <button key={m.id} onClick={() => onMission(m)} title={m.note[lang]}>
-                <b>{m.name}</b><small>{m.company} · {m.year} · {site?.name}</small>
+                <b>{m.name}</b><small>{m.company} · {clpsChipWhen(m, lang, minDate)} · {site ? siteLabel(site, lang) : ''}</small>
               </button>
             )
           })}</div>
@@ -212,7 +215,7 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
           </div>
         </div>
         {cards.length > 0 && <p className="s-help s-legend"><Info size={15} />{tr
-          ? 'Her kart gerçek araziyi gösterir. “GO 4/30”: 30 günün 4’ünde iniş işe yarar. Yüzde: binlerce simülasyonda görevin başarılı olma şansı. Ayrıntı için karta tıkla.'
+          ? 'Her kart gerçek araziyi gösterir. “UYGUN 4/30”: 30 günün 4’ünde iniş işe yarar. Yüzde: binlerce simülasyonda görevin başarılı olma şansı. Ayrıntı için karta tıkla.'
           : 'Each card shows the real terrain. “GO 4/30”: landing works on 4 of the 30 days. The percentage: the chance the mission succeeds over thousands of simulations. Click a card for details.'}</p>}
         {cards.length === 0 ? <p className="s-empty">{tr ? 'Bu pencerede uygun nokta yok; başka bir ay veya görev deneyin.' : 'No site passes in this window; try another month or mission.'}</p> : (
           <div className="card-grid">

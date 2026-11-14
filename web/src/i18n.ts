@@ -7,6 +7,66 @@ export function hours(h: number, lang: Lang): string {
   return h < 48 ? `${Math.round(h)} hours` : `${(h / 24).toFixed(1)} days`
 }
 
+/** A number that is already a percent (53 → "53%" / "%53"). */
+export function fmtPercent(n: number, lang: Lang): string {
+  const v = Math.round(n)
+  return lang === 'tr' ? `%${v}` : `${v}%`
+}
+
+/** Compact duration for a stat, a table cell or a badge: "0 h" / "0 sa". */
+export function fmtHoursShort(h: number, lang: Lang): string {
+  return `${Math.round(h)} ${lang === 'tr' ? 'sa' : 'h'}`
+}
+
+/** The verdict word already used in the Turkish prose: UYGUN / UYGUN DEĞİL. */
+export function verdictLabel(go: boolean, lang: Lang): string {
+  if (lang === 'tr') return go ? 'UYGUN' : 'UYGUN DEĞİL'
+  return go ? 'GO' : 'NO-GO'
+}
+
+const MONTH_SHORT = {
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'],
+  tr: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
+}
+
+/** "2027-09-10" → "10 Sept 2027" / "10 Eyl 2027". Invalid strings pass through. */
+export function fmtIsoDate(iso: string, lang: Lang): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
+  if (!m) return iso
+  const mon = MONTH_SHORT[lang][Number(m[2]) - 1]
+  if (!mon) return iso
+  return `${Number(m[3])} ${mon} ${m[1]}`
+}
+
+/** The robotic landing record's span. The stored English string stays in probability.ts. */
+export function landingPeriod(lang: Lang): string {
+  return lang === 'tr' ? '2019 – 2025 ortası' : '2019 – mid-2025'
+}
+
+/** The browser catalogue is JPL DE421. A stale source line may still say DE440. */
+export function catalogueSources(sources: readonly string[]): string[] {
+  return sources.map((s) => s.replace(/JPL DE440/g, 'JPL DE421'))
+}
+
+/**
+ * Turkish print view of a report that was built in English number style.
+ * English keeps GO, percents, hours and ISO dates, and only renames the ephemeris.
+ * The <style> block is left alone, so class="go", class="nogo" and width:100% survive.
+ */
+export function localizeReportHtml(html: string, lang: Lang): string {
+  const fixEph = (s: string) => s.replace(/JPL DE440/g, 'JPL DE421')
+  if (lang !== 'tr') return fixEph(html)
+  const cut = html.indexOf('</style>')
+  const head = cut >= 0 ? html.slice(0, cut + 8) : ''
+  let s = cut >= 0 ? html.slice(cut + 8) : html
+  s = s.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, (_m, y: string, mo: string, d: string) => fmtIsoDate(`${y}-${mo}-${d}`, 'tr'))
+  s = s.replace(/(\d+(?:[.,]\d+)?)%/g, '%$1')
+  s = s.replace(/(\d+(?:[.,]\d+)?) h\b/g, '$1 sa')
+  s = s.replace(/NO-GO/g, 'UYGUN DEĞİL')
+  s = s.replace(/\bGO\b/g, 'UYGUN')
+  return head + fixEph(s)
+}
+
 export const fmtPct = pct
 
 export const T = {

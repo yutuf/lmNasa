@@ -1,0 +1,328 @@
+{
+  "tour": [
+    {
+      "lang": "tr",
+      "step": "1 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "tr",
+      "step": "2 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "tr",
+      "step": "3 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "tr",
+      "step": "4 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "tr",
+      "step": "5 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "tr",
+      "step": "6 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "tr",
+      "step": "7 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "tr",
+      "step": "8 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "en",
+      "step": "1 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "en",
+      "step": "2 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "en",
+      "step": "3 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "en",
+      "step": "4 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "en",
+      "step": "5 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "en",
+      "step": "6 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "en",
+      "step": "7 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    },
+    {
+      "lang": "en",
+      "step": "8 / 8",
+      "bottom": 832,
+      "height": 844,
+      "nextClickable": true
+    }
+  ],
+  "driveApollo": [
+    {
+      "text": "Plan a sunlit route",
+      "clickable": true
+    },
+    {
+      "text": "⏸",
+      "clickable": true
+    },
+    {
+      "text": "1×",
+      "clickable": true
+    },
+    {
+      "text": "10×",
+      "clickable": true
+    },
+    {
+      "text": "1m/s",
+      "clickable": true
+    },
+    {
+      "text": "10m/s",
+      "clickable": true
+    },
+    {
+      "text": "1h/s",
+      "clickable": true
+    },
+    {
+      "text": "Back to the lander",
+      "clickable": true
+    },
+    {
+      "text": "Sky compass",
+      "clickable": true
+    },
+    {
+      "text": "Exit",
+      "clickable": true
+    }
+  ],
+  "driveDefault": [
+    {
+      "text": "Plan a sunlit route (to the lander)",
+      "clickable": true
+    },
+    {
+      "text": "⏸",
+      "clickable": true
+    },
+    {
+      "text": "1×",
+      "clickable": true
+    },
+    {
+      "text": "10×",
+      "clickable": true
+    },
+    {
+      "text": "1m/s",
+      "clickable": true
+    },
+    {
+      "text": "10m/s",
+      "clickable": true
+    },
+    {
+      "text": "1h/s",
+      "clickable": true
+    },
+    {
+      "text": "Back to the lander",
+      "clickable": true
+    },
+    {
+      "text": "Sky compass",
+      "clickable": true
+    },
+    {
+      "text": "Exit",
+      "clickable": true
+    }
+  ],
+  "walk": {
+    "powerCards": 0,
+    "footer": " Back to the lander Sky compass ExitW/S walk · A/D turn · Shift run · drag to look · F flashlight · 1–5 time speed",
+    "walkReadout": " Sun: 100% · 1.8° · sets in 14.7 d Earth: hidden · -2.2° · rises in 2.5 d Radio link: — walked 0 m ·  Flashlight on"
+  },
+  "filmDesktop": {
+    "rect": {
+      "x": 270,
+      "y": 690,
+      "width": 900,
+      "height": 111,
+      "top": 690,
+      "right": 1170,
+      "bottom": 801,
+      "left": 270
+    },
+    "scrollHeight": 900,
+    "innerHeight": 900,
+    "scrollWidth": 900,
+    "clientWidth": 900,
+    "text": "5 September 2027: launch from Kennedy Space Center. One and a half turns around Earth, the burn toward the Moon, about 4.5 days of coasting, capture into a polar orbit, and touchdown on 10 September 2027."
+  },
+  "filmPhone": {
+    "rect": {
+      "x": 16,
+      "y": 633.203125,
+      "width": 358,
+      "height": 117.96875,
+      "top": 633.203125,
+      "right": 374,
+      "bottom": 751.171875,
+      "left": 16
+    },
+    "scrollHeight": 844,
+    "innerHeight": 844,
+    "scrollWidth": 358,
+    "clientWidth": 358,
+    "text": "5 September 2027: launch from Kennedy Space Center. One and a half turns around Earth, the burn toward the Moon, about 4.5 days of coasting, capture into a polar orbit, and touchdown on 10 September 2027."
+  },
+  "verdict": {
+    "scrollHeight": 844,
+    "innerHeight": 844
+  },
+  "landing": {
+    "firstExit": {
+      "rect": {
+        "x": 1352.65625,
+        "y": 16,
+        "width": 71.34375,
+        "height": 34,
+        "top": 16,
+        "right": 1424,
+        "bottom": 50,
+        "left": 1352.65625
+      },
+      "clickable": true
+    },
+    "readout": "ALTITUDE 1,432 m · RANGE 2,108 m · T−26 s",
+    "camera": [
+      1979.203527633499,
+      1434.7948244518889,
+      -758.8121422467827
+    ],
+    "time": 0.84960000000149,
+    "crafts": [
+      {
+        "worldSize": [
+          2.83903237375921,
+          3.0245458459594374,
+          2.483685402015567
+        ],
+        "pixelWidth": 208.7896206221245,
+        "pixelHeight": 192.87147328314538
+      },
+      {
+        "worldSize": [
+          5.155609532575454,
+          8.554453798508803,
+          3.013946749620345
+        ],
+        "pixelWidth": 391.12131508538334,
+        "pixelHeight": 744.2530339970779
+      }
+    ]
+  },
+  "filmPhoneTr": {
+    "rect": {
+      "x": 16,
+      "y": 652.796875,
+      "width": 358,
+      "height": 98.375,
+      "top": 652.796875,
+      "right": 374,
+      "bottom": 751.171875,
+      "left": 16
+    },
+    "scrollHeight": 844,
+    "innerHeight": 844,
+    "scrollWidth": 358,
+    "clientWidth": 358,
+    "text": "5 Eylül 2027: Kennedy Uzay Merkezi'nden fırlatma. Dünya yörüngesinde bir buçuk tur, Ay'a transfer ateşlemesi, yaklaşık 4,5 gün yol, kutup yörüngesine giriş ve 10 Eylül 2027 iniş."
+  },
+  "filmDesktopTr": {
+    "rect": {
+      "x": 270,
+      "y": 719,
+      "width": 900,
+      "height": 82,
+      "top": 719,
+      "right": 1170,
+      "bottom": 801,
+      "left": 270
+    },
+    "scrollHeight": 900,
+    "innerHeight": 900,
+    "scrollWidth": 900,
+    "clientWidth": 900,
+    "text": "5 Eylül 2027: Kennedy Uzay Merkezi'nden fırlatma. Dünya yörüngesinde bir buçuk tur, Ay'a transfer ateşlemesi, yaklaşık 4,5 gün yol, kutup yörüngesine giriş ve 10 Eylül 2027 iniş."
+  },
+  "verdictDesktop": {
+    "scrollHeight": 900,
+    "innerHeight": 900
+  },
+  "scrollRestored": {
+    "classRemoved": true,
+    "height": 3497,
+    "innerHeight": 900
+  }
+}

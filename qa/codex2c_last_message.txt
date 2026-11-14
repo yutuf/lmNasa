@@ -1,0 +1,8 @@
+Completed Task 2c and appended “Run 2c” to `CODEX_RESULT_2.md`.
+
+- Removed gzip pipeline and generated logs; kept `measureFirstLoad.py`.
+- Tests: 406 passed. Lint and build passed.
+- Confirmed no `.gz` files in `web/dist`.
+- TypeScript failed on four unused imports in `src/App.tsx:4`; left unchanged because it’s outside scope.
+
+No git commands or installs used.

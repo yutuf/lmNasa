@@ -54,3 +54,17 @@ export function describePlace(lat: number, lon: number, feats: Feature[], lang: 
     text: tr ? `${f[0]} ${isCrater ? 'kenarının' : ''} ${away.toFixed(1).replace('.', ',')} km ${dir}`.replace(/\s+/g, ' ')
       : `${away.toFixed(1)} km ${dir} of ${f[0]}${isCrater ? ' rim' : ''}` }
 }
+
+/**
+ * Split a place title so the bold span is the feature name, with the words before and after it kept.
+ * "39.4 km NE of Slater rim" + "Slater" → before "39.4 km NE of", name "Slater", after "rim".
+ * When the name is missing or is the whole title, the whole string is the bold part.
+ */
+export function splitPlaceTitle(text: string, placeName: string): { before: string; name: string; after: string } {
+  const name = placeName.trim()
+  const whole = text.trim()
+  if (!name || name === whole) return { before: '', name: text, after: '' }
+  const i = text.indexOf(name)
+  if (i < 0) return { before: '', name: text, after: '' }
+  return { before: text.slice(0, i).trim(), name, after: text.slice(i + name.length).trim() }
+}

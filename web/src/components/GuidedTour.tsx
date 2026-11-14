@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Lang } from '../i18n'
 import { DEFAULT_TOUR, placeCallout, spotlightBox, stepFrom, stepsPresent, type TourStep } from '../tourModel'
 import '../tour.css'
+import '../tour-fix.css'
 
 export { DEFAULT_TOUR }
 export type { TourStep }
@@ -120,8 +121,8 @@ export default function GuidedTour({ lang, onClose, steps = DEFAULT_TOUR }: {
       ring.style.height = `${box.height}px`
       ring.classList.add('is-on')
       const spot = placeCallout(box, view, { width: card.offsetWidth, height: card.offsetHeight })
-      card.style.top = `${spot.top}px`
-      card.style.left = `${spot.left}px`
+      card.style.top = `${Math.max(12, Math.min(spot.top, view.height - card.offsetHeight - 12))}px`
+      card.style.left = `${Math.max(12, Math.min(spot.left, view.width - card.offsetWidth - 12))}px`
       card.dataset.place = spot.placement
       if (!shownRef.current) {
         shownRef.current = true
@@ -132,6 +133,7 @@ export default function GuidedTour({ lang, onClose, steps = DEFAULT_TOUR }: {
     card.focus({ preventScroll: true })
     const ro = new ResizeObserver(place)
     ro.observe(el)
+    ro.observe(card)
     window.addEventListener('resize', place)
     window.addEventListener('scroll', place, { capture: true, passive: true })
     const follow = () => {

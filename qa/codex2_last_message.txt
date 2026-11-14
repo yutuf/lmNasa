@@ -1,0 +1,5 @@
+Implemented gzip delivery and deferred terrain loading. All 73 binaries round-trip exactly; startup binary payloads shrink 29.8%.
+
+TypeScript and lint API checks pass. Full tests, builds, and Playwright measurements remain blocked by process permissions.
+
+[CODEX_RESULT_2.md](</C:/Users/kayma/Desktop/lmNasa Lunar/CODEX_RESULT_2.md>) documents results, limitations, and exact cross-owner patches. Other runs’ files were untouched.

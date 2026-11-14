@@ -9,7 +9,7 @@ type T = Record<Lang, string>
 const DATA: Record<Lang, Row[]> = {
   en: [
     ['Terrain, horizons, slopes', 'NASA LRO LOLA laser altimeter', 'South pole: 5–40 m grids (horizon atlas on a 2 km grid, slopes at 40 m). Whole Moon: LDEM global grid, points about 30 km apart.'],
-    ['Sun and Earth positions', 'JPL DE440 / DE421 ephemerides (NASA NAIF SPICE)', 'Every hour from November 2026 to December 2045.'],
+    ['Sun and Earth positions', 'JPL DE421 ephemeris (NASA NAIF SPICE)', 'Every hour from November 2026 to December 2045. The browser catalogue is de421.bsp.'],
     ['Talking to Earth', 'NASA Deep Space Network', 'Goldstone, Madrid, Canberra: whether a 34/70 m dish can see the Moon each hour.'],
     ['Water ice', 'LRO Diviner + permanently shadowed regions', 'Distance to the nearest cold trap where ice is stable (south pole only).'],
     ['Artemis III regions', 'NASA / USGS official outlines', 'The nine candidate landing regions.'],
@@ -19,7 +19,7 @@ const DATA: Record<Lang, Row[]> = {
   ],
   tr: [
     ['Arazi, ufuklar, eğimler', 'NASA LRO LOLA lazer altimetresi', 'Güney kutbu: 5–40 m ızgaralar (2 km ufuk atlası, 40 m eğim). Tüm Ay: LDEM küresel ızgara, noktalar yaklaşık 30 km arayla.'],
-    ['Güneş ve Dünya konumları', 'JPL DE440 / DE421 efemerisleri (NASA NAIF SPICE)', 'Kasım 2026’dan Aralık 2045’e her saat.'],
+    ['Güneş ve Dünya konumları', 'JPL DE421 efemerisi (NASA NAIF SPICE)', 'Kasım 2026’dan Aralık 2045’e her saat. Tarayıcı kataloğu de421.bsp.'],
     ['Dünya ile iletişim', 'NASA Derin Uzay Ağı (DSN)', 'Goldstone, Madrid, Canberra: 34/70 m antenin her saat Ay’ı görüp görmediği.'],
     ['Su buzu', 'LRO Diviner + kalıcı gölgeli bölgeler', 'Buzun kararlı olduğu en yakın soğuk tuzağa uzaklık (yalnızca güney kutbu).'],
     ['Artemis III bölgeleri', 'NASA / USGS resmi sınırları', 'Dokuz aday iniş bölgesi.'],
@@ -40,7 +40,7 @@ const METHOD: Record<Lang, string[]> = {
   ],
   tr: [
     'Her nokta ve her saat için Güneş ve Dünya yerel gökyüzüne yerleştirilir ve o yöndeki gerçek arazi ufkuyla karşılaştırılır. Güneş bir disk sayılır: kısmen gizliyse kısmen aydınlıktır.',
-    'Bir iniş tarihi, görev boyunca güneş ışığı, Dünya bağlantısı (DSN anteniyle veya seçildiyse röle uydusuyla), en uzun karanlık ve batarya gereksinimleri karşıladığında ve zemin yeterince düz olduğunda GO’dur.',
+    'Bir iniş tarihi, görev boyunca güneş ışığı, Dünya bağlantısı (DSN anteniyle veya seçildiyse röle uydusuyla), en uzun karanlık ve batarya gereksinimleri karşıladığında ve zemin yeterince düz olduğunda UYGUN’dur.',
     'Başarı şansı: her yer için yüzlerce simüle görev; fırlatma gecikmesi, ufuk hatası, iniş alanındaki dağılım, batarya yıpranması, ayakların altındaki eğim ve isteğe bağlı gerçek iniş geçmişi (13’te 8’den Beta önseli).',
     'İniş elipsi: aynı iniş tarihi, yerin 2 km çevresindeki her ızgara noktasında kontrol edilir; en kötü değerler gösterilir.',
     'Röle uydusu: yüksek noktası güneyde olan eliptik donmuş yörünge (Kepler modeli); ufkun 10° üstündeyken bağlantı sayılır.',

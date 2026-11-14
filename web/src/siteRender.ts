@@ -6,6 +6,7 @@
 import * as THREE from 'three'
 import { dataUrl } from './data'
 import { heightAt, parseDem, planeDir, type Dem } from './terrain'
+import { afterResultsPaint } from './resultsPaint'
 
 const W = 520, H = 400
 const HALF_M = 9000                 // the relief covers 18 km x 18 km
@@ -90,14 +91,16 @@ function build(height: (e: number, n: number) => number, mPerUnit: number, exag:
 export function renderSite(key: string, xKm: number, yKm: number, lonDeg: number, sunAzDeg: number, sunAltDeg: number, latDeg = -90, radiusKm?: number): Promise<string> {
   if (cache.has(key)) return cache.get(key)!
   const job = queue.then(async () => {
-    const dem = await loadDem()
+    await afterResultsPaint()
+    // A whole-Moon thumbnail never needs the south-pole DEM.
+    const dem = latDeg < -84.6 ? await loadDem() : null
     const r = getRenderer()
     const scene = new THREE.Scene()
     // inside the polar grid: 200 m terrain, 18 km disc; elsewhere: the whole-Moon grid, 120 km disc
-    const polar = latDeg < -84.6 && !Number.isNaN(heightAt(dem, xKm * 1000, yKm * 1000))
+    const polar = dem !== null && !Number.isNaN(heightAt(dem, xKm * 1000, yKm * 1000))
     let mesh: THREE.Mesh
     let sunPlane: [number, number]
-    if (polar) {
+    if (polar && dem) {
       // stereographic plane: east-ish = +x, north-ish = +y around the site
       const pd = (e: number, n: number) => heightAt(dem, xKm * 1000 + e, yKm * 1000 + n)
       mesh = build(pd, radiusKm ? (radiusKm * 1000) / HALF_M : 1, EXAG)

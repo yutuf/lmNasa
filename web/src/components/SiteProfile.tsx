@@ -2,9 +2,8 @@
 // rank and the name, then the numbers that decide the landing, and the ways to go deeper.
 import { useEffect } from 'react'
 import { ArrowLeft, Car, Footprints, Microscope, PlaneLanding, Rocket } from 'lucide-react'
-import type { Lang } from '../i18n'
-import { splitName } from '../teams'
-import { useSiteImage, type CardSite } from './SiteCard'
+import { fmtHoursShort, fmtPercent, verdictLabel, type Lang } from '../i18n'
+import { PlaceTitle, useSiteImage, type CardSite } from './SiteCard'
 import VehiclePhoto from './VehiclePhoto'
 import ProbabilityPanel from './ProbabilityPanel'
 import { landerById } from '../vehicles'
@@ -16,7 +15,6 @@ export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand
 }) {
   const img = useSiteImage(s)
   const tr = lang === 'tr'
-  const [light, bold] = splitName(s.name)
   const r = s.row
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -27,13 +25,14 @@ export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand
   // uncertainty: the 5th-95th percentile across the success simulation's missions (launch slip, horizon error, scatter
   // across the landing zone, battery wear); for map values, where the number comes from
   const pr = s.prob
-  const range = (x: [number, number, number] | undefined, unit: string) => (x ? `${tr ? 'simülasyonlarda' : 'across simulations'} ${Math.round(x[0])}–${Math.round(x[2])}${unit}` : undefined)
+  const rangePct = (x: [number, number, number] | undefined) => (x ? (tr ? `simülasyonlarda %${Math.round(x[0])}–%${Math.round(x[2])}` : `across simulations ${Math.round(x[0])}–${Math.round(x[2])}%`) : undefined)
+  const rangeH = (x: [number, number, number] | undefined) => (x ? (tr ? `simülasyonlarda ${Math.round(x[0])}–${Math.round(x[2])} sa` : `across simulations ${Math.round(x[0])}–${Math.round(x[2])} h`) : undefined)
   const stats: [string, string, string?, string?][] = [
     [tr ? 'Uygun iniş tarihi' : 'GO landing dates', `${r.goDates}/${r.windowDays}`],
     [tr ? 'En iyi iniş' : 'Best landing', s.bestDate],
-    [tr ? 'Güneş ışığı' : 'Sunlight', `${r.sunPct}%`, 'sun', range(pr?.sunPct, '%')],
-    [tr ? 'Dünya bağlantısı' : 'Earth contact', `${r.earthPct}%`, 'earth', range(pr?.earthPct, '%')],
-    [tr ? 'En uzun karanlık' : 'Longest darkness', `${r.longestDarkH} h`, 'dark', range(pr?.darkH, ' h')],
+    [tr ? 'Güneş ışığı' : 'Sunlight', fmtPercent(r.sunPct, lang), 'sun', rangePct(pr?.sunPct)],
+    [tr ? 'Dünya bağlantısı' : 'Earth contact', fmtPercent(r.earthPct, lang), 'earth', rangePct(pr?.earthPct)],
+    [tr ? 'En uzun karanlık' : 'Longest darkness', fmtHoursShort(r.longestDarkH, lang), 'dark', rangeH(pr?.darkH)],
     [tr ? 'Gereken batarya' : 'Battery needed', `${r.batteryNeedWh.toLocaleString(tr ? 'tr-TR' : 'en-US')} Wh`, 'batt'],
     [tr ? 'İniş alanı eğimi (%95)' : 'Landing zone slope (95%)', r.zoneSlopeDeg === null ? '–' : `${r.zoneSlopeDeg.toFixed(1)}°`, 'safe', r.zoneSlopeDeg === null ? undefined : (tr ? 'LOLA 40 m eğim haritası' : 'LOLA 40 m slope map')],
     [tr ? 'En yakın buz' : 'Nearest water ice', r.iceKm === null ? '–' : `${r.iceKm.toFixed(1)} km`, 'ice', r.iceKm === null ? undefined : (tr ? 'Diviner + kalıcı gölge haritası' : 'Diviner + shadow map')],
@@ -46,10 +45,9 @@ export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand
         <button className="profile-back" onClick={onClose}><ArrowLeft size={16} /> {tr ? 'Sonuçlar' : 'Results'}</button>
         <div className="ph-text">
           <span className="ph-rank">{String(s.rank).padStart(2, '0')}</span>
-          {light && <span className="ph-first">{light}</span>}
-          <span className="ph-last">{bold}</span>
+          <PlaceTitle text={s.name} placeName={s.placeName} light="ph-first" bold="ph-last" />
           <span className="ph-region">{s.region ?? (tr ? 'Açık arazi' : 'Open terrain')} · {r.lat.toFixed(3)}°, {r.lon.toFixed(2)}°E</span>
-          <span className={`ph-verdict ${r.goDates > 0 ? 'go' : 'nogo'}`}>{r.goDates > 0 ? 'GO' : 'NO-GO'}</span>
+          <span className={`ph-verdict ${r.goDates > 0 ? 'go' : 'nogo'}`}>{verdictLabel(r.goDates > 0, lang)}</span>
           {s.note && <span className="ph-note-chip">{s.note}</span>}
         </div>
         <div className="ph-visual">
@@ -73,9 +71,9 @@ export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand
             </div>
             <div className="ph-ellipse-grid">
               <div className={s.ellipse.go === s.ellipse.points ? 'ok' : s.ellipse.go > 0 ? 'warn' : 'bad'}><span>{tr ? 'Geçen noktalar' : 'Points that pass'}</span><b>{s.ellipse.go}/{s.ellipse.points}</b></div>
-              <div><span>{tr ? 'En az güneş' : 'Least sunlight'}</span><b>{s.ellipse.worstSun}%</b></div>
-              <div><span>{tr ? 'En az Dünya bağlantısı' : 'Least Earth contact'}</span><b>{s.ellipse.worstEarth}%</b></div>
-              <div><span>{tr ? 'En uzun karanlık' : 'Longest darkness'}</span><b>{s.ellipse.worstDarkH} h</b></div>
+              <div><span>{tr ? 'En az güneş' : 'Least sunlight'}</span><b>{fmtPercent(s.ellipse.worstSun, lang)}</b></div>
+              <div><span>{tr ? 'En az Dünya bağlantısı' : 'Least Earth contact'}</span><b>{fmtPercent(s.ellipse.worstEarth, lang)}</b></div>
+              <div><span>{tr ? 'En uzun karanlık' : 'Longest darkness'}</span><b>{fmtHoursShort(s.ellipse.worstDarkH, lang)}</b></div>
               <div><span>{tr ? 'En dik nokta (400 m ölçekli)' : 'Steepest point (400 m scale)'}</span><b>{s.ellipse.worstSlope.toFixed(1)}°</b></div>
             </div>
           </div>
@@ -86,7 +84,7 @@ export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand
           : `Ranges: 90 % of ${pr.trials} simulated missions. A launch slip also moves the landing date, so this is the spread of outcomes for the mission, not an error bar on one date (it includes horizon error, scatter across the landing zone and battery wear).`}</p>}
         <div className="ph-strips">
           <div><span>{tr ? 'Her iniş tarihi' : 'Every landing date in the window'}</span>
-            <div className="ph-cal marks" role="list">{r.perStart.map((g, k) => <i key={k} role="listitem" className={g ? 'go' : 'nogo'} title={`${tr ? 'Gün' : 'Day'} ${k + 1}: ${g ? 'GO' : 'NO-GO'}`} aria-label={`${tr ? 'Gün' : 'Day'} ${k + 1}: ${g ? 'GO' : 'NO-GO'}`} />)}</div></div>
+            <div className="ph-cal marks" role="list">{r.perStart.map((g, k) => <i key={k} role="listitem" className={g ? 'go' : 'nogo'} title={`${tr ? 'Gün' : 'Day'} ${k + 1}: ${verdictLabel(g, lang)}`} aria-label={`${tr ? 'Gün' : 'Day'} ${k + 1}: ${verdictLabel(g, lang)}`} />)}</div></div>
           <div><span>{tr ? 'Gün gün güneş' : 'Sun, day by day'}</span>
             <div className="ph-cal">{r.sunDaily.map((v, k) => <i key={k} style={{ background: `rgba(255,200,61,${0.12 + 0.88 * v})` }} />)}</div></div>
           <div><span>{tr ? 'Gün gün Dünya bağlantısı' : 'Earth link, day by day'}</span>

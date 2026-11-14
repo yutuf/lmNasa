@@ -1,0 +1,5 @@
+Completed both fixes: a soft, size-scaled descent plume and a compact, right-aligned rover panel.
+
+All 396 tests, TypeScript, ESLint, and the production build pass. Edge screenshots are in `qa/codex/after2-*.png`; details are appended under “Run 1b” in [CODEX_RESULT.md](CODEX_RESULT.md).
+
+No git commands, installs, or downloads were run.

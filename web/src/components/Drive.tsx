@@ -6,6 +6,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useTexture } from '@react-three/drei'
+import '../drive-fix.css'
 import type { Ephem } from '../engine'
 import { pointLatLon } from '../engine'
 import type { Lang } from '../i18n'
@@ -25,7 +26,7 @@ export interface DriveStart { x: number; y: number; hour: number; missionH: numb
 // Rover model, set from the chosen rover when the view opens (vehicles.ts); the default is VIPER-class.
 const ROVER = { batteryWh: 3000, panelW: 450, driveW: 220, idleW: 120, maxSpeed: 0.25, maxSlope: 20, mast: 2 }
 const WARPS = [1, 10, 60, 600, 3600]
-const PARK = [9, 5]   // rover parking spot beside the lander (m)
+const parking = (start: DriveStart) => [Math.max(14, landerById(start.lander).heightM * 0.7), 8]
 // Moonwalk: walking pace on the Moon (Apollo crews loped at ~1 m/s), eye height, the steepest slope on foot
 const WALK = { speed: 1.2, run: 2.6, eye: 1.7, maxSlope: 30 }
 // Landing: the last ~2.4 km and 1.6 km of height, 26 s of screen time (a real terminal descent takes a few minutes)
@@ -160,6 +161,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
     filmMode?: 'landing' | 'rover' }) {
   const rv = roverById(start.rover)
   const ld = landerById(start.lander)
+  const PARK = useMemo(() => parking(start), [start])
   Object.assign(ROVER, { maxSpeed: rv.maxSpeed, maxSlope: rv.maxSlope, batteryWh: rv.batteryWh, panelW: rv.panelW, driveW: rv.driveW, idleW: rv.idleW })
   const [world, setWorld] = useState<World | null>(null)
   const [hud, setHud] = useState(0)
@@ -186,7 +188,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
       // face the Sun's side at the start so the first view is lit
       const sky = conditions(eph, horizonProfile(ground.height, start.x, start.y), start.x, start.y, start.hour)
       const [dx, dy] = planeDir(sky.lon, sky.sun.az)
-      s.heading = Math.atan2(dy, dx) + (initialMode === 'rover' ? 0.6 : 0)
+      s.heading = initialMode === 'rover' ? Math.atan2(-PARK[1], -PARK[0]) : Math.atan2(dy, dx)
       s.sunHeading = Math.atan2(dy, dx)
       if (initialMode === 'walk') placeWalker(s, start)
       const tg = sci ? findIceTarget(sci, start.x, start.y) : null
@@ -264,7 +266,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
     if (hud) hud.style.display = 'none'                      // the touchdown banner belongs to the landing only
     s.warp = 30; s.lights = true; s.playing = true; s.profileAt = { x: NaN, y: NaN }
     planRef.current()
-  }, [cinematic, world, filmMode, start])
+  }, [cinematic, world, filmMode, start, PARK])
 
   // keyboard
   useEffect(() => {
@@ -327,12 +329,13 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
   return (
     <div className={`drive ${cinematic ? 'cinematic' : ''} ${s.mode === 'landing' ? 'landing' : ''}`}>
       <div id="landing-hud" className="landing-hud" />
+      {!cinematic && s.mode === 'landing' && <button className="big ghost descent-exit" onClick={onExit}><LogOut size={14} /> {t('exit')}</button>}
       {!world && <div className="drive-loading">{t('loading')}</div>}
       {world && (
         <Canvas shadows gl={{ logarithmicDepthBuffer: true, antialias: true }} dpr={cinematic ? [1, 1.25] : [1, 1.6]}
                 camera={{ fov: 62, near: 0.3, far: 600000, position: [0, 3, 0] }}
                 onCreated={({ gl }) => { gl.debug.checkShaderErrors = import.meta.env.DEV && !cinematic; gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = cinematic ? 1.5 : 1.1 }}>
-          <Suspense fallback={null}><Scene world={world} sim={sim} eph={eph} start={start} /></Suspense>
+          <Suspense fallback={null}><Scene world={world} sim={sim} eph={eph} start={start} lang={lang} /></Suspense>
         </Canvas>
       )}
       <LookDrag sim={sim} />
@@ -350,7 +353,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
           {tgt && s.phase === 'go' && (
             <>
               <div className="ico"><Crosshair size={13} /><b>{t('target')}</b> · {tDist < 1000 ? `${Math.round(tDist)} m` : `${(tDist / 1000).toFixed(2)} km`} · {Math.round(tAz ?? 0)}°</div>
-              <div className="hud-sub">{t('inPsr')} · {t('iceIdx')} {tgt.ice.toFixed(2)}</div>
+              <div className="hud-sub">{t('inPsr')} · {t('iceIdx')} <span className="drive-value">{tgt.ice.toFixed(2)}</span></div>
               {tDist < 25 && <div className="drill">{s.drilled > 0 ? `${t('drilling')} ${Math.round((s.drilled / 2) * 100)}%` : t('drillHint')}</div>}
             </>
           )}
@@ -359,7 +362,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
           {here && here.psr > 0.5 && <div className="hud-sub psr">{t('psrHere')}</div>}
           {therm && (
             <div className="hud-sub ico"><Thermometer size={12} /> {lang === 'tr' ? 'Yüzey ort.' : 'Surface avg'} {degC(therm.avgK)} · {lang === 'tr' ? 'en sıcak' : 'max'} {degC(therm.maxK)} ·{' '}
-              {therm.iceM === null ? (lang === 'tr' ? 'kalıcı buz yok' : 'no stable ice') : `${lang === 'tr' ? 'buz kararlı' : 'ice stable below'} ${Math.round(therm.iceM * 100)} cm`}</div>
+              {therm.iceM === null ? (lang === 'tr' ? 'kalıcı buz yok' : 'no stable ice') : <>{lang === 'tr' ? 'buz kararlı' : 'ice stable below'} <span className="drive-value">{Math.round(therm.iceM * 100)} cm</span></>}</div>
           )}
           {s.phase !== 'done' && (
             <div className="route-row">
@@ -394,14 +397,14 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
       </div>
 
       <div className="hud bottom-left">
-        <div className={`gauge ${pct < 0.2 ? 'low' : ''}`}>
+        {s.mode !== 'walk' && <><div className={`gauge ${pct < 0.2 ? 'low' : ''}`}>
           <span className="ico"><BatteryMedium size={13} /> {t('battery')}</span><b>{Math.round(pct * 100)}%</b>
           <i style={{ width: `${pct * 100}%` }} />
         </div>
         <div className="flows">
           <span className="in ico"><Zap size={12} /> {t('solar')} +{Math.round(s.solarW)} W</span>
           <span className="out">{t('use')} −{Math.round(s.useW)} W</span>
-        </div>
+        </div></>}
         <div className={`status ${(c?.sunFrac ?? 0) >= 0.5 ? 'ok' : 'bad'}`}>
           <Sun size={12} /> {t('sun')}: {c ? `${Math.round(c.sunFrac * 100)}% · ${c.sun.alt.toFixed(1)}°` : '—'}
           {next && <em> · {next.sunUp ? t('sets') : t('rises')} {hrs(next.sunH)}</em>}
@@ -419,7 +422,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
       <div className="hud bottom-right">
         {s.mode === 'lander'
           ? <>
-              <button className="big" onClick={() => { s.mode = 'rover'; s.warp = 60; s.playing = true; s.pitch = -0.12; s.yaw = 0 }}><Car size={14} /> {t('deploy')}</button>
+              <button className="big" onClick={() => { s.mode = 'rover'; s.heading = Math.atan2(-PARK[1], -PARK[0]); s.warp = 60; s.playing = true; s.pitch = -0.12; s.yaw = 0 }}><Car size={14} /> {t('deploy')}</button>
               <button className="big" onClick={() => { s.mode = 'walk'; placeWalker(s, start); s.warp = 1; s.playing = true; s.driven = 0; s.lastPrint = 0; s.profileAt = { x: NaN, y: NaN } }}><Footprints size={14} /> {t('stepOut')}</button>
             </>
           : <button className="big ghost" onClick={() => { s.mode = 'lander'; s.x = start.x + PARK[0]; s.y = start.y + PARK[1]; s.yaw = 0; s.pitch = 0.02; s.profileAt = { x: NaN, y: NaN } }}><PlaneLanding size={14} /> {t('back')}</button>}
@@ -430,9 +433,9 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
         )}
         <button className="big ghost" onClick={onExit}><LogOut size={14} /> {t('exit')}</button>
         <p className="keys">{s.mode === 'lander' ? t('keysLander') : s.mode === 'walk' ? t('keysWalk') : t('keys')}</p>
-        <p className="keys">{lang === 'tr'
+        {s.mode !== 'walk' && <p className="keys">{lang === 'tr'
           ? `${rv.name}: ${rv.panelW ? `${rv.panelW} W panel, ` : 'güneş paneli yok, '}${(rv.batteryWh / 1000).toFixed(1)} kWh batarya, ${rv.maxSpeed} m/sn, en çok ${rv.maxSlope}° eğim (yaklaşık değerler); arazi, Güneş, Dünya ve DSN gerçek veridir.`
-          : `${rv.name}: ${rv.panelW ? `${rv.panelW} W panel, ` : 'no solar panel, '}${(rv.batteryWh / 1000).toFixed(1)} kWh battery, ${rv.maxSpeed} m/s, up to ${rv.maxSlope}° slopes (approximate); terrain, Sun, Earth and DSN are real data.`}</p>
+          : `${rv.name}: ${rv.panelW ? `${rv.panelW} W panel, ` : 'no solar panel, '}${(rv.batteryWh / 1000).toFixed(1)} kWh battery, ${rv.maxSpeed} m/s, up to ${rv.maxSlope}° slopes (approximate); terrain, Sun, Earth and DSN are real data.`}</p>}
       </div>
 
       {s.mode === 'lander' && (
@@ -444,7 +447,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
       {s.mode === 'rover' && s.steep && !s.dead && <div className="toast">{t('steep')}</div>}
       {s.mode === 'walk' && s.steep && <div className="toast">{t('tooSteepWalk')}</div>}
       {s.mode === 'walk' && !s.steep && !s.torch && (c?.sunFrac ?? 1) < 0.5 && <div className="toast">{t('darkHint')}</div>}
-      {s.dead && (
+      {s.mode === 'rover' && s.dead && (
         <div className="gameover">
           <h2><Snowflake size={20} /> {t('dead')}</h2>
           <p>{t('driven')} {(s.driven / 1000).toFixed(2)} km · {t('survived')} {hrs(Math.round(s.hour - s.startHour))}</p>
@@ -522,8 +525,9 @@ function Compass({ az, sunAz, earthAz, sunUp, earthUp, lang, target }: { az: num
 
 // ---------------------------------------------------------------- 3D scene
 
-function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRefObject<Sim>; eph: Ephem; start: DriveStart }) {
+function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.MutableRefObject<Sim>; eph: Ephem; start: DriveStart; lang: Lang }) {
   const ld = landerById(start.lander)
+  const PARK = useMemo(() => parking(start), [start])
   const rv = roverById(start.rover)
   const { camera, scene } = useThree()
   const h = world.ground.height
@@ -570,7 +574,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
   useEffect(() => {
     scene.background = new THREE.Color('#000000')
     if (import.meta.env.DEV) Object.assign(window, { __drive: { sim: sim.current, camera, scene } })
-  }, [scene, camera])
+  }, [scene, camera, sim])
   useEffect(() => {
     const l = head.current
     if (!l) return
@@ -885,16 +889,23 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
         plumeG.current.visible = x < 0.995
         plumeG.current.position.copy(pos)
         plumeG.current.quaternion.copy(lander.current.quaternion)
-        const fl = 0.85 + Math.random() * 0.3
-        plumeG.current.scale.set(fl, fl * (1.2 + (1 - x)), fl)
+        // Models stand on local y=0; the bell is just above the feet.
+        // Unit cone points down (-Y), bounded to 1.5 rendered craft heights.
+        const height = ld.id === 'hls' ? 50 : ld.id === 'vikram' ? 2 : 7
+        const length = height * 1.5 * THREE.MathUtils.clamp(b0.hgt / (height * 3), 0.08, 1)
+        const bell = new THREE.Vector3(0, height * 0.12, 0).applyQuaternion(lander.current.quaternion)
+        plumeG.current.position.add(bell)
+        plumeG.current.scale.set(height * 0.22, length, height * 0.22)
       }
       if (plumeL.current) plumeL.current.intensity = x < 0.995 ? 900 * (0.8 + Math.random() * 0.4) : 0
       const el = document.getElementById('landing-hud')
       if (el) {
         const vs = (bez(Math.max(0, e - 0.01)).hgt - b0.hgt) / Math.max(1e-3, dt) * 0.01 * LAND.secs / 26
         el.dataset.done = x >= 1 ? '1' : '0'
-        el.textContent = x >= 1 ? (start.rough ? 'HARD LANDING · 5 m/s · TILTED 9°' : 'CONTACT LIGHT · TOUCHDOWN')
-          : `ALTITUDE ${Math.round(b0.hgt).toLocaleString('en-US')} m · RANGE ${Math.round(b0.d).toLocaleString('en-US')} m · T−${Math.ceil((1 - x) * secs)} s`
+        el.textContent = x >= 1
+          ? (lang === 'tr' ? (start.rough ? 'SERT İNİŞ · 5 m/sn · EĞİM 9°' : 'TEMAS IŞIĞI · İNİŞ')
+            : (start.rough ? 'HARD LANDING · 5 m/s · TILTED 9°' : 'CONTACT LIGHT · TOUCHDOWN'))
+          : `${lang === 'tr' ? 'İRTİFA' : 'ALTITUDE'} ${Math.round(b0.hgt).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')} m · ${lang === 'tr' ? 'MESAFE' : 'RANGE'} ${Math.round(b0.d).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')} m · T−${Math.ceil((1 - x) * secs)} ${lang === 'tr' ? 'sn' : 's'}`
         void vs
       }
       if (x >= 1) {
@@ -987,15 +998,16 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
       const dir = new THREE.Vector3(Math.cos(s.sunHeading), 0, -Math.sin(s.sunHeading))
       const side = new THREE.Vector3(0, 1, 0).cross(dir).normalize()
       const site = toV(start.x, start.y)
-      const eye = landing.x < 0.38 ? landing.pos.clone().addScaledVector(dir, 26).addScaledVector(side, 9).add(new THREE.Vector3(0, 8, 0))   // chase, behind and above
-        : landing.x < 0.72 ? landing.pos.clone().addScaledVector(side, 28).add(new THREE.Vector3(0, -3, 0))                                  // alongside
-        : site.clone().addScaledVector(side, -38).addScaledVector(dir, -22).add(new THREE.Vector3(0, 1.7, 0))                                 // on the ground, looking up
-      const g = toV(start.x + (eye.x - site.x), start.y - (eye.z - site.z)).y + 1.2
-      if (eye.y < g) eye.y = g
-      if (!L.started) { camera.position.copy(eye); L.look.copy(landing.pos); L.started = true }
-      const k = 1 - Math.exp(-dt * (landing.x < 0.72 ? 2.2 : 3))
-      camera.position.lerp(eye, k)
-      L.look.lerp(landing.pos.clone().add(new THREE.Vector3(0, landing.x < 0.72 ? 0 : 3, 0)), 1 - Math.exp(-dt * 6))
+      // Track the moving craft directly: smoothing its world position trails hundreds of metres
+      // behind during the accelerated descent. Keep a fixed offset from the craft instead.
+      const height = ld.id === 'hls' ? 50 : ld.id === 'vikram' ? 2 : 7
+      const distance = Math.max(12, height * 3)
+      const eye = landing.pos.clone().addScaledVector(dir, distance)
+        .addScaledVector(side, distance * 0.45).add(new THREE.Vector3(0, height * 1.3, 0))
+      const ground = toV(start.x + eye.x - site.x, start.y - eye.z + site.z).y + 1.2
+      eye.y = Math.max(eye.y, ground)
+      camera.position.copy(eye)
+      L.look.copy(landing.pos).add(new THREE.Vector3(0, height * 0.45, 0))
       camera.lookAt(L.look)
       return
     }
@@ -1048,11 +1060,21 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
       camera.lookAt(eye.clone().add(dir))
     } else {
       const back = fwd.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), s.yaw)
-      const eye = p.clone().addScaledVector(back, -11).add(new THREE.Vector3(0, Math.max(1.5, 3.5 - s.pitch * 12), 0))
+      const length = rv.id === 'pragyan' ? 0.92 : rv.id === 'yutu' ? 1.5 : 3.1
+      const eye = p.clone().addScaledVector(back, -length * 2.5)
+        .add(new THREE.Vector3(0, Math.max(0.9, length * 0.9 - s.pitch * 3), 0))
+      // Keep the chase camera outside the lander's footprint for any viewing angle.
+      const base = toV(start.x, start.y)
+      const clearance = Math.max(6, ld.heightM * 0.4)
+      const away = new THREE.Vector3(eye.x - base.x, 0, eye.z - base.z)
+      if (away.length() < clearance) {
+        away.setLength(clearance)
+        eye.x = base.x + away.x; eye.z = base.z + away.z
+      }
       const camGround = toV(s.x + (eye.x - p.x), s.y - (eye.z - p.z)).y + 1.2
       if (eye.y < camGround) eye.y = camGround
       camera.position.lerp(eye, Math.min(1, dt * 6))
-      camera.lookAt(p.clone().add(new THREE.Vector3(0, 1.2, 0)))
+      camera.lookAt(p.clone().add(new THREE.Vector3(0, length * 0.25, 0)))
     }
   })
 
@@ -1099,12 +1121,38 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
         </mesh>
       </group>
       <group ref={plumeG} visible={false}>
-        <pointLight ref={plumeL} position={[0, -1.5, 0]} color="#ffb366" distance={260} decay={1.6} intensity={0} />
-        <mesh position={[0, -2.6, 0]} rotation={[Math.PI, 0, 0]}>
-          <coneGeometry args={[0.9, 4.5, 20, 1, true]} />
-          <meshBasicMaterial color="#ffc88a" transparent opacity={0.5} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} side={THREE.DoubleSide} />
+        <pointLight ref={plumeL} color="#ffb366" distance={12} decay={2} intensity={0} />
+        <mesh position={[0, -0.5, 0]}>
+          <coneGeometry args={[1, 1, 32, 1, true]} />
+          <shaderMaterial transparent depthWrite={false} blending={THREE.AdditiveBlending} side={THREE.DoubleSide}
+            vertexShader={`
+              #include <common>
+              #include <logdepthbuf_pars_vertex>
+              varying vec2 vUv;
+              varying vec3 vNormal;
+              varying vec3 vView;
+              void main() {
+                vUv = uv;
+                vNormal = normalize(normalMatrix * normal);
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                vView = -mvPosition.xyz;
+                gl_Position = projectionMatrix * mvPosition;
+                #include <logdepthbuf_vertex>
+              }
+            `}
+            fragmentShader={`
+              #include <logdepthbuf_pars_fragment>
+              varying vec2 vUv;
+              varying vec3 vNormal;
+              varying vec3 vView;
+              void main() {
+                #include <logdepthbuf_fragment>
+                float edge = pow(abs(dot(normalize(vNormal), normalize(vView))), 1.5);
+                float fade = smoothstep(0.0, 0.65, vUv.y) * (1.0 - smoothstep(0.88, 1.0, vUv.y));
+                gl_FragColor = vec4(1.0, 0.58, 0.24, 0.16 * edge * fade);
+              }
+            `} />
         </mesh>
-        <mesh position={[0, -1.4, 0]}><sphereGeometry args={[0.7, 16, 12]} /><meshBasicMaterial color="#fff1d6" transparent opacity={0.8} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} /></mesh>
       </group>
       <points ref={dust} visible={false} frustumCulled={false}>
         <bufferGeometry><bufferAttribute attach="attributes-position" args={[new Float32Array(420 * 3), 3]} /></bufferGeometry>
