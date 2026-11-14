@@ -1,5 +1,7 @@
-// 3D terrain renders for site cards: the real LOLA terrain around a site (pole_dem.bin, 200 m grid) as a lit relief
-// with the Sun where it stands on the best landing date, rendered once off-screen to a transparent PNG and cached.
+// 3D terrain renders for site cards: the real LOLA terrain around a site as a lit relief with the Sun where it stands
+// on the best landing date, rendered once off-screen to a transparent PNG and cached. Near the south pole: the 200 m
+// polar grid (pole_dem.bin), 18 km across. Anywhere else: the ~3.8 km whole-Moon grid (global_dem.bin, loaded only
+// then), 120 km across, so whole craters show.
 // One shared WebGL renderer for all cards (browsers limit the number of live WebGL contexts).
 import * as THREE from 'three'
 import { dataUrl } from './data'
@@ -11,6 +13,20 @@ const N = 120                       // grid cells per side
 const EXAG = 2.2                    // vertical exaggeration, so 200 m slopes read at card size
 
 let demP: Promise<Dem> | null = null
+interface Global { ppd: number; rows: number; cols: number; unit: number; h: Int16Array }
+let globP: Promise<Global> | null = null
+const loadGlobal = () => (globP ??= fetch(dataUrl('global_dem.bin')).then((r) => r.arrayBuffer()).then((b) => {
+  const v = new DataView(b)
+  return { ppd: v.getUint16(0, true), rows: v.getUint16(2, true), cols: v.getUint16(4, true), unit: v.getFloat32(6, true), h: new Int16Array(b.slice(10)) }
+}))
+/** Height (m) from the whole-Moon grid, bilinear; longitude wraps. */
+function globalHeight(g: Global, lat: number, lon: number) {
+  const col = g.ppd * (((lon % 360) + 360) % 360) - 0.5, row = Math.min(g.rows - 1.001, Math.max(0, g.ppd * (90 - lat) - 0.5))
+  const c0 = Math.floor(col), r0 = Math.floor(row), fc = col - c0, fr = row - r0
+  const C = (c: number) => ((c % g.cols) + g.cols) % g.cols
+  const at = (r: number, c: number) => g.h[r * g.cols + C(c)] * g.unit
+  return at(r0, c0) * (1 - fc) * (1 - fr) + at(r0, c0 + 1) * fc * (1 - fr) + at(r0 + 1, c0) * (1 - fc) * fr + at(r0 + 1, c0 + 1) * fc * fr
+}
 let renderer: THREE.WebGLRenderer | null = null
 const cache = new Map<string, Promise<string>>()
 let queue: Promise<unknown> = Promise.resolve()
@@ -30,8 +46,10 @@ function getRenderer() {
   return renderer
 }
 
-function build(dem: Dem, xM: number, yM: number) {
-  const z0 = heightAt(dem, xM, yM)
+/** Build the relief in render units (the disc is always 2 x HALF_M wide); `height(east, north)` takes metres from the
+ *  site, `mPerUnit` converts render units to metres, `exag` is the vertical exaggeration. */
+function build(height: (e: number, n: number) => number, mPerUnit: number, exag: number) {
+  const z0 = height(0, 0)
   const base = Number.isNaN(z0) ? 0 : z0
   // a round relief (a polar grid of rings), like a core sample cut out of the terrain
   const ring = new THREE.RingGeometry(1, HALF_M, 160, N)
@@ -40,14 +58,14 @@ function build(dem: Dem, xM: number, yM: number) {
   const col = new Float32Array(pos.count * 3)
   for (let i = 0; i < pos.count; i++) {
     const px = pos.getX(i), pz = pos.getZ(i)
-    let z = heightAt(dem, xM + px, yM - pz)
+    let z = height(px * mPerUnit, -pz * mPerUnit)
     if (Number.isNaN(z)) z = base
     const r = Math.hypot(px, pz) / HALF_M
     // a round cut-out that sinks away at the edge, like a core sample
     const rim = r > 0.95
-    pos.setY(i, rim ? -2600 : (z - base) * EXAG)
+    pos.setY(i, rim ? -2600 : ((z - base) / mPerUnit) * exag)
     // neutral grey regolith, a little lighter on high ground; the cut-out's side is dark rock
-    const shade = rim ? 0.16 : 0.5 + 0.22 * Math.min(1, Math.max(0, (z - base + 1500) / 3000))
+    const shade = rim ? 0.16 : 0.5 + 0.22 * Math.min(1, Math.max(0, (z - base + 1500 * mPerUnit) / (3000 * mPerUnit)))
     col[3 * i] = shade; col[3 * i + 1] = shade * 0.985; col[3 * i + 2] = shade * 0.96
   }
   ring.setAttribute('color', new THREE.BufferAttribute(col, 3))
@@ -59,20 +77,36 @@ function build(dem: Dem, xM: number, yM: number) {
 }
 
 /** A transparent PNG data URL of the terrain around (xKm, yKm), lit by the Sun at (sunAzDeg, sunAltDeg). */
-export function renderSite(key: string, xKm: number, yKm: number, lonDeg: number, sunAzDeg: number, sunAltDeg: number): Promise<string> {
+export function renderSite(key: string, xKm: number, yKm: number, lonDeg: number, sunAzDeg: number, sunAltDeg: number, latDeg = -90): Promise<string> {
   if (cache.has(key)) return cache.get(key)!
   const job = queue.then(async () => {
     const dem = await loadDem()
     const r = getRenderer()
     const scene = new THREE.Scene()
-    const mesh = build(dem, xKm * 1000, yKm * 1000)
+    // inside the polar grid: 200 m terrain, 18 km disc; elsewhere: the whole-Moon grid, 120 km disc
+    const polar = latDeg < -84.6 && !Number.isNaN(heightAt(dem, xKm * 1000, yKm * 1000))
+    let mesh: THREE.Mesh
+    let sunPlane: [number, number]
+    if (polar) {
+      // stereographic plane: east-ish = +x, north-ish = +y around the site
+      const pd = (e: number, n: number) => heightAt(dem, xKm * 1000 + e, yKm * 1000 + n)
+      mesh = build(pd, 1, EXAG)
+      sunPlane = planeDir(lonDeg, sunAzDeg)
+    } else {
+      const g = await loadGlobal()
+      const R = 1737400, la = (latDeg * Math.PI) / 180
+      const gd = (e: number, n: number) => globalHeight(g, latDeg + (n / R) * (180 / Math.PI), lonDeg + (e / (R * Math.max(0.05, Math.cos(la)))) * (180 / Math.PI))
+      mesh = build(gd, 60000 / HALF_M, 3.2)
+      const a = (sunAzDeg * Math.PI) / 180
+      sunPlane = [Math.sin(a), Math.cos(a)]          // local east, north
+    }
     scene.add(mesh)
     // the landing point: a thin red mast
     const mast = new THREE.Mesh(new THREE.CylinderGeometry(70, 70, 1400, 12), new THREE.MeshBasicMaterial({ color: 0xe10600 }))
     mast.position.set(0, 700 + 40, 0)
     scene.add(mast)
     // the Sun at its real azimuth; at the pole it is a few degrees up, so lift it a little for a readable render
-    const [dx, dy] = planeDir(lonDeg, sunAzDeg)
+    const [dx, dy] = sunPlane
     const alt = Math.max(7, Math.min(35, sunAltDeg + 6)) * Math.PI / 180
     const sun = new THREE.DirectionalLight(0xfff3e0, 3.4)
     sun.position.set(dx * Math.cos(alt), Math.sin(alt), -dy * Math.cos(alt)).multiplyScalar(30000)

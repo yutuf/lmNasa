@@ -18,7 +18,7 @@ const SUGGEST: Record<Lang, string[]> = {
     'Bu sonucu 10 yaşındaki birine anlat', 'Fırlatma bir hafta gecikirse ne olur?'],
 }
 
-export default function Luna({ lang, context, onAction }: { lang: Lang; context: () => unknown; onAction: (a: LunaAction) => void }) {
+export default function Luna({ lang, context, onAction, onPlan }: { lang: Lang; context: () => unknown; onAction: (a: LunaAction) => void; onPlan?: () => void }) {
   const [open, setOpen] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [text, setText] = useState('')
@@ -85,6 +85,9 @@ export default function Luna({ lang, context, onAction }: { lang: Lang; context:
             <span>{lang === 'tr' ? 'Görevinizi anlatın veya sonuçları sorun' : 'Describe your mission or ask about the results'}</span>
           </div>
           <div className="luna-msgs">
+            {msgs.length === 0 && onPlan && (
+              <button className="luna-plan" onClick={() => { setOpen(false); onPlan() }}>{lang === 'tr' ? 'Benimle bir görev planla →' : 'Plan a mission with me →'}</button>
+            )}
             {msgs.length === 0 && (
               <div className="luna-suggest">
                 {SUGGEST[lang].map((s) => <button key={s} onClick={() => send(s)}>{s}</button>)}

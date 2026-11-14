@@ -160,7 +160,7 @@ export function pointLatLon(xKm: number, yKm: number): [number, number] {
 }
 
 /** Horizon elevation (deg) at an azimuth, periodic linear interpolation (numpy.interp(..., period=360)). */
-function horizonAt(h: Uint8Array, off: number, nAz: number, az: number): number {
+export function horizonAt(h: Uint8Array, off: number, nAz: number, az: number): number {
   const step = 360 / nAz
   const p = (((az % 360) + 360) % 360) / step
   const i = Math.floor(p)
@@ -170,7 +170,7 @@ function horizonAt(h: Uint8Array, off: number, nAz: number, az: number): number 
   return a + (b - a) * f
 }
 
-function diskFraction(alt: number, hz: number, r: number): number {
+export function diskFraction(alt: number, hz: number, r: number): number {
   const d = Math.min(Math.max((alt - hz) / r, -1), 1)
   return (Math.acos(-d) + d * Math.sqrt(1 - d * d)) / Math.PI
 }

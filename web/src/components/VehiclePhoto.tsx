@@ -19,8 +19,11 @@ function Capture({ target, done }: { target: React.RefObject<THREE.Group | null>
     let id = 0
     const tick = () => {
       // wait a couple of frames so textures and environment maps are on the GPU
-      if (++frames < 3) { id = requestAnimationFrame(tick); return }
+      // and until the model is really there: real models load (and suspend) inside their own boundary
       const g = target.current
+      let meshes = 0
+      g?.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes++ })
+      if (++frames < 3 || (!meshes && frames < 900)) { id = requestAnimationFrame(tick); return }
       if (!g) return
       const box = new THREE.Box3().setFromObject(g)
       const size = box.getSize(new THREE.Vector3()), centre = box.getCenter(new THREE.Vector3())

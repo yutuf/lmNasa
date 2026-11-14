@@ -6,6 +6,7 @@ import type { Lang } from '../i18n'
 import type { SiteRow } from '../report'
 import { renderSite } from '../siteRender'
 import { splitName } from '../teams'
+import type { Probability } from '../probability'
 
 export interface CardSite {
   r: PointResult
@@ -19,6 +20,8 @@ export interface CardSite {
   sun: { az: number; alt: number }
   bestDate: string
   note?: string          // far side, or the distance to the science target
+  prob?: Probability     // Monte Carlo mission success
+  targetKm?: number      // distance to the nearest science target
 }
 
 export function useSiteImage(s: CardSite) {
@@ -26,7 +29,7 @@ export function useSiteImage(s: CardSite) {
   useEffect(() => {
     let live = true
     // keyed by position, not index: the two grids number their points differently
-    renderSite(`${s.xKm.toFixed(2)},${s.yKm.toFixed(2)}:${Math.round(s.sun.az)}`, s.xKm, s.yKm, s.r.lon, s.sun.az, s.sun.alt).then((u) => { if (live) setImg(u) }).catch(() => {})
+    renderSite(`${s.xKm.toFixed(2)},${s.yKm.toFixed(2)}:${Math.round(s.sun.az)}`, s.xKm, s.yKm, s.r.lon, s.sun.az, s.sun.alt, s.r.lat).then((u) => { if (live) setImg(u) }).catch(() => {})
     return () => { live = false }
   }, [s.r.index, s.xKm, s.yKm, s.r.lon, s.sun.az, s.sun.alt])
   return img
@@ -49,6 +52,7 @@ export default function SiteCard({ s, lang, onOpen }: { s: CardSite; lang: Lang;
       <span className="sc-foot">
         <span className={`sc-go ${go ? 'go' : 'nogo'}`}>{go ? 'GO' : 'NO-GO'} {s.r.goCount}/{s.row.windowDays}</span>
         <span>{s.bestDate}</span>
+        {s.prob && <span className="sc-prob" title={lang === 'tr' ? 'Görev başarı olasılığı' : 'Mission success probability'}>{Math.round(s.prob.p * 100)}%</span>}
       </span>
       {s.note && <span className="sc-note">{s.note}</span>}
     </button>

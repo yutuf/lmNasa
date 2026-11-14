@@ -21,9 +21,10 @@ interface Props {
   earthDir: number[]    // Moon-fixed unit vector toward Earth
   earthLabel: string
   onPick?: (k: number) => void
-  flight?: { lat: number; lon: number; approach: Approach; labels: [string, string, string, string]; view: FlightView } | null
+  flight?: { lat: number; lon: number; approach: Approach; labels: [string, string, string, string]; view: FlightView; start?: number } | null
   targets?: Target[]
   onTarget?: (id: string) => void
+  labels?: boolean        // floating HTML labels (off in the film)
 }
 
 function Moon() {
@@ -211,7 +212,7 @@ export type FlightView = 'overview' | 'chase' | 'pilot' | 'site'
 /** The spacecraft's route: trans-lunar coast, polar orbit over the site, powered descent; a craft flies it in a loop.
  *  In the follow views the camera rides along (chase, pilot) or watches from the landing site, the descent gets a
  *  bigger share of the loop so it can be followed, and a HUD element (#flight-hud) shows phase, altitude and time. */
-function Flight({ lat, lon, approach, earthDir, labels, view }: { lat: number; lon: number; approach: Approach; earthDir: THREE.Vector3; labels: [string, string, string, string]; view: FlightView }) {
+function Flight({ lat, lon, approach, earthDir, labels, view, start = 0, showLabel = true }: { lat: number; lon: number; approach: Approach; earthDir: THREE.Vector3; labels: [string, string, string, string]; view: FlightView; start?: number; showLabel?: boolean }) {
   const f = useMemo(() => flightPath(lat, lon, earthDir, approach),
     [lat, lon, earthDir.x, earthDir.y, earthDir.z, approach.headingDeg])  // eslint-disable-line react-hooks/exhaustive-deps
   const lines = useMemo(() => {
@@ -239,41 +240,60 @@ function Flight({ lat, lon, approach, earthDir, labels, view }: { lat: number; l
     return () => { cam.near = 0.01; cam.up.set(0, 1, 0); cam.updateProjectionMatrix() }
   }, [follow, view, camera])
   const site = useMemo(() => surfacePoint(lat, lon, 1.004), [lat, lon])
-  const tmp = useMemo(() => ({ fwd: new THREE.Vector3(), up: new THREE.Vector3(), pos: new THREE.Vector3(), look: new THREE.Vector3(), q: new THREE.Quaternion() }), [])
-  useFrame(({ clock }) => {
+  const tmp = useMemo(() => ({ fwd: new THREE.Vector3(), up: new THREE.Vector3(), pos: new THREE.Vector3(), look: new THREE.Vector3(), q: new THREE.Quaternion(),
+    camLook: new THREE.Vector3(), camUp: new THREE.Vector3(0, 1, 0), started: false }), [])
+  // smooth curves through each phase, sampled by distance (constant speed within a phase, no corners)
+  const curves = useMemo(() => [f.transfer, f.parking, f.descent].map((pts) => new THREE.CatmullRomCurve3(pts, false, 'centripetal')), [f])
+  const plume = useRef<THREE.Sprite>(null)
+  const plumeTex = useMemo(() => {
+    const c = document.createElement('canvas'); c.width = c.height = 64
+    const x = c.getContext('2d')!
+    const g = x.createRadialGradient(32, 32, 0, 32, 32, 32)
+    g.addColorStop(0, 'rgba(255,240,200,1)'); g.addColorStop(0.35, 'rgba(255,160,60,0.6)'); g.addColorStop(1, 'rgba(255,120,40,0)')
+    x.fillStyle = g; x.fillRect(0, 0, 64, 64)
+    return new THREE.CanvasTexture(c)
+  }, [])
+  useFrame(({ clock }, dtRaw) => {
     if (!craft.current) return
-    if (t0.current === null) t0.current = clock.elapsedTime
+    const dt = Math.min(dtRaw, 0.1)
+    if (t0.current === null) { t0.current = clock.elapsedTime; tmp.started = false }
     // share of the loop per phase (the rest: landed); the follow views spend longer on the orbit and the descent
     const T = view === 'overview' ? 16 : view === 'site' ? 22 : 32
     const w = view === 'overview' ? [0.42, 0.28, 0.22] : view === 'site' ? [0.12, 0.2, 0.58] : [0.22, 0.3, 0.4]
-    const u = ((clock.elapsedTime - t0.current) % T) / T
-    const nT = f.transfer.length - 1, nP = f.parking.length - 1, nD = f.descent.length - 1
-    let k: number
-    if (u < w[0]) k = (u / w[0]) * nT
-    else if (u < w[0] + w[1]) k = nT + ((u - w[0]) / w[1]) * nP
-    else if (u < w[0] + w[1] + w[2]) k = nT + nP + ((u - w[0] - w[1]) / w[2]) * nD
-    else k = f.all.length - 1
-    const i = Math.min(f.all.length - 2, Math.floor(k))
-    const p = f.all[i].clone().lerp(f.all[i + 1], Math.min(1, k - i))
-    craft.current.position.copy(p)
-    const phase = f.phaseAt[Math.min(f.all.length - 1, Math.round(k))]
-    if (label.current) label.current.textContent = view === 'pilot' ? '' : labels[phase]
+    const u = ((((clock.elapsedTime - t0.current) % T) / T) + start) % 1   // start: where in the loop to begin (film scenes)
+    let phase: number, s: number
+    if (u < w[0]) { phase = 0; s = u / w[0] }
+    else if (u < w[0] + w[1]) { phase = 1; s = (u - w[0]) / w[1] }
+    else if (u < w[0] + w[1] + w[2]) { phase = 2; s = (u - w[0] - w[1]) / w[2] }
+    else { phase = 3; s = 1 }
+    // the descent brakes: fast at the top, slow into touchdown; the coast eases in and out
+    const e = phase === 2 ? 1 - (1 - s) ** 2.2 : phase === 0 ? s * s * (3 - 2 * s) : s
+    const cv = curves[Math.min(2, phase)]
+    const p = cv.getPointAt(Math.min(1, e))
     const { fwd, up, pos, look, q } = tmp
-    fwd.subVectors(f.all[i + 1], f.all[i]).normalize()
+    fwd.copy(cv.getTangentAt(Math.min(0.999, e))).normalize()
     up.copy(p).normalize()
+    craft.current.position.copy(p)
     // the lander model stands on its legs: +y along the local vertical
     q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), up)
     craft.current.quaternion.copy(q)
+    if (label.current) label.current.textContent = view === 'pilot' ? '' : labels[Math.min(2, phase)]
+    if (plume.current) {
+      // engine glow under the lander while it brakes, flickering a little
+      const on = phase === 2 && s < 0.995
+      plume.current.visible = on
+      const sz = (follow ? 0.004 : 0.02) * (0.8 + 0.3 * Math.random())
+      plume.current.scale.set(sz, sz, 1)
+      plume.current.position.copy(up).multiplyScalar(-(follow ? 0.0012 : 0.006))
+    }
 
     // HUD: phase, altitude (orbit 100 km, the drawing is lifted for visibility) and time to touchdown
     const hud = document.getElementById('flight-hud')
     if (hud) {
-      const landed = k >= f.all.length - 1.01
       const altKm = phase === 0 ? null : Math.max(0, ((p.length() - 1.004) / (1.09 - 1.004)) * 100)
-      const s = phase === 2 ? (k - nT - nP) / nD : 0
-      hud.dataset.phase = landed ? 'landed' : String(phase)
-      hud.textContent = landed ? labels[3]
-        : phase === 0 ? `${labels[0]} · ${(u / w[0] * 4.5).toFixed(1)} / ~4.5 d`
+      hud.dataset.phase = phase === 3 ? 'landed' : String(phase)
+      hud.textContent = phase === 3 ? labels[3]
+        : phase === 0 ? `${labels[0]} · ${(e * 4.5).toFixed(1)} / ~4.5 d`
         : phase === 1 ? `${labels[1]} · ${altKm!.toFixed(0)} km`
         : `${labels[2]} · ${altKm! < 1 ? `${Math.round(altKm! * 1000)} m` : `${altKm!.toFixed(1)} km`} · T−${((1 - s) * 12).toFixed(1)} min`
     }
@@ -284,7 +304,7 @@ function Flight({ lat, lon, approach, earthDir, labels, view }: { lat: number; l
       look.copy(p).addScaledVector(fwd, 0.04)
     } else if (view === 'pilot') {
       // from the cockpit: ahead along the track, tipping down toward the ground as the descent goes on
-      const down = phase === 2 ? 0.25 + 0.75 * ((k - nT - nP) / nD) : phase === 1 ? 0.15 : 0
+      const down = phase >= 2 ? 0.25 + 0.75 * Math.min(1, s) : phase === 1 ? 0.15 : 0
       pos.copy(p).addScaledVector(up, 0.0004)
       look.copy(p).addScaledVector(fwd, 0.1 * (1 - down)).addScaledVector(up, -0.1 * down)
     } else {
@@ -293,9 +313,14 @@ function Flight({ lat, lon, approach, earthDir, labels, view }: { lat: number; l
       pos.copy(site).addScaledVector(site.clone().normalize(), 0.004).addScaledVector(side, 0.02).addScaledVector(fwd, 0.02)
       look.copy(p)
     }
-    camera.position.lerp(pos, view === 'pilot' ? 0.5 : 0.15)
-    camera.up.lerp(up, 0.2).normalize()
-    camera.lookAt(look)
+    // frame-rate independent smoothing for position, aim and roll (no snapping between path segments)
+    const a = (rate: number) => 1 - Math.exp(-dt * rate)
+    if (!tmp.started) { camera.position.copy(pos); tmp.camLook.copy(look); tmp.camUp.copy(up); tmp.started = true }
+    camera.position.lerp(pos, a(view === 'pilot' ? 14 : 5))
+    tmp.camLook.lerp(look, a(view === 'pilot' ? 10 : 6))
+    tmp.camUp.lerp(up, a(4)).normalize()
+    camera.up.copy(tmp.camUp)
+    camera.lookAt(tmp.camLook)
   })
   return (
     <>
@@ -306,13 +331,14 @@ function Flight({ lat, lon, approach, earthDir, labels, view }: { lat: number; l
               <NasaModel file="lander.glb" size={view === 'site' ? 0.004 : 0.003} shadows={false} />
             </Suspense>
           : <mesh><sphereGeometry args={[0.012, 12, 12]} /><meshBasicMaterial color="#fde68a" /></mesh>}
-        <Html center className="tag tag-craft"><div ref={label} /></Html>
+        {showLabel && <Html center className="tag tag-craft"><div ref={label} /></Html>}
+        <sprite ref={plume} visible={false}><spriteMaterial map={plumeTex} transparent depthWrite={false} blending={THREE.AdditiveBlending} /></sprite>
       </group>
     </>
   )
 }
 
-export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthDir, earthLabel, onPick, flight, targets, onTarget }: Props) {
+export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthDir, earthLabel, onPick, flight, targets, onTarget, labels = true }: Props) {
   const closeUp = !!flight && flight.view !== 'overview'
   const sun = useMemo(() => toThree(sunDir).normalize(), [sunDir])
   const earth = useMemo(() => toThree(earthDir).normalize(), [earthDir])
@@ -337,7 +363,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
       {overlay && !closeUp && <OverlayCap overlay={overlay} />}
       <group position={earth.clone().multiplyScalar(5.2)}>
         <Suspense fallback={null}><EarthBall /></Suspense>
-        <Html center className="tag tag-earth">{earthLabel}</Html>
+        {labels && <Html center className="tag tag-earth">{earthLabel}</Html>}
       </group>
       {!closeUp && targets?.map((t) => (
         <group key={t.id} position={surfacePoint(t.lat, t.lon, 1.004)}>
@@ -370,7 +396,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
           <Html center className="tag tag-spot">{selected.label}</Html>
         </group>
       )}
-      {flight ? <Flight {...flight} earthDir={earth} /> : <Orbiter />}
+      {flight ? <Flight {...flight} earthDir={earth} showLabel={labels} /> : <Orbiter />}
       <OrbitControls makeDefault enabled={!flight || flight.view === 'overview'} enablePan={false} minDistance={1.06} maxDistance={flight ? 16 : 8} rotateSpeed={0.5} zoomSpeed={0.6} />
       {(!flight || flight.view === 'overview') && <CameraFlight target={target} wide={wide} />}
     </Canvas>
