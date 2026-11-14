@@ -342,3 +342,13 @@ button.mini.on { border-color: #67e8f9; color: #67e8f9; }
 .ev { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .ev.sunrise { background: var(--sun); } .ev.sunset { background: transparent; box-shadow: inset 0 0 0 1.5px var(--sun); }
 .ev.earthrise { background: var(--earth); } .ev.earthset { background: transparent; box-shadow: inset 0 0 0 1.5px var(--earth); }
+
+/* map toolbar */
+.map-tools { position: absolute; left: 12px; top: 12px; right: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; pointer-events: none; }
+.map-tools > * { pointer-events: auto; }
+.map-tools .seg { background: rgba(9, 9, 11, .85); }
+.map-time { display: flex; align-items: center; gap: 8px; padding: 3px 10px 3px 3px; border-radius: 7px; background: rgba(9, 9, 11, .85);
+  border: 1px solid var(--border); font-size: 12px; color: var(--text-2); min-width: min(460px, 100%); }
+.map-time .rng { flex: 1; min-width: 120px; }
+.map-time .icon-btn { width: 28px; height: 28px; background: var(--surface-2); color: var(--text); }
+.sw.lit { background: #f5c446; } .sw.dark { background: #0c1430; border: 1px solid #334155; }

@@ -185,3 +185,10 @@ export function insideRing(x: number, y: number, ring: number[][]): boolean {
   }
   return inside
 }
+
+/** Visible share of the solar disk at every atlas point at one ephemeris hour (for the sunlight map). */
+export function sunlitMap(atlas: Atlas, ephem: Ephem, hour: number): Float32Array {
+  const out = new Float32Array(atlas.n)
+  for (let i = 0; i < atlas.n; i++) out[i] = pointSky(atlas, ephem, [], i, hour, 1, false).sunFraction[0]
+  return out
+}

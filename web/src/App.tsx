@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { dataUrl, loadManifest, type Manifest, type Series } from './data'
-import { insideRing, parseAtlas, parseEphem, pointTrack, type Atlas, type PointResult } from './engine'
+import { insideRing, parseAtlas, parseEphem, pointTrack, sunlitMap, type Atlas, type PointResult } from './engine'
 import { T, fmtPct, hours, why, type Lang } from './i18n'
 import { evaluateWindow, requiredBatteryWh, type Constraints } from './model'
 import { EngineRunner } from './runner'
@@ -11,7 +11,7 @@ import YearView from './components/YearView'
 import { download, reportHtml, siteRow, toCsv, type SiteRow } from './report'
 import HorizonView from './components/HorizonView'
 import Luna, { type LunaAction } from './components/Luna'
-import { AlertTriangle, ArrowLeftRight, Link2, MapPin, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Printer, Sun } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, Link2, MapPin, Pause, Play, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Printer, Sun } from 'lucide-react'
 import type { Overlay, Pin } from './components/Globe'
 import type { DriveMode, DriveStart } from './components/Drive'
 
@@ -124,6 +124,9 @@ export default function App() {
   const initSite = useRef<number | null>(Number(new URLSearchParams(location.hash.slice(1)).get('site')) || null)
   const setSel = (k: number) => { setPinned(null); setSelRaw(k) }
   const [copied, setCopied] = useState(false)
+  const [mapMode, setMapMode] = useState<'results' | 'sun'>('results')
+  const [mapH, setMapH] = useState(0)
+  const [mapPlay, setMapPlay] = useState(false)
   const siteIndex = pinned?.index ?? null
   const [dsn, setDsn] = useState<boolean[] | null>(null)
   const ephemRef = useRef<ArrayBuffer | null>(null)
@@ -238,6 +241,32 @@ export default function App() {
     return top.map((r, k) => siteRow(atlas, eph, dsn, r, k + 1, ran.q, c, firstHour(ran.q), [region(r), describePlace(r.lat, ((r.lon % 360) + 360) % 360, feats, lang)?.text].filter(Boolean).join(' · ') || null))
   }, [top, atlas, ran, m, dsn, eph, feats, lang])  // eslint-disable-line react-hooks/exhaustive-deps
   const cmpRows = rows.filter((r) => cmp.includes(r.index))
+  const mapSpan = ran ? (ran.q.windowDays - 1) * 24 + ran.q.days * 24 : 0
+  const mapHour = ran && m ? Math.min(m.n - 1, Math.max(0, firstHour(ran.q) + mapH)) : 0
+  useEffect(() => {
+    if (!mapPlay) return
+    const id = setInterval(() => setMapH((h) => (h + 2 >= mapSpan ? 0 : h + 2)), 90)
+    return () => clearInterval(id)
+  }, [mapPlay, mapSpan])
+  const sunOverlay: Overlay | null = useMemo(() => {
+    if (mapMode !== 'sun' || !atlas || !eph) return null
+    const lit = sunlitMap(atlas, eph, mapHour)
+    const n = Math.round((2 * atlas.rMaxM) / atlas.spacingM) + 1
+    const px = new Uint8Array(n * n * 4)
+    for (let i = 0; i < atlas.n; i++) {
+      const col = Math.round((atlas.xKm[i] * 1000 + atlas.rMaxM) / atlas.spacingM)
+      const row = Math.round((atlas.yKm[i] * 1000 + atlas.rMaxM) / atlas.spacingM)
+      const k = (row * n + col) * 4
+      const f = lit[i]
+      if (f >= 0.5) { px[k] = 245; px[k + 1] = 196; px[k + 2] = 70; px[k + 3] = 70 + 80 * f }
+      else { px[k] = 12; px[k + 1] = 20; px[k + 2] = 48; px[k + 3] = 215 }
+    }
+    const tex = new THREE.DataTexture(px, n, n, THREE.RGBAFormat)
+    tex.magFilter = THREE.LinearFilter
+    tex.minFilter = THREE.LinearFilter
+    tex.needsUpdate = true
+    return { texture: tex, rMaxM: atlas.rMaxM, edgeLat: -84.5 }
+  }, [mapMode, atlas, eph, mapHour])
   // nearby alternatives: points within 8 km that pass on more landing dates than the pick
   const nearby = useMemo(() => {
     if (!pick || !results || !atlas) return []
@@ -252,7 +281,7 @@ export default function App() {
   const startDate = (s: number) => new Date(Date.parse(ran!.q.start + 'T00:00:00Z') + s * 86400e3)
   const fmtDate = (d: Date) => d.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' })
   const pins: Pin[] = top.map((r, k) => ({ lat: r.lat, lon: r.lon, label: String(k + 1), good: r.goCount > 0 }))
-  const sunDir = detail ? detail.tr.sunDir(detail.a) : [1, 0, 0]
+  const sunDir = mapMode === 'sun' && eph ? [eph.sun[0][mapHour], eph.sun[1][mapHour], eph.sun[2][mapHour]] : detail ? detail.tr.sunDir(detail.a) : [1, 0, 0]
   const earthDir = detail ? detail.tr.earthDir(detail.a) : [1, 0, 0]
   const set = <K extends keyof Params>(k: K, v: Params[K]) => setP((o) => ({ ...o, [k]: v }))
   const clamp = (v: unknown, lo: number, hi: number, d: number) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : d)
@@ -381,14 +410,38 @@ export default function App() {
           <section className="card map-card">
             <div className="map">
               <Suspense fallback={null}>
-                <Globe poleCap={m.pole_cap} overlay={overlay} pins={pins} earthLabel={lang === 'tr' ? 'Dünya' : 'Earth'}
+                <Globe poleCap={m.pole_cap} overlay={sunOverlay ?? overlay} pins={pins} earthLabel={lang === 'tr' ? 'Dünya' : 'Earth'}
                        selected={pick ? { lat: pick.lat, lon: pick.lon, label: `#${sel + 1}` } : null}
                        sunDir={sunDir} earthDir={earthDir} onPick={setSel} />
               </Suspense>
+              <div className="map-tools">
+                <div className="seg">
+                  <button className={mapMode === 'results' ? 'on' : ''} onClick={() => { setMapMode('results'); setMapPlay(false) }}>{S.navResults[lang]}</button>
+                  <button className={mapMode === 'sun' ? 'on' : ''} onClick={() => setMapMode('sun')}>{T.sunlight[lang]}</button>
+                </div>
+                {mapMode === 'sun' && ran && (
+                  <div className="map-time">
+                    <button className="icon-btn" onClick={() => setMapPlay(!mapPlay)} aria-label="Play">{mapPlay ? <Pause size={14} /> : <Play size={14} />}</button>
+                    <input className="rng" type="range" min={0} max={Math.max(1, mapSpan - 1)} value={mapH}
+                           style={{ ['--p' as string]: `${(mapH / Math.max(1, mapSpan - 1)) * 100}%` }}
+                           onChange={(e) => { setMapPlay(false); setMapH(+e.target.value) }} />
+                    <span className="num">{new Date((m.start_unix + mapHour * 3600) * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC</span>
+                  </div>
+                )}
+              </div>
               <div className="map-legend">
-                <span><i className="sw go" />{S.legGo[lang]}</span>
-                <span><i className="sw nogo" />{S.legNo[lang]}</span>
-                <span><i className="sw none" />{S.legSteep[lang]}</span>
+                {mapMode === 'results' ? (
+                  <>
+                    <span><i className="sw go" />{S.legGo[lang]}</span>
+                    <span><i className="sw nogo" />{S.legNo[lang]}</span>
+                    <span><i className="sw none" />{S.legSteep[lang]}</span>
+                  </>
+                ) : (
+                  <>
+                    <span><i className="sw lit" />{lang === 'tr' ? 'Güneş görüyor' : 'In sunlight'}</span>
+                    <span><i className="sw dark" />{lang === 'tr' ? 'Gölgede' : 'In shadow'}</span>
+                  </>
+                )}
               </div>
             </div>
           </section>
