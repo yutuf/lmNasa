@@ -352,3 +352,6 @@ button.mini.on { border-color: #67e8f9; color: #67e8f9; }
 .map-time .rng { flex: 1; min-width: 120px; }
 .map-time .icon-btn { width: 28px; height: 28px; background: var(--surface-2); color: var(--text); }
 .sw.lit { background: #f5c446; } .sw.dark { background: #0c1430; border: 1px solid #334155; }
+.ico, .status, .hud-sub.ico { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.hud.objective .ico { display: flex; }
+.gameover h2 { display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
