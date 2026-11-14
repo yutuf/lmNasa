@@ -315,3 +315,15 @@ button.mini.on { border-color: #67e8f9; color: #67e8f9; }
   .hud.objective { top: 130px; max-width: 60vw; }
   .hud.timeline { width: 60vw; bottom: 330px; }
 }
+
+/* year view */
+.year { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 18px; }
+.month-label { font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+.month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.month-grid > * { aspect-ratio: 1; border-radius: 2px; border: 0; padding: 0; }
+.month-grid .blank { background: none; }
+.month-grid button { cursor: pointer; }
+.month-grid button.go { background: rgba(34, 197, 94, .75); }
+.month-grid button.nogo { background: var(--surface-3); }
+.month-grid button:hover { outline: 1px solid var(--text); }
+.month-grid button.cur { outline: 1.5px solid var(--text); outline-offset: 1px; }

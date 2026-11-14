@@ -6,6 +6,8 @@ import { T, fmtPct, hours, why, type Lang } from './i18n'
 import { evaluateWindow, requiredBatteryWh, type Constraints } from './model'
 import { EngineRunner } from './runner'
 import { listEclipses } from './eclipse'
+import { describePlace, type Feature } from './places'
+import YearView from './components/YearView'
 import { download, reportHtml, siteRow, toCsv, type SiteRow } from './report'
 import HorizonView from './components/HorizonView'
 import Luna, { type LunaAction } from './components/Luna'
@@ -123,6 +125,8 @@ export default function App() {
   const runner = useRef<EngineRunner | null>(null)
   const [drive, setDrive] = useState<{ mode: DriveMode; start: DriveStart } | null>(null)
   const [cmp, setCmp] = useState<number[]>([])
+  const [feats, setFeats] = useState<Feature[]>([])
+  useEffect(() => { fetch(dataUrl('features.json')).then((r) => r.json()).then((j) => setFeats(j.features)).catch(() => {}) }, [])
 
   useEffect(() => {
     (async () => {
@@ -219,8 +223,8 @@ export default function App() {
   const rows: SiteRow[] = useMemo(() => {
     if (!atlas || !ran || !m || !dsn || !eph) return []
     const c = constraints(ran.q)!
-    return top.map((r, k) => siteRow(atlas, eph, dsn, r, k + 1, ran.q, c, firstHour(ran.q), region(r) ?? null))
-  }, [top, atlas, ran, m, dsn, eph])  // eslint-disable-line react-hooks/exhaustive-deps
+    return top.map((r, k) => siteRow(atlas, eph, dsn, r, k + 1, ran.q, c, firstHour(ran.q), [region(r), describePlace(r.lat, ((r.lon % 360) + 360) % 360, feats, lang)?.text].filter(Boolean).join(' · ') || null))
+  }, [top, atlas, ran, m, dsn, eph, feats, lang])  // eslint-disable-line react-hooks/exhaustive-deps
   const cmpRows = rows.filter((r) => cmp.includes(r.index))
 
   if (!m || !atlas) return <div className="loading">LunaNav<small>{lang === 'tr' ? 'NASA verisi yükleniyor…' : 'loading NASA data…'}</small></div>
@@ -235,7 +239,7 @@ export default function App() {
     settings: ran?.q ?? p,
     meaning: 'sun/earth = minimum % of mission hours; shadow = longest tolerated darkness (h); batt = Wh; slope = max degrees; dsn = Earth contact also needs a NASA DSN dish',
     engine: ran ? { pointsChecked: atlas.n, hourlyChecks: ran.hoursChecked, landingDatesInWindow: ran.q.windowDays, firstDate: ran.q.start } : null,
-    results: top.map((r, k) => ({ rank: k + 1, lat: +r.lat.toFixed(3), lon: +r.lon.toFixed(3), artemisRegion: region(r) ?? null,
+    results: top.map((r, k) => ({ rank: k + 1, lat: +r.lat.toFixed(3), lon: +r.lon.toFixed(3), artemisRegion: region(r) ?? null, place: place(r) ?? null,
       goLandingDates: r.goCount, bestLanding: startDate(r.bestStart).toISOString().slice(0, 10),
       bestWindow: { sunlightPct: Math.round(r.sunFrac * 100), earthContactPct: Math.round(r.commFrac * 100), longestDarkHours: r.longestDarkH },
       slopeDeg: atlas.slope[r.index], heightM: atlas.height[r.index] })),
@@ -263,7 +267,9 @@ export default function App() {
   }
 
   const loc = lang === 'tr' ? 'tr-TR' : 'en-US'
-  const siteName = (r: PointResult) => region(r) ?? `${r.lat.toFixed(2)}°, ${(((r.lon % 360) + 360) % 360).toFixed(1)}°E`
+  const place = (r: PointResult) => describePlace(r.lat, ((r.lon % 360) + 360) % 360, feats, lang)?.text
+  const coords = (r: PointResult) => `${r.lat.toFixed(2)}°, ${(((r.lon % 360) + 360) % 360).toFixed(1)}°E`
+  const siteName = (r: PointResult) => region(r) ?? place(r) ?? coords(r)
   const preset = PRESETS.find((pr) => p.days === pr.days && p.sun === pr.sun && p.batt === pr.batt)?.id ?? 'custom'
 
   return (
@@ -384,7 +390,7 @@ export default function App() {
                                  onChange={() => setCmp((c) => c.includes(r.index) ? c.filter((x) => x !== r.index) : [...c, r.index].slice(-4))} />
                         </td>
                         <td className="rank">{k + 1}</td>
-                        <td><div className="site">{siteName(r)}</div>{region(r) && <div className="sub">{r.lat.toFixed(2)}°, {(((r.lon % 360) + 360) % 360).toFixed(1)}°E</div>}</td>
+                        <td><div className="site">{siteName(r)}</div><div className="sub">{region(r) && place(r) ? `${place(r)} · ` : ''}{coords(r)}</div></td>
                         <td>
                           <div className="go-cell">
                             <span className="meter"><i className={r.goCount > 0 ? 'go' : 'nogo'} style={{ width: `${Math.max(4, (r.goCount / ran.q.windowDays) * 100)}%` }} /></span>
@@ -413,7 +419,7 @@ export default function App() {
                   <div>
                     <div className="eyebrow">{S.siteN[lang]} {sel + 1}{region(pick) ? ` · ${S.inRegion[lang]}` : ''}</div>
                     <h2>{siteName(pick)}</h2>
-                    <p className="sub">{pick.lat.toFixed(3)}°, {(((pick.lon % 360) + 360) % 360).toFixed(3)}°E · {S.bestDate[lang]} {fmtDate(startDate(pick.bestStart))} · {ran.q.days} {S.days[lang]} ·{' '}
+                    <p className="sub">{region(pick) && place(pick) ? `${place(pick)} · ` : ''}{pick.lat.toFixed(3)}°, {(((pick.lon % 360) + 360) % 360).toFixed(3)}°E · {S.bestDate[lang]} {fmtDate(startDate(pick.bestStart))} · {ran.q.days} {S.days[lang]} ·{' '}
                       {lang === 'tr' ? 'eğim' : 'slope'} {atlas.slope[pick.index].toFixed(1)}° · {lang === 'tr' ? 'yükseklik' : 'height'} {atlas.height[pick.index].toLocaleString(loc)} m</p>
                   </div>
                   <div className="actions">
@@ -465,6 +471,11 @@ export default function App() {
 
               <HorizonView horizon={detail.tr.horizon} series={detail.series} i0={detail.a} len={detail.len} stepH={1}
                            startMs={startDate(pick.bestStart).getTime()} lang={lang} />
+              {eph && dsn && (
+                <YearView atlas={atlas} eph={eph} dsn={dsn} index={pick.index} c={detail.c} days={ran.q.days} needDsn={ran.q.dsn}
+                          startUnix={m.start_unix} lang={lang} current={startDate(pick.bestStart).toISOString().slice(0, 10)}
+                          onPick={(d) => { const next = { ...p, start: d }; setP(next); run(next); scrollTo({ top: 0, behavior: 'smooth' }) }} />
+              )}
             </>
           )}
 
