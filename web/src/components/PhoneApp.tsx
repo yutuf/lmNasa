@@ -1,6 +1,6 @@
-// The phone is a touch controller. Drag the picture or hold the pad to aim the view
-// from a point standing on the Moon. Pair it with the desktop and the same look drives the big screen,
-// and the phone can run the search. Motion sensors are not used: they flip when the hand rolls.
+// The phone is a remote. Held upright, its turn rate moves a cursor over the lunar view.
+// The picture does not follow the phone's tilt, so a wrist roll cannot flip it.
+// Pair it with the desktop and the same cursor appears on the big screen.
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import { Suspense, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react'
@@ -9,8 +9,8 @@ import * as THREE from 'three'
 import { dataUrl } from '../data'
 import type { Lang } from '../i18n'
 import { directionMoonFixed, toThree } from '../geometry'
-import { dragLook, eyePosition, nudgeLook, SOUTH_POLE, writeLook, type Stand } from '../phoneLook'
-import { openGuest, openHost, parsePhoneHash, phoneUrl, roomCode, standFrom, type LinkStatus } from '../phoneLink'
+import { commitAim, cursorNdc, dragCursor, dragLook, eyePosition, SOUTH_POLE, stepRemote, writeLook, type CursorAim, type Stand } from '../phoneLook'
+import { openGuest, openHost, parsePhoneHash, phoneUrl, roomCode, standFrom, type LinkStatus, type PhoneToDesk } from '../phoneLink'
 import '../phone.css'
 
 interface Tilt { heading: number; alt: number; roll: number }
@@ -192,16 +192,69 @@ function useDragLook(tilt: RefObject<Tilt>, active: boolean) {
   return { onPointerDown, onPointerMove, onPointerUp: end, onPointerCancel: end }
 }
 
-function Pad({ tilt }: { tilt: RefObject<Tilt> }) {
+function useDragCursor(aim: RefObject<CursorAim>, active: boolean) {
+  const on = useRef(active)
+  on.current = active
+  const last = useRef<{ x: number; y: number } | null>(null)
+  const onPointerDown = (e: ReactPointerEvent) => {
+    if (!on.current) return
+    if ((e.target as HTMLElement).closest('button, a, .phone-dock, .phone-top, .phone-pad')) return
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    last.current = { x: e.clientX, y: e.clientY }
+  }
+  const onPointerMove = (e: ReactPointerEvent) => {
+    if (!on.current || !last.current || !aim.current) return
+    const next = dragCursor(aim.current, e.clientX - last.current.x, e.clientY - last.current.y)
+    aim.current.x = next.x
+    aim.current.y = next.y
+    last.current = { x: e.clientX, y: e.clientY }
+  }
+  const end = () => { last.current = null }
+  return { onPointerDown, onPointerMove, onPointerUp: end, onPointerCancel: end }
+}
+
+function motionNeedsGesture(): boolean {
+  const motion = window.DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> } | undefined
+  return typeof motion?.requestPermission === 'function'
+}
+
+async function allowMotion(): Promise<boolean> {
+  const motion = window.DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> } | undefined
+  if (typeof motion?.requestPermission !== 'function') return true
+  try { return (await motion.requestPermission()) === 'granted' } catch { return false }
+}
+
+function useRemote(aim: RefObject<CursorAim>, armed: boolean) {
+  useEffect(() => {
+    if (!armed) return
+    let last = performance.now()
+    const onMotion = (e: DeviceMotionEvent) => {
+      const now = performance.now()
+      const dt = (now - last) / 1000
+      last = now
+      const rate = e.rotationRate
+      const cur = aim.current
+      if (!rate || !cur) return
+      const next = stepRemote(cur, { alpha: rate.alpha ?? 0, beta: rate.beta ?? 0, gamma: rate.gamma ?? 0 }, dt)
+      cur.x = next.x
+      cur.y = next.y
+    }
+    window.addEventListener('devicemotion', onMotion)
+    return () => window.removeEventListener('devicemotion', onMotion)
+  }, [aim, armed])
+}
+
+function Pad({ aim }: { aim: RefObject<CursorAim> }) {
   const hold = (dir: 'left' | 'right' | 'up' | 'down') => (e: ReactPointerEvent) => {
     e.stopPropagation()
     const step = () => {
-      const cur = tilt.current
+      const cur = aim.current
       if (!cur) return
-      const next = nudgeLook(cur, dir)
-      cur.heading = next.heading
-      cur.alt = next.alt
-      cur.roll = 0
+      const dx = dir === 'left' ? -4 : dir === 'right' ? 4 : 0
+      const dy = dir === 'up' ? 4 : dir === 'down' ? -4 : 0
+      const next = dragCursor(cur, dx / 0.16, -dy / 0.16)
+      cur.x = next.x
+      cur.y = next.y
     }
     step()
     const id = window.setInterval(step, 90)
@@ -211,12 +264,33 @@ function Pad({ tilt }: { tilt: RefObject<Tilt> }) {
   }
   return (
     <div className="phone-pad">
-      <button className="n" onPointerDown={hold('up')} aria-label="Look up">▲</button>
-      <button className="w" onPointerDown={hold('left')} aria-label="Turn left">◀</button>
-      <button className="e" onPointerDown={hold('right')} aria-label="Turn right">▶</button>
-      <button className="s" onPointerDown={hold('down')} aria-label="Look down">▼</button>
+      <button className="n" onPointerDown={hold('up')} aria-label="Cursor up">▲</button>
+      <button className="w" onPointerDown={hold('left')} aria-label="Cursor left">◀</button>
+      <button className="e" onPointerDown={hold('right')} aria-label="Cursor right">▶</button>
+      <button className="s" onPointerDown={hold('down')} aria-label="Cursor down">▼</button>
     </div>
   )
+}
+
+function Cursor({ aim }: { aim: RefObject<CursorAim> }) {
+  const el = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    let frame = 0
+    const tick = () => {
+      const node = el.current
+      const cur = aim.current
+      const box = node?.parentElement?.getBoundingClientRect()
+      if (node && cur && box && box.height > 0) {
+        const ndc = cursorNdc(cur.x, cur.y, 68, box.width / box.height)
+        node.style.left = `${50 + ndc.x * 50}%`
+        node.style.top = `${50 - ndc.y * 50}%`
+      }
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [aim])
+  return <div ref={el} className="phone-cursor" />
 }
 
 function QR({ text }: { text: string }) {
@@ -231,7 +305,10 @@ function QR({ text }: { text: string }) {
 
 const copy = {
   en: {
-    hold: 'Drag the picture, or use the pad. The big screen follows.',
+    hold: 'Hold the phone upright and twist it. The cursor moves, and the view stays upright.',
+    remote: 'Use as a remote',
+    look: 'Look here',
+    center: 'Center',
     pair: 'Pair this phone',
     waiting: 'Open the code on the phone',
     live: 'Phone paired',
@@ -243,7 +320,10 @@ const copy = {
     failHost: 'Pairing failed',
   },
   tr: {
-    hold: 'Görüntüyü sürükle ya da yastığı kullan. Büyük ekran onu izler.',
+    hold: 'Telefonu dik tut ve çevir. İmleç hareket eder, görüntü dik kalır.',
+    remote: 'Uzaktan kumanda yap',
+    look: 'Buraya bak',
+    center: 'Ortala',
     pair: 'Bu telefonu eşle',
     waiting: 'Kodu telefonda aç',
     live: 'Telefon eşlendi',
@@ -276,8 +356,11 @@ export function PhoneGuest() {
   const [status, setStatus] = useState<LinkStatus>(parsed.code ? 'connecting' : 'waiting')
   const [stand, setStand] = useState<Stand>({ ...SOUTH_POLE, name: lang === 'tr' ? 'Güney kutbu' : SOUTH_POLE.name })
   const tilt = useRef<Tilt>({ heading: 0, alt: -22, roll: 0 })
-  const send = useRef<((msg: { t: 'ori'; heading: number; alt: number; roll: number } | { t: 'cmd'; name: 'find' | 'best' }) => void) | null>(null)
-  const drag = useDragLook(tilt, true)
+  const aim = useRef<CursorAim>({ x: 0, y: 0 })
+  const [armed, setArmed] = useState(() => !motionNeedsGesture())
+  const send = useRef<((msg: PhoneToDesk) => void) | null>(null)
+  const drag = useDragCursor(aim, true)
+  useRemote(aim, armed)
 
   useEffect(() => {
     const code = parsed.code
@@ -291,7 +374,8 @@ export function PhoneGuest() {
       stop = link.close
       timer = window.setInterval(() => {
         const v = tilt.current
-        if (v) link.send({ t: 'ori', heading: v.heading, alt: v.alt, roll: v.roll })
+        const a = aim.current
+        if (v && a) link.send({ t: 'ori', heading: v.heading, alt: v.alt, roll: 0, aimX: a.x, aimY: a.y })
       }, 16)
     })
     return () => { dead = true; clearInterval(timer); stop() }
@@ -308,17 +392,30 @@ export function PhoneGuest() {
           </div>
           <button className="phone-x" onClick={() => setLang(lang === 'en' ? 'tr' : 'en')}>{lang.toUpperCase()}</button>
         </div>
-        <div className="phone-cross" />
+        <Cursor aim={aim} />
         <Readout tilt={tilt} />
-        <Pad tilt={tilt} />
+        <Pad aim={aim} />
         <div className="phone-dock">
           <div className={`phone-status ${status === 'live' ? 'live' : ''} ${status === 'error' ? 'bad' : ''}`}>
             {status === 'live' ? t.live : status === 'error' ? t.fail : parsed.code ? t.waiting : t.solo}
           </div>
           <p className="phone-status">{t.hold}</p>
           <div className="phone-actions">
+            {!armed && <button className="primary" onClick={() => { void allowMotion().then((ok) => { if (ok) setArmed(true) }) }}>{t.remote}</button>}
+            <button onClick={() => {
+              const v = tilt.current
+              const a = aim.current
+              if (!v || !a) return
+              const next = commitAim(v, a)
+              v.heading = next.heading
+              v.alt = next.alt
+              v.roll = 0
+              a.x = 0
+              a.y = 0
+            }}>{t.look}</button>
+            <button onClick={() => { if (aim.current) { aim.current.x = 0; aim.current.y = 0 } }}>{t.center}</button>
             <button onClick={() => send.current?.({ t: 'cmd', name: 'find' })}>{t.find}</button>
-            <button className="primary" onClick={() => send.current?.({ t: 'cmd', name: 'best' })}>{t.best}</button>
+            <button className={armed ? 'primary' : ''} onClick={() => send.current?.({ t: 'cmd', name: 'best' })}>{t.best}</button>
           </div>
         </div>
       </div>
@@ -338,6 +435,7 @@ export function PhoneHost({ lang, site, onClose, onFind, onBest }: {
   const [status, setStatus] = useState<LinkStatus>('connecting')
   const [detail, setDetail] = useState('')
   const tilt = useRef<Tilt>({ heading: 0, alt: -22, roll: 0 })
+  const aim = useRef<CursorAim>({ x: 0, y: 0 })
   const link = useRef<{ send: (msg: { t: 'site'; name: string; lat: number; lon: number }) => void } | null>(null)
   const onFindRef = useRef(onFind)
   const onBestRef = useRef(onBest)
@@ -353,10 +451,12 @@ export function PhoneHost({ lang, site, onClose, onFind, onBest }: {
     let stop = () => {}
     let dead = false
     openHost(code, (m) => {
-      if (m.t === 'ori' && tilt.current) {
+      if (m.t === 'ori' && tilt.current && aim.current) {
         tilt.current.heading = m.heading
         tilt.current.alt = m.alt
-        tilt.current.roll = m.roll
+        tilt.current.roll = 0
+        aim.current.x = m.aimX
+        aim.current.y = m.aimY
       } else if (m.t === 'cmd' && m.name === 'find') onFindRef.current()
       else if (m.t === 'cmd') onBestRef.current()
     }, (s, d) => { setStatus(s); if (d) setDetail(d) }).then((l) => {
@@ -384,7 +484,7 @@ export function PhoneHost({ lang, site, onClose, onFind, onBest }: {
           </div>
           <button className="phone-x" onClick={onClose} aria-label={t.close}>×</button>
         </div>
-        <div className="phone-cross" />
+        <Cursor aim={aim} />
         <Readout tilt={tilt} />
         <div className="phone-dock">
           {status !== 'live' && (

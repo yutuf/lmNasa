@@ -125,6 +125,72 @@ export function nudgeLook(tilt: { heading: number; alt: number }, dir: 'left' | 
   return dragLook(tilt, 0, step / 0.22)
 }
 
+export interface RemoteRates { alpha: number; beta: number; gamma: number }
+export interface CursorAim { x: number; y: number }
+
+/** How far the cursor may travel, in degrees, and still stay on a vertical phone. */
+export function remoteLimits(vFovDeg = 68, aspect = 9 / 19.5): { x: number; y: number } {
+  const halfV = Math.tan(vFovDeg * Math.PI / 360)
+  const edge = 0.86
+  return {
+    x: Math.atan(halfV * aspect * edge) * 180 / Math.PI,
+    y: Math.atan(halfV * edge) * 180 / Math.PI,
+  }
+}
+
+/**
+ * TV-remote cursor. Rates are degrees per second in the device frame.
+ * The phone is held upright, screen facing the user.
+ * +gamma yaws the screen toward the user's right, so the cursor moves right.
+ * +beta tips the top of the phone toward the user, so the cursor moves down.
+ * Alpha rolls the phone in the plane of the screen and is ignored, so a wrist
+ * roll cannot flip the picture. The picture itself does not follow the phone's tilt.
+ */
+export function stepRemote(cursor: CursorAim, rates: RemoteRates, dt: number, opts?: { dead?: number; gain?: number; limitX?: number; limitY?: number }): CursorAim {
+  if (!(dt > 0) || dt > 0.05) return { x: cursor.x, y: cursor.y }
+  const dead = opts?.dead ?? 6
+  const gain = opts?.gain ?? 1.2
+  const limits = remoteLimits()
+  const limitX = opts?.limitX ?? limits.x
+  const limitY = opts?.limitY ?? limits.y
+  const zone = (v: number) => {
+    if (!Number.isFinite(v) || Math.abs(v) > 720) return 0
+    if (Math.abs(v) < dead) return 0
+    return v - Math.sign(v) * dead
+  }
+  return {
+    x: Math.max(-limitX, Math.min(limitX, cursor.x + zone(rates.gamma) * dt * gain)),
+    y: Math.max(-limitY, Math.min(limitY, cursor.y - zone(rates.beta) * dt * gain)),
+  }
+}
+
+/** Finger right moves the cursor right. Finger up moves it up. Same limits as the remote. */
+export function dragCursor(cursor: CursorAim, dx: number, dy: number, degPerPx = 0.16): CursorAim {
+  const limits = remoteLimits()
+  return {
+    x: Math.max(-limits.x, Math.min(limits.x, cursor.x + dx * degPerPx)),
+    y: Math.max(-limits.y, Math.min(limits.y, cursor.y - dy * degPerPx)),
+  }
+}
+
+/** Point the camera at the cursor, then the caller puts the cursor back on the center. */
+export function commitAim(tilt: { heading: number; alt: number }, aim: CursorAim): { heading: number; alt: number } {
+  return {
+    heading: (tilt.heading + aim.x + 360) % 360,
+    alt: Math.max(-75, Math.min(75, tilt.alt + aim.y)),
+  }
+}
+
+/** Cursor position on screen. +x is right, +y is up, each axis is -1..1 across the view. */
+export function cursorNdc(xDeg: number, yDeg: number, vFovDeg = 68, aspect = 16 / 9): { x: number; y: number } {
+  const halfV = Math.tan(vFovDeg * Math.PI / 360)
+  const halfH = halfV * Math.max(aspect, 0.2)
+  return {
+    x: Math.max(-0.92, Math.min(0.92, Math.tan(xDeg * Math.PI / 180) / halfH)),
+    y: Math.max(-0.92, Math.min(0.92, Math.tan(yDeg * Math.PI / 180) / halfV)),
+  }
+}
+
 export interface Stand { name: string; lat: number; lon: number }
 
 export const SOUTH_POLE: Stand = { name: 'South pole', lat: -85, lon: 0 }

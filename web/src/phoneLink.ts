@@ -1,11 +1,11 @@
-// Pair a phone with the desktop. The phone is a touch controller: drag and the pad send the look; the desktop
-// can ask the phone to stand at the current site. Signaling goes through PeerJS's public broker.
+// Pair a phone with the desktop. The phone is a remote: its turn rate moves a cursor, and the desktop
+// stands at the current site. Signaling goes through PeerJS's public broker.
 import type { DataConnection, Peer } from 'peerjs'
 import type { Stand } from './phoneLook'
 import { PUBLIC_ORIGIN, shareOrigin } from './publicOrigin'
 
 export type PhoneToDesk =
-  | { t: 'ori'; heading: number; alt: number; roll: number }
+  | { t: 'ori'; heading: number; alt: number; roll: number; aimX: number; aimY: number }
   | { t: 'cmd'; name: 'find' | 'best' }
 
 export type DeskToPhone = { t: 'site'; name: string; lat: number; lon: number }
@@ -50,7 +50,7 @@ export function parsePhoneToDesk(raw: unknown): PhoneToDesk | null {
   if (!raw || typeof raw !== 'object') return null
   const m = raw as Partial<PhoneToDesk>
   if (m.t === 'ori' && finite(m.heading) && finite(m.alt) && finite(m.roll)) {
-    return { t: 'ori', heading: m.heading, alt: m.alt, roll: m.roll }
+    return { t: 'ori', heading: m.heading, alt: m.alt, roll: m.roll, aimX: finite(m.aimX) ? m.aimX : 0, aimY: finite(m.aimY) ? m.aimY : 0 }
   }
   if (m.t === 'cmd' && (m.name === 'find' || m.name === 'best')) return { t: 'cmd', name: m.name }
   return null
