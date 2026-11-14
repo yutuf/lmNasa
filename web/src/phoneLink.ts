@@ -2,6 +2,7 @@
 // can ask the phone to stand at the current site. Signaling goes through PeerJS's public broker.
 import type { DataConnection, Peer } from 'peerjs'
 import type { Stand } from './phoneLook'
+import { PUBLIC_ORIGIN, shareOrigin } from './publicOrigin'
 
 export type PhoneToDesk =
   | { t: 'ori'; heading: number; alt: number; roll: number }
@@ -30,21 +31,11 @@ export function parsePhoneHash(hash: string): { code: string | null; lang: 'en' 
   return { code: code ? code.toUpperCase() : null, lang: q.get('lang') === 'tr' ? 'tr' : 'en' }
 }
 
+export { PUBLIC_ORIGIN }
+
 /** Where a phone in the room can open LunaNav. A desktop on localhost cannot be reached by scanning. */
-export const PUBLIC_ORIGIN = 'https://lunanav-theta.vercel.app'
-
-export function phoneShareOrigin(origin: string): string {
-  try {
-    const host = new URL(origin).hostname
-    if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '::1') return PUBLIC_ORIGIN
-  } catch {
-    return PUBLIC_ORIGIN
-  }
-  return origin.replace(/\/$/, '')
-}
-
 export function phoneUrl(origin: string, path: string, code: string, lang: 'en' | 'tr'): string {
-  const base = phoneShareOrigin(origin)
+  const base = shareOrigin(origin)
   const route = `#phone?code=${code}&lang=${lang}`
   if (base === PUBLIC_ORIGIN) return `${base}/${route}`
   const p = path.startsWith('/') ? path : `/${path}`
