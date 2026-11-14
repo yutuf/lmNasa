@@ -1,15 +1,15 @@
-// The phone is a remote. Held upright, twisting it turns the lunar view.
-// The turn rate is used, not the absolute tilt, and roll is ignored, so the picture cannot flip.
-// Pair it with the desktop and the big screen turns the same way.
+// The phone is only a steering wheel. Twisting it turns the lunar view on the big screen.
+// The turn rate is used, not the absolute tilt, so the picture cannot flip. The phone does not
+// draw that picture: the wheel would take it out of view.
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
-import { Suspense, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react'
 import qrcode from 'qrcode-generator'
 import * as THREE from 'three'
 import { dataUrl } from '../data'
 import type { Lang } from '../i18n'
-import { directionMoonFixed, toThree } from '../geometry'
-import { dragLook, eyePosition, nudgeLook, SOUTH_POLE, stepSlew, writeLook, type Stand } from '../phoneLook'
+import { directionMoonFixed, enu, surfacePoint, toThree } from '../geometry'
+import { dragLook, eyePosition, SOUTH_POLE, stepSlew, writeLook, type Stand } from '../phoneLook'
 import { openGuest, openHost, parsePhoneHash, phoneUrl, roomCode, standFrom, type LinkStatus, type PhoneToDesk } from '../phoneLink'
 import '../phone.css'
 
@@ -35,14 +35,14 @@ function MoonBall() {
   return (
     <mesh>
       <sphereGeometry args={[1, 160, 80]} />
-      <meshStandardMaterial map={albedo} normalMap={normal} normalScale={new THREE.Vector2(1.2, 1.2)} roughness={1} metalness={0} color="#e4ded4" />
+      <meshStandardMaterial map={albedo} normalMap={normal} normalScale={new THREE.Vector2(2.4, 2.4)} roughness={0.96} metalness={0} color="#efe6d8" />
     </mesh>
   )
 }
 
 function Stars() {
   const geo = useMemo(() => {
-    const n = 1400
+    const n = 2200
     const pos = new Float32Array(n * 3)
     const col = new Float32Array(n * 3)
     let s = 42
@@ -82,7 +82,7 @@ function Sun({ stand }: { stand: Stand }) {
   const sun = toThree(directionMoonFixed(10, 220, stand.lat, stand.lon)).multiplyScalar(15)
   return (
     <>
-      <directionalLight position={[sun.x, sun.y, sun.z]} intensity={4.4} color="#fff3df" />
+      <directionalLight position={[sun.x, sun.y, sun.z]} intensity={5.6} color="#fff1d2" />
       <group position={sun}>
         <sprite scale={[4.5, 4.5, 1]}><spriteMaterial map={core} transparent depthWrite={false} blending={THREE.AdditiveBlending} /></sprite>
       </group>
@@ -112,6 +112,66 @@ function surfaceBeacon(lat: number, lon: number) {
   return eyePosition(Math.min(lat + 0.35, 89), lon).normalize().multiplyScalar(1.0015)
 }
 
+const STAGE_R = 1.0018
+
+function Relief({ stand }: { stand: Stand }) {
+  const rocks = useRef<THREE.InstancedMesh>(null)
+  const basis = useMemo(() => {
+    const { e, n, u } = enu(stand.lat, stand.lon)
+    return { east: toThree(e).normalize(), north: toThree(n).normalize(), up: toThree(u).normalize() }
+  }, [stand.lat, stand.lon])
+  useLayoutEffect(() => {
+    const mesh = rocks.current
+    if (!mesh) return
+    const dummy = new THREE.Object3D()
+    const align = new THREE.Quaternion()
+    const spin = new THREE.Quaternion()
+    const p = new THREE.Vector3()
+    let s = 11
+    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647
+    for (let i = 0; i < 56; i++) {
+      const ang = rnd() * Math.PI * 2
+      const dist = 0.008 + rnd() * 0.035
+      p.copy(basis.up).addScaledVector(basis.east, Math.cos(ang) * dist).addScaledVector(basis.north, Math.sin(ang) * dist).normalize()
+      align.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p)
+      spin.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rnd() * Math.PI * 2)
+      dummy.position.copy(p).multiplyScalar(1.00055)
+      dummy.quaternion.copy(align).multiply(spin)
+      dummy.scale.setScalar(0.0004 + rnd() * 0.0012)
+      dummy.updateMatrix()
+      mesh.setMatrixAt(i, dummy.matrix)
+    }
+    mesh.instanceMatrix.needsUpdate = true
+  }, [basis])
+  const eye = surfacePoint(stand.lat, stand.lon, STAGE_R)
+  const level = useMemo(() => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), basis.up), [basis])
+  const lander = useMemo(() => basis.up.clone().addScaledVector(basis.north, 0.012).normalize(), [basis])
+  const landerTurn = useMemo(() => new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), lander), [lander])
+  return (
+    <group>
+      <instancedMesh ref={rocks} args={[undefined, undefined, 56]}>
+        <dodecahedronGeometry args={[1, 0]} />
+        <meshStandardMaterial color="#b1a496" roughness={1} metalness={0} />
+      </instancedMesh>
+      <group position={eye} quaternion={level}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.04, 0.07, 96]} />
+          <meshBasicMaterial color="#f0ddc0" transparent opacity={0.33} side={THREE.DoubleSide} depthWrite={false} />
+        </mesh>
+      </group>
+      <group position={lander.clone().multiplyScalar(1.0011)} quaternion={landerTurn}>
+        <mesh position={[0, 0.0022, 0]}><boxGeometry args={[0.0016, 0.0014, 0.0016]} /><meshStandardMaterial color="#f4efe4" roughness={0.55} metalness={0.15} /></mesh>
+        <mesh position={[0, 0.0034, 0]}><cylinderGeometry args={[0.0007, 0.0009, 0.0011, 16]} /><meshStandardMaterial color="#d9a441" roughness={0.4} metalness={0.35} /></mesh>
+        <mesh position={[0.0011, 0.0011, 0.0011]} rotation={[0, 0, 0.5]}><cylinderGeometry args={[0.00008, 0.00008, 0.0022, 6]} /><meshStandardMaterial color="#c8c2b8" /></mesh>
+        <mesh position={[-0.0011, 0.0011, 0.0011]} rotation={[0, 0, -0.5]}><cylinderGeometry args={[0.00008, 0.00008, 0.0022, 6]} /><meshStandardMaterial color="#c8c2b8" /></mesh>
+        <mesh position={[0.0011, 0.0011, -0.0011]} rotation={[0.5, 0, 0.4]}><cylinderGeometry args={[0.00008, 0.00008, 0.0022, 6]} /><meshStandardMaterial color="#c8c2b8" /></mesh>
+        <mesh position={[-0.0011, 0.0011, -0.0011]} rotation={[0.5, 0, -0.4]}><cylinderGeometry args={[0.00008, 0.00008, 0.0022, 6]} /><meshStandardMaterial color="#c8c2b8" /></mesh>
+        <pointLight position={[0, 0.004, 0]} intensity={1.6} distance={0.05} color="#ffd7a4" />
+      </group>
+    </group>
+  )
+}
+
 function LookCam({ stand, tilt }: { stand: Stand; tilt: RefObject<Tilt> }) {
   const { camera, scene } = useThree()
   const lamp = useRef<THREE.DirectionalLight>(null)
@@ -135,7 +195,7 @@ function LookCam({ stand, tilt }: { stand: Stand; tilt: RefObject<Tilt> }) {
     const k = 1 - Math.exp(-Math.min(dt, 0.05) / 0.08)
     if (!primed.current) { current.current.copy(target.current); primed.current = true }
     else current.current.slerp(target.current, k)
-    camera.position.copy(eyePosition(stand.lat, stand.lon))
+    camera.position.copy(surfacePoint(stand.lat, stand.lon, STAGE_R))
     camera.quaternion.copy(current.current)
     const head = lamp.current
     if (!head) return
@@ -151,12 +211,13 @@ function Stage({ stand, tilt }: { stand: Stand; tilt: RefObject<Tilt> }) {
   return (
     <Canvas camera={{ fov: 68, near: 0.0005, far: 40 }} dpr={[1, 1.5]} gl={{ antialias: true }}
       onCreated={({ gl, scene }) => { scene.background = new THREE.Color('#070814'); gl.setClearColor(0x070814, 1) }}>
-      <hemisphereLight args={['#b7c4d4', '#3a2c22', 0.72]} />
+      <hemisphereLight args={['#d5e2f2', '#4a3428', 0.85]} />
       <Suspense fallback={null}>
         <MoonBall />
         <SkyBodies stand={stand} />
         <Sun stand={stand} />
         <Beacon stand={stand} />
+        <Relief stand={stand} />
       </Suspense>
       <Stars />
       <LookCam stand={stand} tilt={tilt} />
@@ -224,29 +285,31 @@ function useRemote(tilt: RefObject<Tilt>, armed: boolean) {
   }, [tilt, armed])
 }
 
-function Pad({ tilt }: { tilt: RefObject<Tilt> }) {
-  const hold = (dir: 'left' | 'right' | 'up' | 'down') => (e: ReactPointerEvent) => {
-    e.stopPropagation()
-    const step = () => {
-      const cur = tilt.current
-      if (!cur) return
-      const next = nudgeLook(cur, dir)
-      cur.heading = next.heading
-      cur.alt = next.alt
-      cur.roll = 0
+function Wheel({ tilt, drag }: { tilt: RefObject<Tilt>; drag: ReturnType<typeof useDragLook> }) {
+  const wheel = useRef<HTMLDivElement>(null)
+  const figure = useRef<HTMLElement>(null)
+  useEffect(() => {
+    let frame = 0
+    const tick = () => {
+      const t = tilt.current
+      const node = wheel.current
+      const num = figure.current
+      if (t && node && num) {
+        node.style.transform = `rotate(${t.heading}deg)`
+        num.style.transform = `rotate(${-t.heading}deg)`
+        num.textContent = `${((t.heading % 360) + 360) % 360 | 0}°`
+      }
+      frame = requestAnimationFrame(tick)
     }
-    step()
-    const id = window.setInterval(step, 90)
-    const up = () => { clearInterval(id); removeEventListener('pointerup', up); removeEventListener('pointercancel', up) }
-    addEventListener('pointerup', up)
-    addEventListener('pointercancel', up)
-  }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [tilt])
   return (
-    <div className="phone-pad">
-      <button className="n" onPointerDown={hold('up')} aria-label="Look up">▲</button>
-      <button className="w" onPointerDown={hold('left')} aria-label="Turn left">◀</button>
-      <button className="e" onPointerDown={hold('right')} aria-label="Turn right">▶</button>
-      <button className="s" onPointerDown={hold('down')} aria-label="Look down">▼</button>
+    <div className="phone-wheel-wrap" {...drag}>
+      <div className="phone-wheel" ref={wheel}>
+        <i />
+        <b ref={figure}>0°</b>
+      </div>
     </div>
   )
 }
@@ -263,8 +326,8 @@ function QR({ text }: { text: string }) {
 
 const copy = {
   en: {
-    hold: 'Hold the phone upright and twist it. The view turns with you and stays upright.',
-    remote: 'Enable pointing',
+    hold: 'Twist the phone like a wheel. The Moon stays on the big screen.',
+    remote: 'Enable steering',
     pair: 'Pair this phone',
     waiting: 'Open the code on the phone',
     live: 'Phone paired',
@@ -276,8 +339,8 @@ const copy = {
     failHost: 'Pairing failed',
   },
   tr: {
-    hold: 'Telefonu dik tut ve çevir. Görüntü seninle döner ve dik kalır.',
-    remote: 'Yöneltmeyi aç',
+    hold: 'Telefonu bir direksiyon gibi çevir. Ay büyük ekranda kalır.',
+    remote: 'Direksiyonu aç',
     pair: 'Bu telefonu eşle',
     waiting: 'Kodu telefonda aç',
     live: 'Telefon eşlendi',
@@ -334,29 +397,24 @@ export function PhoneGuest() {
   }, [parsed.code, tilt])
 
   return (
-    <div className="phone-app" {...drag}>
-      <Stage stand={stand} tilt={tilt} />
-      <div className="phone-hud">
-        <div className="phone-top">
-          <div>
-            <div className="phone-brand">LUNA<b>NAV</b></div>
-            <p className="phone-site">{stand.name}</p>
-          </div>
-          <button className="phone-x" onClick={() => setLang(lang === 'en' ? 'tr' : 'en')}>{lang.toUpperCase()}</button>
+    <div className="phone-app phone-remote">
+      <div className="phone-top">
+        <div>
+          <div className="phone-brand">LUNA<b>NAV</b></div>
+          <p className="phone-site">{stand.name}</p>
         </div>
-        <div className="phone-cross" />
-        <Readout tilt={tilt} />
-        <Pad tilt={tilt} />
-        <div className="phone-dock">
-          <div className={`phone-status ${status === 'live' ? 'live' : ''} ${status === 'error' ? 'bad' : ''}`}>
-            {status === 'live' ? t.live : status === 'error' ? t.fail : parsed.code ? t.waiting : t.solo}
-          </div>
-          <p className="phone-status">{t.hold}</p>
-          <div className="phone-actions">
-            {!armed && <button onClick={() => { void allowMotion().then((ok) => { if (ok) setArmed(true) }) }}>{t.remote}</button>}
-            <button onClick={() => send.current?.({ t: 'cmd', name: 'find' })}>{t.find}</button>
-            <button className="primary" onClick={() => send.current?.({ t: 'cmd', name: 'best' })}>{t.best}</button>
-          </div>
+        <button className="phone-x" onClick={() => setLang(lang === 'en' ? 'tr' : 'en')}>{lang.toUpperCase()}</button>
+      </div>
+      <Wheel tilt={tilt} drag={drag} />
+      <div className="phone-dock">
+        <div className={`phone-status ${status === 'live' ? 'live' : ''} ${status === 'error' ? 'bad' : ''}`}>
+          {status === 'live' ? t.live : status === 'error' ? t.fail : parsed.code ? t.waiting : t.solo}
+        </div>
+        <p className="phone-status">{t.hold}</p>
+        <div className="phone-actions">
+          {!armed && <button onClick={() => { void allowMotion().then((ok) => { if (ok) setArmed(true) }) }}>{t.remote}</button>}
+          <button onClick={() => send.current?.({ t: 'cmd', name: 'find' })}>{t.find}</button>
+          <button className="primary" onClick={() => send.current?.({ t: 'cmd', name: 'best' })}>{t.best}</button>
         </div>
       </div>
     </div>
@@ -413,6 +471,7 @@ export function PhoneHost({ lang, site, onClose, onFind, onBest }: {
   return (
     <div className="phone-app" {...drag}>
       <Stage stand={site} tilt={tilt} />
+      <div className="phone-visor" />
       <div className="phone-hud">
         <div className="phone-top">
           <div>

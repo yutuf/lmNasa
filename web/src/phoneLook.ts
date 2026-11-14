@@ -165,8 +165,10 @@ export function stepRemote(cursor: CursorAim, rates: RemoteRates, dt: number, op
 }
 
 /**
- * Turn the view itself from the same remote rates. The crosshair stays centered.
- * +gamma turns right. +beta looks down. Alpha is ignored, so a wrist roll cannot flip the view.
+ * Turn the view from the phone, used as a steering wheel. The picture stays upright.
+ * +alpha rolls the top of the phone to the user's left, like turning a wheel left, so the view turns left.
+ * +gamma yaws the screen to the user's right and also turns right. The stronger of the two wins,
+ * so a wheel twist and a yaw do not add. +beta looks down.
  * Holding still leaves the view where it is. Altitude stays clear of the zenith.
  */
 export function stepSlew(tilt: { heading: number; alt: number }, rates: RemoteRates, dt: number, opts?: { dead?: number; gain?: number }): { heading: number; alt: number } {
@@ -178,8 +180,11 @@ export function stepSlew(tilt: { heading: number; alt: number }, rates: RemoteRa
     if (Math.abs(v) < dead) return 0
     return v - Math.sign(v) * dead
   }
+  const wheel = -zone(rates.alpha)
+  const yaw = zone(rates.gamma)
+  const turn = Math.abs(wheel) >= Math.abs(yaw) ? wheel : yaw
   return {
-    heading: (tilt.heading + zone(rates.gamma) * dt * gain + 360) % 360,
+    heading: (tilt.heading + turn * dt * gain + 360) % 360,
     alt: Math.max(-75, Math.min(75, tilt.alt - zone(rates.beta) * dt * gain)),
   }
 }

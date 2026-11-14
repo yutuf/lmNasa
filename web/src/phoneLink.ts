@@ -1,4 +1,4 @@
-// Pair a phone with the desktop. Twisting the upright phone turns the view, and the desktop follows.
+// Pair a phone with the desktop. The phone is a steering wheel and does not draw the Moon.
 // Signaling goes through PeerJS's public broker.
 import type { DataConnection, Peer } from 'peerjs'
 import type { Stand } from './phoneLook'
