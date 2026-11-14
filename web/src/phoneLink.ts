@@ -1,5 +1,5 @@
-// Pair a phone with the desktop. The phone is a remote: its turn rate moves a cursor, and the desktop
-// stands at the current site. Signaling goes through PeerJS's public broker.
+// Pair a phone with the desktop. Twisting the upright phone turns the view, and the desktop follows.
+// Signaling goes through PeerJS's public broker.
 import type { DataConnection, Peer } from 'peerjs'
 import type { Stand } from './phoneLook'
 import { PUBLIC_ORIGIN, shareOrigin } from './publicOrigin'

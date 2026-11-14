@@ -164,6 +164,26 @@ export function stepRemote(cursor: CursorAim, rates: RemoteRates, dt: number, op
   }
 }
 
+/**
+ * Turn the view itself from the same remote rates. The crosshair stays centered.
+ * +gamma turns right. +beta looks down. Alpha is ignored, so a wrist roll cannot flip the view.
+ * Holding still leaves the view where it is. Altitude stays clear of the zenith.
+ */
+export function stepSlew(tilt: { heading: number; alt: number }, rates: RemoteRates, dt: number, opts?: { dead?: number; gain?: number }): { heading: number; alt: number } {
+  if (!(dt > 0) || dt > 0.05) return { heading: tilt.heading, alt: tilt.alt }
+  const dead = opts?.dead ?? 5
+  const gain = opts?.gain ?? 1.35
+  const zone = (v: number) => {
+    if (!Number.isFinite(v) || Math.abs(v) > 720) return 0
+    if (Math.abs(v) < dead) return 0
+    return v - Math.sign(v) * dead
+  }
+  return {
+    heading: (tilt.heading + zone(rates.gamma) * dt * gain + 360) % 360,
+    alt: Math.max(-75, Math.min(75, tilt.alt - zone(rates.beta) * dt * gain)),
+  }
+}
+
 /** Finger right moves the cursor right. Finger up moves it up. Same limits as the remote. */
 export function dragCursor(cursor: CursorAim, dx: number, dy: number, degPerPx = 0.16): CursorAim {
   const limits = remoteLimits()
