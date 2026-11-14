@@ -1,10 +1,83 @@
 # LunaNav — where and when should we land on the Moon?
 
-Open-source planning tool for landing sites and dates at the lunar south pole.
-
-**Live app: https://limitlessapps.streamlit.app/**  ·  **[1-minute demo video](docs/demo/lunanav-demo.mp4)**
+Open-source planning tool for landing sites and dates at the lunar south pole: describe a mission, and LunaNav
+searches the real terrain hour by hour and tells you where and when a solar lander survives. Then stand on the
+lander, or drive a rover there.
 
 [![tests](https://github.com/yutuf/lmNasa/actions/workflows/ci.yml/badge.svg)](https://github.com/yutuf/lmNasa/actions/workflows/ci.yml)
+
+![Landing site search: mission settings, the globe with the result map, the ranked sites](docs/web-search.png)
+
+## The web app (`web/`)
+
+```bash
+cd web && npm install && npm run dev        # http://localhost:5173
+```
+
+Static site (Vite + React + three.js) with one optional serverless function for the AI guide; deploys to Vercel
+with root directory `web` (set `GEMINI_API_KEY` for the AI guide). Everything else runs in the browser, offline.
+
+**Search, not a spot picker.** Set the mission (length, minimum sunlight and Earth contact, longest darkness,
+battery, steepest ground, whether Earth contact also needs a free NASA DSN dish) and a landing window. A Web
+Worker engine checks all 21,856 points of a 2 km grid around the south pole, every landing date in the window,
+hour by hour against each point's real LOLA horizon (about 12 million hourly checks in about a second), and
+ranks the sites. The same algorithm as the Python package, checked against it case by case (`web/src/*.test.ts`).
+
+- **Results:** a ranked table with place names from the IAU gazetteer ("SE rim of Shackleton", "on Mons
+  Malapert"), the share of landing dates that pass, and the Artemis III region each site falls in; CSV export
+  and a printable report; tick two to four rows to compare them side by side.
+- **Site detail:** a GO / NO-GO verdict with the reason in one sentence; sunlight, Earth contact, longest
+  darkness and battery against the requirements; every landing date in the window; the mission's sunrises,
+  sunsets and Earth link losses; better spots within 8 km; eclipses inside the mission (Earth hiding the Sun,
+  checked against NASA's eclipse catalogue); what the lander sees, as a 360° horizon with the Sun and Earth
+  moving over it; and a calendar of every landing date from November 2026 to the end of 2028.
+- **Sunlight map:** scrub or play the mission and watch the shadows sweep across the pole.
+- **Copy link:** the address keeps the mission and the chosen site.
+- **Ask Luna:** describe a mission in your own words ("a 3-week rover landing in spring 2027 that must always
+  reach Earth") or ask about the results; an AI guide (Google Gemini, server-side key) sets up the search or
+  explains the numbers, using only what the engine computed. English and Turkish throughout.
+
+**Be there.** From any result, *Stand on the lander* or *Drive a rover here*:
+
+![The view from the lander on its best landing date: the Sun's path along the horizon](docs/web-lander.png)
+
+- Real LOLA terrain: 10 m maps from NASA's 5 m/px LOLA site models (Barker et al. 2021) at 15 landing areas,
+  the 200 m polar grid elsewhere, lunar curvature included; NASA 3D models (Apollo LM, rover, LRO).
+- The Sun and Earth where the ephemeris puts them for that date; ridges cast real shadows (a horizon ray-march
+  per vertex for distant ridges, a shadow map nearby); dashed paths show where the Sun and Earth travel during
+  the mission.
+- A survival game with honest physics: battery, solar input and power use, countdowns to sunset and Earth-set,
+  radio link through the DSN, time warp to an hour per second. The rover power figures are illustrative and
+  labelled as such.
+- A VIPER-style objective: drive to the most ice-favourable permanently shadowed spot nearby (NASA permanent
+  shadow map, USGS ice index, Diviner temperatures and ice stability depth), drill for two hours, and bring the
+  sample back into sunlight before the battery runs out. A route planner (A* over the terrain, rover slope
+  limit, prefers sunlit ground) with an autopilot.
+- Keyboard and game controller; a USB LED ring can mirror the rover's sky live ([hardware/sky_link](hardware/sky_link)).
+
+![Driving the rover on the Shackleton rim, 10 m LOLA terrain](docs/web-rover.png)
+
+### Data in the web app
+
+| What | Source |
+|---|---|
+| Terrain horizons, 21,856 points | NASA LRO LOLA polar DEMs (PDS), `scripts/build_horizon_atlas.py` |
+| Sun and Earth, hourly | JPL DE440 via Skyfield, Moon-fixed, Earth parallax per point |
+| Deep Space Network visibility | Goldstone, Madrid, Canberra, 10° mask |
+| 10 m rover terrain | LOLA 5 m/px site DEMs, Barker et al. 2021 (NASA GSFC PGDA product 78) |
+| Permanent shadow, average Sun/Earth visibility | Mazarico et al. 2011 (PGDA product 69) |
+| Ice favorability index | USGS Astrogeology |
+| Surface temperature, ice stability depth | LRO Diviner Polar Resource Product (Paige et al., PDS) |
+| Place names | IAU Gazetteer of Planetary Nomenclature (USGS) |
+| Artemis III regions | NASA / USGS candidate region outlines |
+| 3D models | NASA 3D Resources (`web/public/models/CREDITS.md`) |
+| Regolith texture | NASA Artemis south-pole simulation kit (USGS 84S project) |
+
+## The Python package and planner (`lunanav/`, `app.py`)
+
+The science lives in a tested Python package; the original Streamlit planner (live at
+https://limitlessapps.streamlit.app/) remains for detailed analysis. Demo video of the planner:
+[docs/demo/lunanav-demo.mp4](docs/demo/lunanav-demo.mp4).
 
 Existing tools (QuickMap, Moon Trek, JPL Horizons) are built for detailed analysis.
 Answering a simple planning question — *"at this south-pole site, on which dates do we
@@ -163,7 +236,12 @@ streamlit run app.py
 
 ## Deploy
 
-The public app runs on Streamlit Community Cloud at **https://limitlessapps.streamlit.app/**, deployed from this repo's `main` branch.
+**Web app (Vercel, free):** import `yutuf/lmNasa` at https://vercel.com/new, set *Root Directory* to `web`
+(Vite is detected; build `npm run build`, output `dist`), and add the environment variable `GEMINI_API_KEY`
+(a free key from https://aistudio.google.com) for the Ask Luna guide; without it everything except Luna works.
+Locally the key goes in `web/.env.local` (git-ignored).
+
+**Streamlit planner:** the planner runs on Streamlit Community Cloud at **https://limitlessapps.streamlit.app/**, deployed from this repo's `main` branch.
 Locally: `streamlit run app.py`, then open `http://localhost:8501/`.
 
 To deploy a copy (free; needs a GitHub account, and the sign-in can only be done by a person):
