@@ -9,7 +9,7 @@ import * as THREE from 'three'
 import { dataUrl } from '../data'
 import type { Lang } from '../i18n'
 import { directionMoonFixed, toThree } from '../geometry'
-import { eyePosition, headingFromOrientation, SOUTH_POLE, tiltFromAccel, tiltFromOrientation, writeLook, type Stand } from '../phoneLook'
+import { blendGravity, eyePosition, followAngle, gravityInScreen, headingFromOrientation, poseFromGravity, SOUTH_POLE, writeLook, type Gravity, type Stand } from '../phoneLook'
 import { openGuest, openHost, parsePhoneHash, phoneUrl, roomCode, standFrom, type LinkStatus } from '../phoneLink'
 import '../phone.css'
 
@@ -130,7 +130,9 @@ function LookCam({ stand, tilt }: { stand: Stand; tilt: RefObject<Tilt> }) {
     const t = tilt.current
     if (!t) return
     writeLook(target.current, stand.lat, stand.lon, t.heading, t.alt, t.roll)
-    const k = 1 - Math.exp(-Math.min(dt, 0.05) / 0.04)
+    const aimQ = target.current
+    if (current.current.dot(aimQ) < 0) aimQ.set(-aimQ.x, -aimQ.y, -aimQ.z, -aimQ.w)
+    const k = 1 - Math.exp(-Math.min(dt, 0.05) / 0.08)
     if (!primed.current) { current.current.copy(target.current); primed.current = true }
     else current.current.slerp(target.current, k)
     camera.position.copy(eyePosition(stand.lat, stand.lon))
@@ -174,38 +176,40 @@ async function askMotion(): Promise<boolean> {
   }
 }
 
+function screenAngle(): number {
+  const angle = screen.orientation?.angle
+  return typeof angle === 'number' ? angle : 0
+}
+
 function useLocalTilt(on: boolean, tilt: RefObject<Tilt>) {
   useEffect(() => {
     if (!on || !tilt.current) return
-    let heading = tilt.current.heading
-    let absolute = false
-    let fused = false
-    const apply = (e: DeviceOrientationEvent, abs: boolean) => {
-      if (abs) absolute = true
-      else if (absolute) return
+    let gravity: Gravity = { x: 0, y: 9.8, z: 0 }
+    let compass = false
+    let sawAbsolute = false
+    const onOri = (e: DeviceOrientationEvent) => {
+      if (!tilt.current) return
       const ios = (e as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading
       const h = headingFromOrientation(e.alpha, ios)
-      if (h != null) heading = h
-      const next = tiltFromOrientation(e.beta, e.gamma)
-      const cur = tilt.current
-      if (!next || !cur) return
-      fused = true
-      cur.alt = next.alt
-      cur.roll = next.roll
-      cur.heading = heading
+      if (h == null) return
+      compass = true
+      // Cap the step. A compass glitch of 180° is what turns the ground onto the ceiling.
+      tilt.current.heading = followAngle(tilt.current.heading, h, 12)
     }
-    const onAbs = (e: DeviceOrientationEvent) => apply(e, true)
-    const onRel = (e: DeviceOrientationEvent) => apply(e, false)
     const onMotion = (e: DeviceMotionEvent) => {
-      if (fused || !tilt.current) return
-      const g = e.accelerationIncludingGravity
-      if (!g || g.x == null || g.y == null || g.z == null) return
-      if (e.rotationRate?.alpha) heading = (heading + e.rotationRate.alpha * 0.016 + 360) % 360
-      const next = tiltFromAccel({ x: g.x, y: g.y, z: g.z })
-      tilt.current.alt = next.alt
-      tilt.current.roll = next.roll
-      tilt.current.heading = heading
+      const a = e.accelerationIncludingGravity
+      if (!a || a.x == null || a.y == null || a.z == null || !tilt.current) return
+      const sample = gravityInScreen({ x: a.x, y: a.y, z: a.z }, screenAngle())
+      gravity = blendGravity(gravity, sample, 0.42)
+      const pose = poseFromGravity(gravity)
+      tilt.current.alt = pose.alt
+      if (pose.rollOk) tilt.current.roll = pose.roll
+      if (!compass && e.rotationRate?.alpha) {
+        tilt.current.heading = followAngle(tilt.current.heading, tilt.current.heading + e.rotationRate.alpha * 0.016, 8)
+      }
     }
+    const onAbs = (e: DeviceOrientationEvent) => { sawAbsolute = true; onOri(e) }
+    const onRel = (e: DeviceOrientationEvent) => { if (!sawAbsolute) onOri(e) }
     addEventListener('deviceorientationabsolute', onAbs)
     addEventListener('deviceorientation', onRel)
     addEventListener('devicemotion', onMotion)
