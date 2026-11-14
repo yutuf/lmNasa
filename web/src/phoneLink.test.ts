@@ -9,9 +9,10 @@ describe('phone link', () => {
   })
 
   it('builds a url a phone can open', () => {
-    expect(phoneUrl('https://lunanav-theta.vercel.app', '/', 'K7MQ2P', 'en')).toBe('https://lunanav-theta.vercel.app/#phone?code=K7MQ2P&lang=en')
-    expect(phoneUrl('http://localhost:5173', '/', 'K7MQ2P', 'en')).toBe('https://lunanav-theta.vercel.app/#phone?code=K7MQ2P&lang=en')
-    expect(phoneUrl('http://127.0.0.1:5173', '/web/', 'K7MQ2P', 'tr')).toBe('https://lunanav-theta.vercel.app/#phone?code=K7MQ2P&lang=tr')
+    expect(phoneUrl('https://adaptlab.us', '/', 'K7MQ2P', 'en')).toBe('https://adaptlab.us/#phone?code=K7MQ2P&lang=en')
+    expect(phoneUrl('https://lunanav-theta.vercel.app', '/', 'K7MQ2P', 'en')).toBe('https://adaptlab.us/#phone?code=K7MQ2P&lang=en')
+    expect(phoneUrl('http://localhost:5173', '/', 'K7MQ2P', 'en')).toBe('https://adaptlab.us/#phone?code=K7MQ2P&lang=en')
+    expect(phoneUrl('http://127.0.0.1:5173', '/web/', 'K7MQ2P', 'tr')).toBe('https://adaptlab.us/#phone?code=K7MQ2P&lang=tr')
     expect(peerIdFor('k7mq2p')).toBe('lunanav-K7MQ2P')
   })
 
