@@ -265,3 +265,4 @@ body:has(.drive) { overflow: hidden; }
   font-size: 12px; text-align: center; }
 .compass span.tgt { color: #5ee7ff; font-size: 16px; top: 1px; }
 @media (max-width: 760px) { .hud.objective { top: 130px; max-width: 60vw; } .hud.science { top: 120px; width: 80vw; } }
+button.big.ghost.on { border-color: #5ee7ff; color: #5ee7ff; }

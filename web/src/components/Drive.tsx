@@ -12,6 +12,7 @@ import type { Lang } from '../i18n'
 import { R_M, altAz, bodies, conditions, diskAbove, horizonElev, horizonProfile, makeGround, nextChanges, parseDem,
   localSky, parsePatch, parseScience, planeAz, planeDir, scienceAt, findIceTarget, type Dem, type Patch, type Science, type SiteInfo } from '../terrain'
 import { dataUrl } from '../data'
+import { connectSerial, disconnectSerial, sendSky, serialConnected, serialSupported, skyLine } from '../serial'
 
 export type DriveMode = 'lander' | 'rover'
 export interface DriveStart { x: number; y: number; hour: number; missionH: number; label: string; startMs: number }
@@ -69,6 +70,8 @@ const L = {
   loading: { en: 'Loading LOLA terrain…', tr: 'LOLA arazisi yükleniyor…' },
   speed: { en: 'time', tr: 'zaman' },
   mission: { en: 'Mission day', tr: 'Görev günü' },
+  compass: { en: 'Sky compass', tr: 'Gökyüzü pusulası' },
+  compassOn: { en: 'Sky compass connected', tr: 'Gökyüzü pusulası bağlı' },
 } as const
 
 interface World { dem: Dem; patches: Patch[]; ground: ReturnType<typeof makeGround>; sci: Science | null }
@@ -141,7 +144,24 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
   }, [start.x, start.y])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // HUD refresh at 6 Hz
-  useEffect(() => { const t = setInterval(() => setHud((v) => v + 1), 160); return () => clearInterval(t) }, [])
+  useEffect(() => {
+    const t = setInterval(() => {
+      setHud((v) => v + 1)
+      // mirror the sky on the USB LED ring (hardware/sky_link), relative to where the vehicle (or the view) points
+      const s = sim.current
+      const c = s.cond
+      if (!c || !serialConnected()) return
+      const [, lon] = pointLatLon(s.x / 1000, s.y / 1000)
+      const yaw = s.heading + (s.mode === 'lander' ? s.yaw : 0)
+      const nose = planeAz(lon, Math.cos(yaw), Math.sin(yaw))
+      const sci = sciRef.current ? scienceAt(sciRef.current, s.x, s.y) : null
+      sendSky(skyLine(c.sun.az - nose, c.sunFrac, c.earth.az - nose, c.earthUp, (s.battery / ROVER.batteryWh) * 100, (sci?.psr ?? 0) > 0.5))
+    }, 160)
+    return () => { clearInterval(t); disconnectSerial() }
+  }, [])
+  const sciRef = useRef<Science | null>(null)
+  sciRef.current = world?.sci ?? null
+  const [serialOn, setSerialOn] = useState(false)
 
   // keyboard
   useEffect(() => {
@@ -269,6 +289,11 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
         {s.mode === 'lander'
           ? <button className="big" onClick={() => { s.mode = 'rover'; s.warp = 60; s.playing = true; s.pitch = -0.12; s.yaw = 0 }}>🚙 {t('deploy')}</button>
           : <button className="big ghost" onClick={() => { s.mode = 'lander'; s.x = start.x + PARK[0]; s.y = start.y + PARK[1]; s.yaw = 0; s.pitch = 0.02; s.profileAt = { x: NaN, y: NaN } }}>🛬 {t('back')}</button>}
+        {serialSupported() && (
+          <button className={`big ghost ${serialOn ? 'on' : ''}`} onClick={async () => {
+            if (serialOn) { await disconnectSerial(); setSerialOn(false) } else setSerialOn(await connectSerial())
+          }}>🔌 {serialOn ? t('compassOn') : t('compass')}</button>
+        )}
         <button className="big ghost" onClick={onExit}>✕ {t('exit')}</button>
         <p className="keys">{s.mode === 'lander' ? t('keysLander') : t('keys')}</p>
         <p className="keys">{t('model')}</p>

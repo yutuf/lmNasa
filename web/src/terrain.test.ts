@@ -80,3 +80,11 @@ describe('science layers', () => {
     expect(t.ice).toBeCloseTo((200 / 255) * 0.85)
   })
 })
+
+describe('sky link line', () => {
+  it('formats the serial line for the LED ring', async () => {
+    const { skyLine } = await import('./serial')
+    expect(skyLine(-30, 0.5, 370, true, 87.4, false)).toBe('L 330 128 10 1 87 0\n')
+    expect(skyLine(0, 2, 0, false, -5, true)).toBe('L 0 255 0 0 0 1\n')
+  })
+})

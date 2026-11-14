@@ -9,6 +9,7 @@ Physical companions to the app, generated from scripts so they can be rebuilt fo
 | 2 | Horizon compass: 24-LED ring PCB, its printable stand, firmware sketch | `horizon_compass/` |
 | 3 | Timeline bar: 3 × 28 LED PCB, three landing spots day by day | `timeline_bar/` |
 | 4 | Site map: a PCB map of the south pole with an LED per Artemis III region | `site_map/` |
+| 5 | Sky link: any ESP32 + NeoPixel ring mirrors the Sun and Earth around the rover you drive in the web app, live over USB (Web Serial) | `sky_link/` |
 
 Pin mappings are checked against KiCad's own symbol library with `tools/kicad_pins.py`.
 
