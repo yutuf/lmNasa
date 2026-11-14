@@ -219,3 +219,22 @@ export function findIceTarget(sc: Science, x: number, y: number, maxM = 6000, mi
   }
   return best
 }
+
+/** Diviner polar temperatures (thermal.bin, same grid as psr.bin). */
+export interface Thermal { n: number; mPerPx: number; half: number; avg: Uint8Array; max: Uint8Array; ice: Uint8Array }
+
+export function parseThermal(buf: ArrayBuffer): Thermal {
+  const v = new DataView(buf)
+  const n = v.getUint32(0, true)
+  const layer = (k: number) => new Uint8Array(buf, 12 + k * n * n, n * n)
+  return { n, mPerPx: v.getFloat32(4, true), half: v.getFloat32(8, true), avg: layer(0), max: layer(1), ice: layer(2) }
+}
+
+/** Average and maximum surface temperature (K) and ice stability depth (m, null = no stable ice) at a point. */
+export function thermalAt(th: Thermal, x: number, y: number) {
+  const col = Math.floor((x + th.half) / th.mPerPx)
+  const row = Math.floor((th.half - y) / th.mPerPx)
+  if (col < 0 || row < 0 || col >= th.n || row >= th.n) return null
+  const k = row * th.n + col
+  return { avgK: th.avg[k], maxK: th.max[k] * 2, iceM: th.ice[k] === 255 ? null : th.ice[k] / 100 }
+}

@@ -10,7 +10,7 @@ import type { Ephem } from '../engine'
 import { pointLatLon } from '../engine'
 import type { Lang } from '../i18n'
 import { R_M, altAz, bodies, conditions, diskAbove, horizonElev, horizonProfile, makeGround, nextChanges, parseDem,
-  localSky, parsePatch, parseScience, planeAz, planeDir, scienceAt, findIceTarget, type Dem, type Patch, type Science, type SiteInfo } from '../terrain'
+  localSky, parsePatch, parseScience, parseThermal, thermalAt, type Thermal, planeAz, planeDir, scienceAt, findIceTarget, type Dem, type Patch, type Science, type SiteInfo } from '../terrain'
 import { dataUrl } from '../data'
 import { planRoute, type Route } from '../route'
 import { eclipseAt } from '../eclipse'
@@ -64,7 +64,7 @@ const L = {
   science: { en: 'Science view: blue = permanent shadow (never sunlit), cyan = ice-favourable',
     tr: 'Bilim görünümü: mavi = kalıcı gölge (hiç güneş görmez), camgöbeği = buz için elverişli' },
   psrHere: { en: 'You are in permanent shadow', tr: 'Kalıcı gölgedesiniz' },
-  sciSrc: { en: 'Permanent shadow: Mazarico et al. 2011 (NASA PGDA) · ice index: USGS', tr: 'Kalıcı gölge: Mazarico vd. 2011 (NASA PGDA) · buz endeksi: USGS' },
+  sciSrc: { en: 'Permanent shadow: Mazarico et al. 2011 (NASA PGDA) · ice index: USGS · temperatures: LRO Diviner (Paige et al.)', tr: 'Kalıcı gölge: Mazarico vd. 2011 (NASA PGDA) · buz endeksi: USGS · sıcaklık: LRO Diviner (Paige vd.)' },
   keysLander: { en: 'Drag to look around · play the mission clock below · dashed lines: where the Sun (yellow) and Earth (blue) travel during the mission',
     tr: 'Etrafa bakmak için sürükleyin · görev saatini aşağıdan oynatın · kesikli çizgiler: görev boyunca Güneş (sarı) ve Dünya (mavi) yolu' },
   model: { en: 'Rover power model is illustrative (450 W panel, 3 kWh battery, 0.25 m/s); terrain, Sun, Earth and DSN are real data.',
@@ -86,15 +86,16 @@ const L = {
   compassOn: { en: 'Sky compass connected', tr: 'Gökyüzü pusulası bağlı' },
 } as const
 
-interface World { dem: Dem; patches: Patch[]; ground: ReturnType<typeof makeGround>; sci: Science | null }
+interface World { dem: Dem; patches: Patch[]; ground: ReturnType<typeof makeGround>; sci: Science | null; thermal: Thermal | null }
 
-let demPromise: Promise<{ dem: Dem; sites: SiteInfo[]; sci: Science | null }> | null = null
+let demPromise: Promise<{ dem: Dem; sites: SiteInfo[]; sci: Science | null; thermal: Thermal | null }> | null = null
 function loadDem() {
   demPromise ??= Promise.all([
     fetch(dataUrl('pole_dem.bin')).then((r) => r.arrayBuffer()),
     fetch(dataUrl('sites.json')).then((r) => (r.ok ? r.json() : { sites: [] })).catch(() => ({ sites: [] })),
     fetch(dataUrl('psr.bin')).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null),
-  ]).then(([b, s, p]) => ({ dem: parseDem(b), sites: s.sites as SiteInfo[], sci: p ? parseScience(p) : null }))
+    fetch(dataUrl('thermal.bin')).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null),
+  ]).then(([b, s, p, th]) => ({ dem: parseDem(b), sites: s.sites as SiteInfo[], sci: p ? parseScience(p) : null, thermal: th ? parseThermal(th) : null }))
   return demPromise
 }
 const patchCache = new Map<string, Promise<Patch>>()
@@ -141,7 +142,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
   // load the 200 m grid and any 10 m site maps within reach of the start
   useEffect(() => {
     let live = true
-    loadDem().then(async ({ dem, sites, sci }) => {
+    loadDem().then(async ({ dem, sites, sci, thermal }) => {
       const patches = await Promise.all(sites.filter((s) => near(s, start.x, start.y, 30000)).map(loadPatch))
       if (!live) return
       const ground = makeGround(dem, patches)
@@ -153,7 +154,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
       s.heading = Math.atan2(dy, dx) + (initialMode === 'rover' ? 0.6 : 0)
       const tg = sci ? findIceTarget(sci, start.x, start.y) : null
       s.target = tg && { x: tg.x, y: tg.y, ice: tg.ice }
-      setWorld({ dem, patches, ground, sci })
+      setWorld({ dem, patches, ground, sci, thermal })
     })
     return () => { live = false }
   }, [start.x, start.y])  // eslint-disable-line react-hooks/exhaustive-deps
@@ -257,6 +258,8 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
   void hud
   const here = world?.sci ? scienceAt(world.sci, s.x, s.y) : null
   const tgt = s.target
+  const therm = world?.thermal ? thermalAt(world.thermal, s.x, s.y) : null
+  const degC = (k: number) => `${Math.round(k - 273.15)} °C`
   const tDist = tgt ? Math.hypot(tgt.x - s.x, tgt.y - s.y) : 0
   const tAz = tgt ? planeAz(lon, tgt.x - s.x, tgt.y - s.y) : null
 
@@ -296,6 +299,10 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
           {s.phase === 'return' && <div className="drill">🧪 {t('bringBack')}</div>}
           {s.phase === 'done' && <div className="done">✅ {t('complete')} · {(s.driven / 1000).toFixed(2)} km · {hrs(Math.round(s.doneHour - s.startHour))}</div>}
           {here && here.psr > 0.5 && <div className="hud-sub psr">🌑 {t('psrHere')}</div>}
+          {therm && (
+            <div className="hud-sub">🌡 {lang === 'tr' ? 'Yüzey ort.' : 'Surface avg'} {degC(therm.avgK)} · {lang === 'tr' ? 'en sıcak' : 'max'} {degC(therm.maxK)} ·{' '}
+              {therm.iceM === null ? (lang === 'tr' ? 'kalıcı buz yok' : 'no stable ice') : `${lang === 'tr' ? 'buz kararlı' : 'ice stable below'} ${Math.round(therm.iceM * 100)} cm`}</div>
+          )}
           {s.phase !== 'done' && (
             <div className="route-row">
               <button className="mini" disabled={planning === 'busy'} onClick={plan}>
