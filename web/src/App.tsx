@@ -13,7 +13,7 @@ import YearView from './components/YearView'
 import { download, reportHtml, siteRow, toCsv, type SiteRow } from './report'
 import HorizonView from './components/HorizonView'
 import Luna, { type LunaAction } from './components/Luna'
-import { AlertTriangle, ArrowLeftRight, CheckCircle2, Footprints, Sparkles, MoonStar as NightIcon, Snowflake, Timer, Users, Hourglass, Satellite, Droplets, FlaskConical, Rocket, X, Mountain, Link2, MapPin, Pause, Play, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Printer, Sun } from 'lucide-react'
+import { AlertTriangle, ArrowLeftRight, CheckCircle2, Footprints, Sparkles, Wrench, MoonStar as NightIcon, Snowflake, Timer, Users, Hourglass, Satellite, Droplets, FlaskConical, Rocket, X, Mountain, Link2, MapPin, Pause, Play, BatteryMedium, Car, Download, Earth, Github, MoonStar, PlaneLanding, Printer, Scale, Sun } from 'lucide-react'
 import type { FlightView, Overlay, Pin, Target } from './components/Globe'
 import type { DriveMode, DriveStart } from './components/Drive'
 
@@ -26,6 +26,13 @@ import SimpleView from './components/SimpleView'
 import { MissionBar, Ticker, type NextWindow } from './components/MissionBar'
 import SiteProfile from './components/SiteProfile'
 import MissionStory from './components/MissionStory'
+import MissionFilm from './components/MissionFilm'
+import Workshop from './components/Workshop'
+import DecisionLab from './components/DecisionLab'
+import type { Budget, Design } from './workshop'
+import { successProbability } from './probability'
+import ProbabilityPanel from './components/ProbabilityPanel'
+import { launchDate, missionStory } from './story'
 import type { CardSite } from './components/SiteCard'
 import { regionColour } from './teams'
 import { ROVERS, landerById, type Lander } from './vehicles'
@@ -171,7 +178,7 @@ const STEPS: Record<Lang, string[][]> = {
   }
 
 
-interface Params { start: string; windowDays: number; days: number; sun: number; earth: number; shadow: number; batt: number; slope: number; zone: number; zslope: number; ice: number; dsn: boolean; lander: string; rover: string; scope: 'pole' | 'moon'; target: string }
+interface Params { start: string; windowDays: number; days: number; sun: number; earth: number; shadow: number; batt: number; slope: number; zone: number; zslope: number; ice: number; dsn: boolean; lander: string; rover: string; scope: 'pole' | 'moon'; target: string; landing: 'soft' | 'rough' }
 
 const DEF = SCENARIOS[0]
 
@@ -186,6 +193,7 @@ function readHash(): { ui: 'simple' | 'advanced'; lang: Lang; p: Params } {
       zone: [num('zone', DEF.zone)].map((z) => ([0, 100, 250, 500, 1000].includes(z) ? z : DEF.zone))[0], zslope: num('zslope', DEF.zslope),
       ice: [num('ice', DEF.ice)].map((v) => ([0, 2, 5, 10].includes(v) ? v : 0))[0], dsn: q.get('dsn') !== '0',
       lander: landerById(q.get('lander') ?? 'nova').id, rover: ROVERS.find((r) => r.id === q.get('rover'))?.id ?? 'viper',
+      landing: q.get('landing') === 'rough' ? 'rough' : 'soft',
       scope: q.get('scope') === 'moon' ? 'moon' : 'pole', target: targetSites(q.get('target') ?? '').length ? q.get('target')! : '' },
   }
 }
@@ -196,6 +204,12 @@ export default function App() {
   const [ui, setUi] = useState<'simple' | 'advanced'>(init.ui)
   const [profile, setProfile] = useState<CardSite | null>(null)
   const [story, setStory] = useState(false)
+  const [film, setFilm] = useState(false)
+  const [workshop, setWorkshop] = useState(false)
+  const [lab, setLab] = useState(false)
+  const [customName, setCustomName] = useState<string | null>(null)
+  const [withRecord, setWithRecord] = useState(true)
+  const [rankBy, setRankBy] = useState<'go' | 'prob'>('go')   // include the landing record in the success probability
   const [pendingDrive, setPendingDrive] = useState<DriveMode | null>(null)
   const enterRef = useRef<(m: DriveMode) => void>(() => {})
   const [p, setP] = useState<Params>(init.p)
@@ -246,7 +260,7 @@ export default function App() {
   }, [])
   useEffect(() => {
     history.replaceState(null, '', `#ui=${ui}&lang=${lang}&start=${p.start}&window=${p.windowDays}&days=${p.days}&sun=${p.sun}` +
-      `&earth=${p.earth}&shadow=${p.shadow}&batt=${p.batt}&slope=${p.slope}&zone=${p.zone}&zslope=${p.zslope}&ice=${p.ice}&lander=${p.lander}&rover=${p.rover}&scope=${p.scope}&target=${p.target}&dsn=${p.dsn ? 1 : 0}` +
+      `&earth=${p.earth}&shadow=${p.shadow}&batt=${p.batt}&slope=${p.slope}&zone=${p.zone}&zslope=${p.zslope}&ice=${p.ice}&lander=${p.lander}&rover=${p.rover}&scope=${p.scope}&target=${p.target}&landing=${p.landing}&dsn=${p.dsn ? 1 : 0}` +
       (siteIndex !== null ? `&site=${siteIndex}` : ''))
   }, [ui, lang, p, siteIndex])  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -409,13 +423,17 @@ export default function App() {
       const nt = nearestTarget(r)
       const note = farSide(r.lat, r.lon) ? (tr ? 'Uzak yüz: Dünya hiç doğmaz' : 'Far side: Earth never rises')
         : nt ? `${nt.d.toFixed(0)} km ${tr ? '→' : 'to'} ${nt.s.name}` : undefined
+      const lim = ran.q.zone > 0 && atlas.kind === 'pole' ? ran.q.zslope : landerById(ran.q.lander).zslope
+      const prob = successProbability({ atlas, eph, dsn: dsn!, r, firstHour: fh, days: ran.q.days, windowDays: ran.q.windowDays, needDsn: ran.q.dsn,
+        c: constraints(ran.q)!, zoneSlopeP95: listRows[k]?.zoneSlopeDeg ?? atlas.slope[r.index] * 1.6,
+        slopeLimit: lim - (ran.q.landing === 'rough' ? 3 : 0), zoneM: ran.q.zone || 1000, history: withRecord, trials: 300 })
       return { r, row: listRows[k], rank: k + 1, name, region: reg, colour: regionColour(reg), xKm: atlas.xKm[r.index], yKm: atlas.yKm[r.index],
-        sun: { az: sky.sun.az, alt: sky.sun.alt }, note,
+        sun: { az: sky.sun.az, alt: sky.sun.alt }, note, prob, targetKm: nt?.d,
         bestDate: best.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) }
     }).filter((c) => c.row)
   }
-  const cards: CardSite[] = useMemo(() => cardsFor(top, rows), [top, rows, atlas, ran, eph, feats, lang])  // eslint-disable-line react-hooks/exhaustive-deps
-  const polarCards: CardSite[] = useMemo(() => cardsFor(polarTop, rowsFor(polarTop)), [polarTop, atlas, ran, eph, feats, lang])  // eslint-disable-line react-hooks/exhaustive-deps
+  const cards: CardSite[] = useMemo(() => cardsFor(top, rows), [top, rows, atlas, ran, eph, feats, lang, withRecord])  // eslint-disable-line react-hooks/exhaustive-deps
+  const polarCards: CardSite[] = useMemo(() => cardsFor(polarTop, rowsFor(polarTop)), [polarTop, atlas, ran, eph, feats, lang, withRecord])  // eslint-disable-line react-hooks/exhaustive-deps
   const nextWindow: NextWindow | null = useMemo(() => {
     const c = cards.find((x) => x.r.goCount > 0)
     if (!c || !ran) return null
@@ -464,6 +482,7 @@ export default function App() {
     results: top.map((r, k) => ({ rank: k + 1, lat: +r.lat.toFixed(3), lon: +r.lon.toFixed(3), artemisRegion: region(r) ?? null, place: place(r) ?? null,
       goLandingDates: r.goCount, bestLanding: startDate(r.bestStart).toISOString().slice(0, 10),
       bestWindow: { sunlightPct: Math.round(r.sunFrac * 100), earthContactPct: Math.round(r.commFrac * 100), longestDarkHours: r.longestDarkH },
+      successProbabilityPct: (() => { const cs = cards.find((c) => c.r.index === r.index); return cs?.prob ? Math.round(cs.prob.p * 100) : null })(),
       slopeDeg: atlas.slope[r.index], zoneSlopeP95Deg: zoneSlopeAt(hazard, ran?.q.zone, r.index),
       nearestIceKm: ice && !Number.isNaN(ice.distKm[r.index]) ? ice.distKm[r.index] : null, iceColdTrapKm2Within5km: ice ? ice.areaKm2[r.index] : null, heightM: atlas.height[r.index] })),
     selected: detail && pick ? { rank: sel + 1, verdict: detail.w.go ? 'GO' : 'NO-GO', sunlightPct: Math.round(detail.w.sunFrac * 100),
@@ -475,7 +494,7 @@ export default function App() {
     if (a.type === 'select') { if (a.rank >= 1 && a.rank <= top.length) setSel(a.rank - 1); return }
     const q = a.params
     const start = typeof q.start === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(q.start) && q.start >= FIRST_DATE && q.start <= LAST_DATE ? q.start : p.start
-    const next: Params = { lander: p.lander, rover: p.rover, scope: p.scope, target: p.target, start, windowDays: clamp(q.windowDays, 5, 90, p.windowDays), days: clamp(q.days, 1, 30, p.days),
+    const next: Params = { lander: p.lander, rover: p.rover, scope: p.scope, target: p.target, landing: p.landing, start, windowDays: clamp(q.windowDays, 5, 90, p.windowDays), days: clamp(q.days, 1, 30, p.days),
       sun: clamp(q.sun, 0, 100, p.sun), earth: clamp(q.earth, 0, 100, p.earth), shadow: clamp(q.shadow, 0, 240, p.shadow),
       batt: clamp(q.batt, 500, 20000, p.batt), slope: clamp(q.slope, 2, 20, p.slope),
       zone: [0, 100, 250, 500, 1000].includes(q.zone as number) ? (q.zone as number) : p.zone, zslope: clamp(q.zslope, 2, 30, p.zslope),
@@ -503,7 +522,7 @@ export default function App() {
     if (!pick || !detail || !ran) return
     setDrive({ mode, start: { x: atlas.xKm[pick.index] * 1000, y: atlas.yKm[pick.index] * 1000, hour: detail.fh + detail.a,
       missionH: detail.len, startMs: startDate(pick.bestStart).getTime(),
-      label: `${siteName(pick)} · ${fmtDate(startDate(pick.bestStart))}`, lander: p.lander, rover: p.rover } })
+      label: `${siteName(pick)} · ${fmtDate(startDate(pick.bestStart))}`, lander: p.lander, rover: p.rover, rough: p.landing === 'rough' } })
   }
 
   enterRef.current = enter
@@ -515,6 +534,11 @@ export default function App() {
   const dirty = !!ran && (Object.keys(p) as (keyof Params)[]).some((k) => p[k] !== ran.asked[k])
   // the mission comes from the scenario, the hardware (battery, landing precision, slope limit, longest stay) from the lander
   const withLander = (q: Params, l: Lander): Params => ({ ...q, lander: l.id, batt: l.batt, zone: l.zone, zslope: l.zslope, days: Math.min(q.days, l.maxDays) })
+  const watchLanding = () => {
+    if (atlas.kind === 'pole') { setPendingDrive('landing'); return }
+    setMapMode('route'); setFlightView('pilot')
+    setTimeout(() => document.querySelector('.map-card')?.scrollIntoView({ behavior: 'smooth' }), 60)
+  }
   const chooseScope = (s: 'pole' | 'moon') => {
     const t = SCIENCE_SITES.find((x) => x.id === p.target)
     const next: Params = { ...p, scope: s, target: s === 'pole' && t && !inPoleGrid(t) ? '' : p.target }
@@ -625,7 +649,9 @@ export default function App() {
           <a href="#site">{S.navSite[lang]}</a>
           <a href="#method">{S.navMethod[lang]}</a>
         </nav>}
-        <button className="nav-story" onClick={() => setStory(true)}><Sparkles size={14} /> {lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}</button>
+        <button className="nav-ws" onClick={() => setLab(true)}><Scale size={14} /> {lang === 'tr' ? 'Karar' : 'Decide'}</button>
+        <button className="nav-ws" onClick={() => setWorkshop(true)}><Wrench size={14} /> {lang === 'tr' ? 'Atölye' : 'Workshop'}</button>
+        <button className="nav-story" onClick={() => setFilm(true)}><Sparkles size={14} /> {lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}</button>
         <div className="nav-r">
           <div className="seg" role="group" aria-label="Language">
             {(['en', 'tr'] as Lang[]).map((l) => (
@@ -651,16 +677,18 @@ export default function App() {
         <div className="shell simple-shell" id="top">
           <main className="main">
             <SimpleView lang={lang} scenarioId={scenario?.id ?? null} start={p.start} minDate={FIRST_DATE} maxDate={LAST_DATE}
-              busy={progress !== null} progress={progress} cards={cards} polarCards={polarCards} points={atlas.n}
+              busy={progress !== null} progress={progress} points={atlas.n} rankBy={rankBy} onRankBy={setRankBy}
+              cards={rankBy === 'prob' ? [...cards].sort((a, b) => (b.prob?.p ?? 0) - (a.prob?.p ?? 0)).map((c, i) => ({ ...c, rank: i + 1 })) : cards}
+              polarCards={rankBy === 'prob' ? [...polarCards].sort((a, b) => (b.prob?.p ?? 0) - (a.prob?.p ?? 0)).map((c, i) => ({ ...c, rank: i + 1 })) : polarCards}
               targetName={targetSite?.name ?? (targets.length ? SCIENCE_KIND[targets[0].kind].label[lang] : null)}
               scope={p.scope} goal={p.target.startsWith('kind:') ? (p.target.slice(5) as ScienceKind) : null} onScope={chooseScope} onGoal={chooseGoal}
-              windowLabel={ran ? `${matchScenario(ran.asked)?.name[lang] ?? (lang === 'tr' ? 'Özel görev' : 'Custom mission')} · ${fmtDate(new Date(ran.q.start + 'T00:00:00Z'))} + ${ran.q.windowDays} ${S.days[lang]}` : ''}
+              windowLabel={ran ? `${customName ?? matchScenario(ran.asked)?.name[lang] ?? (lang === 'tr' ? 'Özel görev' : 'Custom mission')} · ${fmtDate(new Date(ran.q.start + 'T00:00:00Z'))} + ${ran.q.windowDays} ${S.days[lang]}` : ''}
               lander={p.lander} rover={p.rover}
               onLander={(l) => { const next = withLander(p, l); setP(next); run(next) }}
               onRover={(id) => set('rover', id)}
-              onScenario={(sc) => { const next = applyScenario(sc); setP(next); run(next) }}
+              onScenario={(sc) => { const next = applyScenario(sc); setCustomName(null); setP(next); run(next) }}
               onStart={(d) => set('start', d)} onRun={() => run(p)} onOpen={setProfile}
-              onAdvanced={() => { setUi('advanced'); scrollTo({ top: 0 }) }} onStory={() => setStory(true)} />
+              onAdvanced={() => { setUi('advanced'); scrollTo({ top: 0 }) }} onStory={() => setFilm(true)} />
             {globeCard}
           </main>
         </div>
@@ -903,6 +931,7 @@ export default function App() {
                     <button className="btn" onClick={() => enter('rover')}><Car size={14} /> {S.driveHere[lang]}</button>
                   </div>
                 </div>
+                {(() => { const cs = cards.find((c) => c.r.index === pick.index); return cs?.prob ? <ProbabilityPanel prob={cs.prob} lang={lang} history={withRecord} onHistory={setWithRecord} /> : null })()}
                 <div className={`verdict-row ${detail.w.go ? 'go' : 'nogo'}`}>
                   <span className={`badge ${detail.w.go ? 'go' : 'nogo'}`}>{detail.w.go ? 'GO' : 'NO-GO'}</span>
                   <p>{why(detail.w, 1, detail.c, lang)}</p>
@@ -1035,9 +1064,9 @@ export default function App() {
       </div>
       )}
       {profile && (
-        <SiteProfile s={profile} lang={lang} lander={p.lander} onClose={() => setProfile(null)}
-          onWatch={() => { setPinned(profile.r); setMapMode('route'); setFlightView('pilot'); setProfile(null)
-            setTimeout(() => document.querySelector('.map-card')?.scrollIntoView({ behavior: 'smooth' }), 60) }}
+        <SiteProfile s={cards.find((c) => c.r.index === profile.r.index) ?? polarCards.find((c) => c.r.index === profile.r.index) ?? profile}
+          history={withRecord} onHistory={setWithRecord} lang={lang} lander={p.lander} onClose={() => setProfile(null)}
+          onWatch={() => { setPinned(profile.r); setProfile(null); watchLanding() }}
           onStand={() => { setPinned(profile.r); setPendingDrive('lander'); setProfile(null) }}
           onDrive={() => { setPinned(profile.r); setPendingDrive('rover'); setProfile(null) }}
           onWalk={() => { setPinned(profile.r); setPendingDrive('walk'); setProfile(null) }}
@@ -1047,12 +1076,56 @@ export default function App() {
       {story && (
         <MissionStory lang={lang} cards={cards} ranKey={ran} onClose={() => setStory(false)}
           onSearch={(sc, l, start) => { const next = withLander({ ...applyScenario(sc), start }, l); setP(next); run(next) }}
-          onWatch={(c) => { setStory(false); setPinned(c.r); setMapMode('route'); setFlightView('pilot')
-            setTimeout(() => document.querySelector('.map-card')?.scrollIntoView({ behavior: 'smooth' }), 60) }}
+          onWatch={(c) => { setStory(false); setPinned(c.r); watchLanding() }}
           onWalk={(c) => { setStory(false); setPinned(c.r); setPendingDrive('walk') }}
           onOpen={(c) => { setStory(false); setProfile(c) }} />
       )}
-      <Luna lang={lang} context={lunaContext} onAction={onLuna} />
+      {lab && <DecisionLab cards={cards} lang={lang} onClose={() => setLab(false)} onOpen={(c) => { setLab(false); setProfile(c) }} />}
+      {workshop && (
+        <Workshop lang={lang} onClose={() => setWorkshop(false)} onLaunch={(d: Design, b: Budget) => {
+          // the design's budgets become the search: battery, sunlight, darkness, Earth contact, landing zone and slope
+          const snap = (z: number) => [100, 250, 500, 1000].reduce((best, v) => (Math.abs(v - z) < Math.abs(best - z) ? v : best), 1000)
+          const goalSites = d.goal ? SCIENCE_SITES.filter((s) => s.kind === d.goal) : []
+          const next: Params = { ...p, batt: Math.min(20000, d.batteryWh), days: d.days, sun: b.minSunPct, earth: b.earthPct, shadow: Math.min(240, b.maxDarkH),
+            zone: snap(b.zone), zslope: b.zslope, dsn: d.comms === 'dte', landing: d.landing, rover: d.type === 'rover' ? d.rover : p.rover,
+            target: d.goal ? `kind:${d.goal}` : '', scope: d.goal ? (goalSites.every(inPoleGrid) ? 'pole' : 'moon') : p.scope }
+          setCustomName(d.name); setP(next); run(next); setWorkshop(false)
+          setTimeout(() => document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' }), 400)
+        }} />
+      )}
+      {film && (() => {
+        const c = cards.find((x) => x.r.goCount > 0) ?? cards[0]
+        if (!c || !ran || !eph || !dsn) return null
+        const l = landerById(p.lander)
+        const sc = matchScenario(ran.asked) ?? null
+        const landingDay = new Date(Date.parse(c.row.bestLanding + 'T00:00:00Z'))
+        const ds = { x: c.xKm * 1000, y: c.yKm * 1000, hour: firstHour(ran.q) + c.r.bestStart * 24, missionH: ran.q.days * 24,
+          startMs: landingDay.getTime(), label: `${c.name} · ${fmtDate(landingDay)}`, lander: p.lander, rover: p.rover, rough: p.landing === 'rough' }
+        const polar = atlas.kind === 'pole'
+        const ap = chooseApproach(localSky(eph, ds.x, ds.y, ds.hour).sun.az)
+        return (
+          <MissionFilm lang={lang} card={c} lander={l} roverName={ROVERS.find((r) => r.id === p.rover)?.name ?? 'Rover'}
+            missionName={customName ?? sc?.name[lang] ?? (lang === 'tr' ? 'Özel görev' : 'Custom mission')}
+            chapters={missionStory(c, l, sc, landingDay, lang, ran.q.zslope)} launch={launchDate(landingDay)} landing={landingDay}
+            globe={(view, start) => (
+              <Suspense fallback={null}>
+                <Globe poleCap={m.pole_cap} overlay={null} pins={[]} earthLabel={lang === 'tr' ? 'Dünya' : 'Earth'} selected={null} labels={false}
+                       sunDir={eph ? [eph.sun[0][ds.hour], eph.sun[1][ds.hour], eph.sun[2][ds.hour]] : [1, 0, 0]} earthDir={earthDir}
+                       flight={{ lat: c.r.lat, lon: c.r.lon, approach: ap, view, start,
+                         labels: [S.phCoast[lang], S.phOrbit[lang], S.phDescent[lang], S.phLanded[lang]] }} />
+              </Suspense>
+            )}
+            touchdown={polar ? () => (
+              <Suspense fallback={null}><Drive start={ds} eph={eph} dsn={dsn} lang={lang} initialMode="landing" onExit={() => {}} cinematic /></Suspense>
+            ) : null}
+            rover={polar ? () => (
+              <Suspense fallback={null}><Drive start={ds} eph={eph} dsn={dsn} lang={lang} initialMode="rover" onExit={() => {}} cinematic /></Suspense>
+            ) : null}
+            onClose={() => setFilm(false)}
+            onWalk={polar ? () => { setFilm(false); setPinned(c.r); setPendingDrive('walk') } : null} />
+        )
+      })()}
+      <Luna lang={lang} context={lunaContext} onAction={onLuna} onPlan={() => setStory(true)} />
     </div>
     </>
   )

@@ -8,7 +8,8 @@ import { Sparkles } from 'lucide-react'
 import VehiclePhoto from './VehiclePhoto'
 import { GOALS, SCIENCE_KIND, type ScienceKind } from '../scienceSites'
 
-export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, busy, progress, cards, windowLabel, onScenario, onStart, onRun, onOpen, onAdvanced, lander, rover, onLander, onRover, onStory, polarCards, points, targetName, scope, goal, onScope, onGoal }: {
+export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, busy, progress, cards, windowLabel, onScenario, onStart, onRun, onOpen, onAdvanced, lander, rover, onLander, onRover, onStory, polarCards, points, targetName, scope, goal, onScope, onGoal, rankBy, onRankBy }: {
+  rankBy: 'go' | 'prob'; onRankBy: (v: 'go' | 'prob') => void
   polarCards: CardSite[]; points: number; targetName: string | null
   scope: 'pole' | 'moon'; goal: ScienceKind | null; onScope: (s: 'pole' | 'moon') => void; onGoal: (k: ScienceKind | null) => void
   onStory: () => void
@@ -25,7 +26,7 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
         <p>{tr
           ? `Görevinizi seçin. LunaNav ${points.toLocaleString('tr-TR')} noktayı her iniş tarihi için saat saat NASA verisiyle tarar ve en iyi iniş yerlerini sıralar.`
           : `Pick your mission. LunaNav checks ${points.toLocaleString('en-US')} points, every landing date, hour by hour, on NASA data, and ranks where you should land.`}</p>
-        <button className="s-story" onClick={onStory}><Sparkles size={16} /> {tr ? 'Görevi anlat — Luna ile' : 'Tell me the mission — with Luna'}</button>
+        <button className="s-story" onClick={onStory}><Sparkles size={16} /> {tr ? 'Görevi anlat' : 'Tell me the mission'}</button>
         <div className="s-goal">
           <span className="s-vlabel">{tr ? 'Ne için gidiyoruz?' : 'What do you want to work for?'}</span>
           <div className="s-goals">
@@ -88,6 +89,10 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
         <div className="s-head">
           <h2>{targetName ? (tr ? `${targetName} için en iyi iniş yerleri` : `Best landing sites for ${targetName}`) : polarCards.length ? (tr ? 'En iyi iniş yerleri · kutuplar dışında' : 'Top landing sites · away from the poles') : (tr ? 'En iyi iniş yerleri' : 'Top landing sites')}</h2>
           <span>{windowLabel}</span>
+          <div className="ui-switch rank-switch" role="radiogroup" aria-label={tr ? 'Sıralama' : 'Rank by'}>
+            <button role="radio" aria-checked={rankBy === 'go'} className={rankBy === 'go' ? 'on' : ''} onClick={() => onRankBy('go')}>{tr ? 'Uygun tarih' : 'GO dates'}</button>
+            <button role="radio" aria-checked={rankBy === 'prob'} className={rankBy === 'prob' ? 'on' : ''} onClick={() => onRankBy('prob')}>{tr ? 'Başarı olasılığı' : 'Success probability'}</button>
+          </div>
         </div>
         {cards.length === 0 ? <p className="s-empty">{tr ? 'Bu pencerede uygun nokta yok; başka bir ay veya görev deneyin.' : 'No site passes in this window; try another month or mission.'}</p> : (
           <div className="card-grid">

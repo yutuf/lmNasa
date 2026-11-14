@@ -12,7 +12,8 @@ const fmt = (d: Date, lang: Lang) => d.toLocaleDateString(lang === 'tr' ? 'tr-TR
 /** Launch from Kennedy about 4.5 days of coast plus half a day in lunar orbit before touchdown. */
 export function launchDate(landing: Date) { return new Date(landing.getTime() - 5 * 86400e3) }
 
-export function missionStory(c: CardSite, l: Lander, sc: Scenario | null, landing: Date, lang: Lang): Chapter[] {
+/** zslopeLimit: the touchdown-zone limit the search actually used (defaults to the lander's own). */
+export function missionStory(c: CardSite, l: Lander, sc: Scenario | null, landing: Date, lang: Lang, zslopeLimit = l.zslope): Chapter[] {
   const r = c.row
   const tr = lang === 'tr'
   const go = r.goDates > 0
@@ -30,8 +31,8 @@ export function missionStory(c: CardSite, l: Lander, sc: Scenario | null, landin
     ? `Dünya ufkun üzerinde ve NASA'nın Derin Uzay Ağı anteni boşta: zamanın %${r.earthPct}'inde doğrudan konuşabiliriz.`
     : `Earth above the horizon and a NASA Deep Space Network dish free: we can talk home directly ${r.earthPct}% of the time.` })
   ch.push({ tone: 'land', title: tr ? 'İniş' : 'The landing', text: tr
-    ? `${l.name}, ${l.zone >= 1000 ? `${l.zone / 1000} km` : `${l.zone} m`} yarıçaplı bir alana iner. ${r.zoneSlopeDeg !== null ? `O alanın %95'i ${r.zoneSlopeDeg.toFixed(1)}°'den düz (sınır ${l.zslope}°).` : ''} Kutup yörüngesinden ${r.approachDeg === 0 ? 'kuzeye' : 'güneye'} doğru alçalırız; Güneş uçuş yönünden ${r.sunOffDeg}° ${r.sunOffDeg >= 90 ? 'arkada kalır, kameralar kamaşmaz' : 'açıda, kameralar Güneş’e karşı bakabilir'}.`
-    : `${l.name} touches down inside a zone of ${l.zone >= 1000 ? `${l.zone / 1000} km` : `${l.zone} m`} radius. ${r.zoneSlopeDeg !== null ? `95% of it is gentler than ${r.zoneSlopeDeg.toFixed(1)}° (limit ${l.zslope}°).` : ''} We come down from a polar orbit heading ${r.approachDeg === 0 ? 'north' : 'south'}, with the Sun ${r.sunOffDeg}° off our track${r.sunOffDeg >= 90 ? ', behind us: the hazard cameras are not blinded' : ': the cameras may face glare'}.` })
+    ? `${l.name}, ${l.zone >= 1000 ? `${l.zone / 1000} km` : `${l.zone} m`} yarıçaplı bir alana iner. ${r.zoneSlopeDeg !== null ? `O alanın %95'i ${r.zoneSlopeDeg.toFixed(1)}°'den düz (sınır ${zslopeLimit}°).` : ''} Kutup yörüngesinden ${r.approachDeg === 0 ? 'kuzeye' : 'güneye'} doğru alçalırız; Güneş uçuş yönünden ${r.sunOffDeg}° ${r.sunOffDeg >= 90 ? 'arkada kalır, kameralar kamaşmaz' : 'açıda, kameralar Güneş’e karşı bakabilir'}.`
+    : `${l.name} touches down inside a zone of ${l.zone >= 1000 ? `${l.zone / 1000} km` : `${l.zone} m`} radius. ${r.zoneSlopeDeg !== null ? `95% of it is gentler than ${r.zoneSlopeDeg.toFixed(1)}° (limit ${zslopeLimit}°).` : ''} We come down from a polar orbit heading ${r.approachDeg === 0 ? 'north' : 'south'}, with the Sun ${r.sunOffDeg}° off our track${r.sunOffDeg >= 90 ? ', behind us: the hazard cameras are not blinded' : ': the cameras may face glare'}.` })
   ch.push({ tone: 'launch', title: tr ? 'Fırlatma' : 'The launch', text: tr
     ? `${fmt(launch, lang)}: Kennedy Uzay Merkezi'nden fırlatma. Dünya yörüngesinde bir buçuk tur, Ay'a transfer ateşlemesi, yaklaşık 4,5 gün yol, kutup yörüngesine giriş ve ${fmt(landing, lang)} iniş.`
     : `${fmt(launch, lang)}: launch from Kennedy Space Center. One and a half turns around Earth, the burn toward the Moon, about 4.5 days of coasting, capture into a polar orbit, and touchdown on ${fmt(landing, lang)}.` })

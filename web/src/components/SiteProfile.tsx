@@ -6,10 +6,11 @@ import type { Lang } from '../i18n'
 import { splitName } from '../teams'
 import { useSiteImage, type CardSite } from './SiteCard'
 import VehiclePhoto from './VehiclePhoto'
+import ProbabilityPanel from './ProbabilityPanel'
 import { landerById } from '../vehicles'
 
-export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand, onDrive, onWalk, onAnalysis }: {
-  lander: string
+export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand, onDrive, onWalk, onAnalysis, history, onHistory }: {
+  lander: string; history: boolean; onHistory: (v: boolean) => void
   s: CardSite; lang: Lang; onClose: () => void; onWatch: () => void; onStand: () => void; onDrive: () => void; onWalk: () => void; onAnalysis: () => void
 }) {
   const img = useSiteImage(s)
@@ -53,6 +54,7 @@ export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand
         </div>
       </div>
       <div className="profile-body">
+        {s.prob && <ProbabilityPanel prob={s.prob} lang={lang} history={history} onHistory={onHistory} />}
         <div className="ph-stats">
           {stats.map(([k, v, tone]) => (
             <div key={k} className={`ph-stat ${tone ?? ''}`}><span>{k}</span><b>{v}</b></div>
