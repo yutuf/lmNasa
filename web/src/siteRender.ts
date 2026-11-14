@@ -73,7 +73,7 @@ function build(height: (e: number, n: number) => number, mPerUnit: number, exag:
     const r = Math.hypot(px, pz) / HALF_M
     // a round cut-out that sinks away at the edge, like a core sample
     const rim = r > 0.95
-    pos.setY(i, rim ? (Number.isFinite(lowY) ? lowY - 1800 : -2600) : ((z - base) / mPerUnit) * exag)
+    pos.setY(i, rim ? (Number.isFinite(lowY) ? lowY - 650 : -2600) : ((z - base) / mPerUnit) * exag)
     // neutral grey regolith, a little lighter on high ground; the cut-out's side is dark rock
     const shade = rim ? 0.16 : 0.5 + 0.22 * Math.min(1, Math.max(0, (z - base + 1500 * mPerUnit) / (3000 * mPerUnit)))
     col[3 * i] = shade; col[3 * i + 1] = shade * 0.985; col[3 * i + 2] = shade * 0.96

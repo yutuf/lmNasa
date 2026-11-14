@@ -3,7 +3,7 @@
 // address the page is served from, so it is right on any deployment.
 import { useMemo, useState } from 'react'
 import qrcode from 'qrcode-generator'
-import { ArrowRight, Clapperboard, Database, Globe2, Percent, Scale, Smartphone } from 'lucide-react'
+import { ArrowRight, Clapperboard, PlayCircle, Database, Globe2, Percent, Scale, Smartphone } from 'lucide-react'
 import HeroMoon from './HeroMoon'
 import VehiclePhoto from './VehiclePhoto'
 
@@ -82,6 +82,7 @@ export default function JudgesPage({ onOpen }: { onOpen: (hash: string) => void 
             <div className="jp-cta">
               <button className="btn primary jp-open" onClick={() => onOpen(`#ui=simple&lang=${lang}`)}>{t.open} <ArrowRight size={18} /></button>
               <button className="jp-film" onClick={() => onOpen(`#ui=simple&lang=${lang}&film=1`)}><Clapperboard size={17} /> {t.film}</button>
+              <button className="jp-film" onClick={() => onOpen(`#ui=simple&lang=${lang}&tour=1`)}><PlayCircle size={17} /> {lang === 'tr' ? 'Rehberli tur' : 'Guided tour'}</button>
             </div>
           </div>
           <div className="jp-qrbox">
@@ -95,7 +96,7 @@ export default function JudgesPage({ onOpen }: { onOpen: (hash: string) => void 
         {t.facts.map(([n, d]) => <div key={d}><b>{n}</b><span>{d}</span></div>)}
       </section>
       <section className="jp-feats">
-        {t.feats.map(([I, h, d]) => <div key={h}><I size={22} /><b>{h}</b><span>{d}</span></div>)}
+        {t.feats.map(([I, h, d], k) => <div key={h}><img className="jp-feat-art" src={`${import.meta.env.BASE_URL}art/${['feat-sites', 'feat-odds', 'feat-decision', 'feat-data'][k]}.webp`} alt="" /><I size={22} /><b>{h}</b><span>{d}</span></div>)}
       </section>
       <section className="jp-fleet">
         {(['apollo', 'vikram', 'hls'] as const).map((id) => <VehiclePhoto key={id} kind="lander" id={id} alt="" className="jp-veh" />)}

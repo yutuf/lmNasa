@@ -18,4 +18,11 @@ Used unmodified apart from hiding a display floor and scaling to real size in th
 - `starship.glb`: "SpaceX Starship" by MartianDays, https://sketchfab.com/3d-models/spacex-starship-a8a0b69f776841a1a465cd9fb3762fd2
   (shown as Starship HLS)
 
+## Sketchfab, CC Attribution-ShareAlike 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+- `lrv.glb`: "Mondfahrzeug (Lunar Rover)" by Deutsches Museum | Digital (Inv.-Nr. 2019-407), remodelled from laser
+  scans and photogrammetry of a replica and the original drawings,
+  https://sketchfab.com/3d-models/mondfahrzeug-lunar-rover-acb3f8645a69493cb211a62b40d66aab
+  Changed for the web: geometry simplified, Draco-compressed, textures resized to 1024 px and saved as JPEG. This
+  adapted file is shared under the same licence, CC BY-SA 4.0.
+
 `../draco/`: Draco mesh decoder from three.js (MIT), so the compressed models load offline.

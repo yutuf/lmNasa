@@ -8,9 +8,10 @@ import { useSiteImage, type CardSite } from './SiteCard'
 import VehiclePhoto from './VehiclePhoto'
 import ProbabilityPanel from './ProbabilityPanel'
 import { landerById } from '../vehicles'
+import SiteExtras, { type SiteCtx } from './SiteExtras'
 
-export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand, onDrive, onWalk, onAnalysis, history, onHistory }: {
-  lander: string; history: boolean; onHistory: (v: boolean) => void
+export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand, onDrive, onWalk, onAnalysis, history, onHistory, ctx }: {
+  lander: string; history: boolean; onHistory: (v: boolean) => void; ctx?: SiteCtx | null
   s: CardSite; lang: Lang; onClose: () => void; onWatch: () => void; onStand: () => void; onDrive: () => void; onWalk: () => void; onAnalysis: () => void
 }) {
   const img = useSiteImage(s)
@@ -79,6 +80,7 @@ export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand
             </div>
           </div>
         )}
+        {ctx && <SiteExtras ctx={ctx} s={s} lang={lang} />}
         {pr && <p className="ph-stats-note">{tr
           ? `Aralıklar: ${pr.trials} simüle görevin %90’ı (fırlatma gecikmesi, ufuk hatası, iniş alanındaki dağılım, batarya yıpranması).`
           : `Ranges: 90 % of ${pr.trials} simulated missions (launch slip, horizon error, scatter across the landing zone, battery wear).`}</p>}

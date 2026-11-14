@@ -165,7 +165,7 @@ export function FilmHud({ lang, phase, t, heightM, lat, lon, sunDaily }: {
           </li>
         ))}
       </ul>
-      {phase === 'site' && <p className="fx-hud-where">{fmtLat(lat, lang)} {fmtLon(lon, lang)} · D{String(day + 1).padStart(2, '0')}</p>}
+      {phase === 'site' && <p className="fx-hud-where">{fmtLat(lat, lang)} {fmtLon(lon, lang)}{sunDaily.length > 0 ? ` · D${String(day + 1).padStart(2, '0')}` : ''}</p>}
       <SunSpark values={sunDaily} t={t} lang={lang} compact />
     </aside>
   )
@@ -205,7 +205,7 @@ export function SimGauge({ prob, t, lang, reduce }: { prob: Probability; t: numb
             <em>{Math.round(prob.causes[k] * u * 100)}%</em>
           </div>
         ))}
-        {prob.main && <p className="fx-sim-main">{tr ? 'En büyük pay' : 'Largest share'}: {CAUSE[prob.main][lang]}</p>}
+        {prob.main && u > 0.85 && <p className="fx-sim-main">{tr ? 'En büyük pay' : 'Largest share'}: {CAUSE[prob.main][lang]}</p>}
       </div>
     </>
   )

@@ -34,6 +34,27 @@ function bilinear(h: Int16Array, cols: number, rows: number, col: number, row: n
   return scale * (h[k] * (1 - fc) * (1 - fr) + h[k + 1] * fc * (1 - fr) + h[k + cols] * (1 - fc) * fr + h[k + cols + 1] * fc * fr)
 }
 
+/** Catmull-Rom (bicubic) interpolation: smooth across cells, so a 200 m grid does not show as flat facets under a
+ *  low Sun. Falls back to bilinear at the grid's edge. */
+function bicubic(h: Int16Array, cols: number, rows: number, col: number, row: number, scale: number): number {
+  const c0 = Math.floor(col), r0 = Math.floor(row)
+  if (c0 < 1 || r0 < 1 || c0 + 2 >= cols || r0 + 2 >= rows) return bilinear(h, cols, rows, col, row, scale)
+  const fc = col - c0, fr = row - r0
+  const w = (t: number) => [((-t + 2) * t - 1) * t / 2, ((3 * t - 5) * t * t + 2) / 2, ((-3 * t + 4) * t + 1) * t / 2, ((t - 1) * t * t) / 2]
+  const wc = w(fc), wr = w(fr)
+  let v = 0
+  for (let j = 0; j < 4; j++) {
+    const k = (r0 - 1 + j) * cols + c0 - 1
+    v += wr[j] * (wc[0] * h[k] + wc[1] * h[k + 1] + wc[2] * h[k + 2] + wc[3] * h[k + 3])
+  }
+  return v * scale
+}
+
+/** Smooth height for the 3D ground views (bicubic); heightAt stays bilinear for the analysis. */
+export function heightSmooth(d: Dem, x: number, y: number): number {
+  return bicubic(d.h, d.cols, d.rows, d.sample0 + x / d.mPerPx, d.line0 - y / d.mPerPx, d.scale)
+}
+
 /** Height (m) at a stereographic point (m): +x toward 90°E, +y toward 0°E. NaN outside the grid. */
 export function heightAt(d: Dem, x: number, y: number): number {
   return bilinear(d.h, d.cols, d.rows, d.sample0 + x / d.mPerPx, d.line0 - y / d.mPerPx, d.scale)
@@ -56,7 +77,7 @@ const BLEND_M = 400
 export function makeGround(dem: Dem, patches: Patch[]): { height: Sampler; source: (x: number, y: number) => Patch | null } {
   const source = (x: number, y: number) => patches.find((p) => patchInset(p, x, y) > 0) ?? null
   const height: Sampler = (x, y) => {
-    const base = heightAt(dem, x, y)
+    const base = heightSmooth(dem, x, y)
     for (const p of patches) {
       const d = patchInset(p, x, y)
       if (d <= 0) continue
