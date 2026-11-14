@@ -1,6 +1,6 @@
 // The landing page for judges and visitors (open the site with #judges): what LunaNav does in one screen, a QR code
 // of this very site so anyone in the room can open it on a phone, and one button into the app. The QR encodes the
-// public site (adaptlabs.us), including when this page is opened from localhost.
+// public site, including when this page is opened from localhost.
 import { useMemo, useState } from 'react'
 import qrcode from 'qrcode-generator'
 import { ArrowRight, Clapperboard, PlayCircle, Database, Globe2, Percent, Scale, Smartphone } from 'lucide-react'

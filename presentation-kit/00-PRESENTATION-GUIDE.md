@@ -16,8 +16,8 @@ It checks **21,856 points around the lunar south pole** (2 km apart) and **41,27
 
 ## 2. Links
 
-- **Live app:** https://adaptlabs.us
-- **Judges page with QR code:** https://adaptlabs.us/#judges (show this on the last slide or on a screen)
+- **Live app:** https://lunanav-theta.vercel.app
+- **Judges page with QR code:** https://lunanav-theta.vercel.app/#judges (show this on the last slide or on a screen)
 - **Code:** https://github.com/yutuf/lmNasa (branch `main`)
 
 ## 3. Data (all real, all public)
@@ -63,7 +63,7 @@ Extra if time allows: **Build your own lander** (Workshop): change panels, batte
 - **Plan a mission with me:** Luna asks for the goal first, then only the numbers that are still missing, and the GO or NO-GO comes from the search.
 - **Line drawings** on the goal cards, the "What next?" cards, and the judges page. They are transparent pictures, so the page background shows through.
 
-Talk tip: open https://adaptlabs.us/#judges first: it has the one-screen summary and the QR code, and "Open the app" goes straight in.
+Talk tip: open https://lunanav-theta.vercel.app/#judges first: it has the one-screen summary and the QR code, and "Open the app" goes straight in.
 
 ## 5. Numbers you can say (they come from the app)
 
@@ -110,7 +110,7 @@ Style: the app uses a dark Formula 1-style look (black, red #E10600, bold italic
 
 - [x] The live link works for someone not logged in
 - [ ] Luna works on the live site (`GEMINI_API_KEY` set in Vercel)
-- [x] QR code: built into https://adaptlabs.us/#judges
+- [x] QR code: built into https://lunanav-theta.vercel.app/#judges
 - [ ] Optional: a local recording of the talk, in case the internet fails in the room. Do not upload it. A project video longer than 30 seconds is not eligible for Global Judging. The submitted demo is the 7-slide deck, or a video of 30 seconds or less.
 - [ ] Test on a phone (the app works on phones; there is a Turkish version: EN/TR switch top right)
 
