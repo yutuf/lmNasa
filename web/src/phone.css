@@ -13,6 +13,7 @@
 .phone-brand { font: 900 italic 22px var(--display); font-stretch: 125%; letter-spacing: .04em; }
 .phone-brand b { color: var(--red); }
 .phone-site { margin: 2px 0 0; font-size: 13px; color: var(--text-2); }
+.phone-lola { margin: 4px 0 0; max-width: 42ch; font-size: 11px; line-height: 1.35; color: #b7b1a6; }
 .phone-x { width: 36px; height: 36px; border-radius: 8px; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.45); color: #fff; cursor: pointer; }
 .phone-cursor { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 7px rgba(225,6,0,.38); pointer-events: none; }
 .phone-cursor::after { content: ''; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; background: var(--red, #e10600); border-radius: 50%; }
