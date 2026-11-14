@@ -12,6 +12,7 @@ import type { Lang } from '../i18n'
 import { R_M, altAz, bodies, conditions, diskAbove, horizonElev, horizonProfile, makeGround, nextChanges, parseDem,
   localSky, parsePatch, parseScience, planeAz, planeDir, scienceAt, findIceTarget, type Dem, type Patch, type Science, type SiteInfo } from '../terrain'
 import { dataUrl } from '../data'
+import { planRoute, type Route } from '../route'
 import { connectSerial, disconnectSerial, sendSky, serialConnected, serialSupported, skyLine } from '../serial'
 
 export type DriveMode = 'lander' | 'rover'
@@ -49,8 +50,8 @@ const L = {
   restart: { en: 'Try again', tr: 'Tekrar dene' },
   terrain10: { en: 'LOLA 10 m terrain', tr: 'LOLA 10 m arazi' },
   terrain200: { en: 'LOLA 200 m terrain', tr: 'LOLA 200 m arazi' },
-  keys: { en: 'W/S drive · A/D steer · E drill · V science view · C camera · L lights · 1–5 time speed · drag to look',
-    tr: 'W/S sür · A/D dön · E del · V bilim görünümü · C kamera · L far · 1–5 zaman hızı · sürükle: bak' },
+  keys: { en: 'W/S drive · A/D steer · P plan route · E drill · V science view · C camera · L lights · 1–5 time speed · drag to look',
+    tr: 'W/S sür · A/D dön · P rota · E del · V bilim görünümü · C kamera · L far · 1–5 zaman hızı · sürükle: bak' },
   target: { en: 'Ice target', tr: 'Buz hedefi' },
   inPsr: { en: 'in permanent shadow', tr: 'kalıcı gölgede' },
   iceIdx: { en: 'ice favorability', tr: 'buz olasılık endeksi' },
@@ -71,6 +72,16 @@ const L = {
   speed: { en: 'time', tr: 'zaman' },
   mission: { en: 'Mission day', tr: 'Görev günü' },
   compass: { en: 'Sky compass', tr: 'Gökyüzü pusulası' },
+  plan: { en: 'Plan a sunlit route', tr: 'Güneşli rota planla' },
+  planning: { en: 'Planning over the terrain…', tr: 'Arazi üzerinde planlanıyor…' },
+  noRoute: { en: 'No safe route found (too steep)', tr: 'Güvenli rota yok (çok dik)' },
+  route: { en: 'Route', tr: 'Rota' },
+  inShadow: { en: 'in shadow', tr: 'gölgede' },
+  steepest: { en: 'steepest', tr: 'en dik' },
+  driving: { en: 'driving', tr: 'sürüş' },
+  auto: { en: 'Autopilot', tr: 'Otopilot' },
+  clearRoute: { en: 'Clear', tr: 'Temizle' },
+  toLander: { en: 'to the lander', tr: 'iniş aracına' },
   compassOn: { en: 'Sky compass connected', tr: 'Gökyüzü pusulası bağlı' },
 } as const
 
@@ -108,6 +119,7 @@ interface Sim {
   science: boolean; drillKey: boolean
   target: { x: number; y: number; ice: number } | null
   phase: 'go' | 'return' | 'done'; drilled: number; doneHour: number
+  route: Route | null; routeVer: number; routeI: number; autopilot: boolean
 }
 
 export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
@@ -121,6 +133,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
     cam: 'chase', pad: false, padBtn: [], yaw: 0, pitch: initialMode === 'lander' ? 0.02 : -0.12,
     origin: { x: start.x, y: start.y, h: 0 }, profile: null, profileAt: { x: NaN, y: NaN }, cond: null,
     science: false, drillKey: false, target: null, phase: 'go', drilled: 0, doneHour: 0,
+    route: null, routeVer: 0, routeI: 0, autopilot: false,
   })
 
   // load the 200 m grid and any 10 m site maps within reach of the start
@@ -162,6 +175,39 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
   const sciRef = useRef<Science | null>(null)
   sciRef.current = world?.sci ?? null
   const [serialOn, setSerialOn] = useState(false)
+  const [planning, setPlanning] = useState<'idle' | 'busy' | 'none'>('idle')
+  const plan = () => {
+    if (!world || planning === 'busy') return
+    const s = sim.current
+    const goal: [number, number] = s.phase === 'go' && s.target ? [s.target.x, s.target.y] : [start.x + PARK[0], start.y + PARK[1]]
+    setPlanning('busy')
+    setTimeout(() => {
+      const h = world.ground.height
+      const b = bodies(eph, s.hour)
+      const cache = new Map<string, number>()
+      // sunlight at the current hour from the real horizon, cached on a 100 m lattice
+      const lit = (x: number, y: number) => {
+        const key = `${Math.round(x / 100)},${Math.round(y / 100)}`
+        let v = cache.get(key)
+        if (v === undefined) {
+          const [la, lo] = pointLatLon(x / 1000, y / 1000)
+          const sun = altAz(b.sun, la, lo)
+          v = sun.alt < -1 ? 0 : diskAbove(sun.alt, horizonElev(h, x, y, lo, sun.az, 1, 30000), b.sunR)
+          cache.set(key, v)
+        }
+        return v
+      }
+      const r = planRoute(h, [s.x, s.y], goal, { cell: 20, maxSlope: ROVER.maxSlope - 2, lit, darkCost: 2, margin: 1500 })
+      s.route = r
+      s.routeI = 0
+      s.routeVer++
+      s.autopilot = !!r
+      s.playing = true
+      setPlanning(r ? 'idle' : 'none')
+    }, 40)
+  }
+  const planRef = useRef(plan)
+  planRef.current = plan
 
   // keyboard
   useEffect(() => {
@@ -171,6 +217,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
       s.throttle = (keys.has('w') || keys.has('arrowup') ? 1 : 0) - (keys.has('s') || keys.has('arrowdown') ? 1 : 0)
       s.steer = (keys.has('a') || keys.has('arrowleft') ? 1 : 0) - (keys.has('d') || keys.has('arrowright') ? 1 : 0)
       s.drillKey = keys.has('e')
+      if (s.throttle || s.steer) s.autopilot = false
     }
     const down = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase()
@@ -179,6 +226,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
       if (k === 'c') s.cam = s.cam === 'chase' ? 'mast' : 'chase'
       if (k === 'l') s.lights = !s.lights
       if (k === 'v') s.science = !s.science
+      if (k === 'p') planRef.current()
       if (k === ' ') s.playing = !s.playing
       if (k >= '1' && k <= '5') s.warp = WARPS[+k - 1]
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault()
@@ -246,6 +294,20 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
           {s.phase === 'return' && <div className="drill">🧪 {t('bringBack')}</div>}
           {s.phase === 'done' && <div className="done">✅ {t('complete')} · {(s.driven / 1000).toFixed(2)} km · {hrs(Math.round(s.doneHour - s.startHour))}</div>}
           {here && here.psr > 0.5 && <div className="hud-sub psr">🌑 {t('psrHere')}</div>}
+          {s.phase !== 'done' && (
+            <div className="route-row">
+              <button className="mini" disabled={planning === 'busy'} onClick={plan}>
+                🧭 {planning === 'busy' ? t('planning') : `${t('plan')}${s.phase === 'return' || !tgt ? ` (${t('toLander')})` : ''}`}
+              </button>
+              {s.route && <button className={`mini ${s.autopilot ? 'on' : ''}`} onClick={() => { s.autopilot = !s.autopilot; s.playing = true }}>{s.autopilot ? '⏸' : '▶'} {t('auto')}</button>}
+              {s.route && <button className="mini" onClick={() => { s.route = null; s.autopilot = false; s.routeVer++ }}>{t('clearRoute')}</button>}
+            </div>
+          )}
+          {planning === 'none' && !s.route && <div className="hud-sub bad">{t('noRoute')}</div>}
+          {s.route && (
+            <div className="hud-sub">🧭 {t('route')} {(s.route.lengthM / 1000).toFixed(2)} km · {hrs(Math.round(s.route.lengthM / ROVER.maxSpeed / 3600))} {t('driving')} ·{' '}
+              {(s.route.darkM / 1000).toFixed(2)} km {t('inShadow')} · {t('steepest')} {s.route.maxSlopeDeg.toFixed(0)}°</div>
+          )}
         </div>
       )}
       {s.science && <div className="hud science">{t('science')}<br /><small>{t('sciSrc')}</small></div>}
@@ -399,6 +461,9 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
   }, [])
   const stars = useMemo(starField, [])
   const glare = useMemo(sunGlare, [])
+  const routeLine = useMemo(() => new THREE.Line(new THREE.BufferGeometry(),
+    new THREE.LineBasicMaterial({ color: '#5ee7ff', transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false })), [])
+  const routeKey = useRef('')
   const paths = useRef<THREE.Group>(null)
   // Sun and Earth paths over the whole mission, seen from the lander (drawn on the sky; terrain hides the parts behind ridges)
   const pathLines = useMemo(() => {
@@ -559,6 +624,20 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
     const isRover = s.mode === 'rover'
     const simDt = s.playing && !s.dead ? dt * s.warp : 0
     const [, lon] = pointLatLon(s.x / 1000, s.y / 1000)
+    if (isRover && s.autopilot && s.route && !s.dead) {
+      const pts = s.route.pts
+      while (s.routeI < pts.length - 1 && Math.hypot(pts[s.routeI][0] - s.x, pts[s.routeI][1] - s.y) < 12) s.routeI++
+      const [tx, ty] = pts[Math.min(s.routeI + 1, pts.length - 1)]
+      const last = s.routeI >= pts.length - 1 && Math.hypot(pts[pts.length - 1][0] - s.x, pts[pts.length - 1][1] - s.y) < 6
+      if (last) { s.autopilot = false; s.throttle = 0; s.steer = 0 }
+      else {
+        const want = Math.atan2(ty - s.y, tx - s.x)
+        const diff = Math.atan2(Math.sin(want - s.heading), Math.cos(want - s.heading))
+        s.heading += Math.max(-1, Math.min(1, diff)) * Math.min(1, dt * 4)
+        s.throttle = Math.abs(diff) > 0.7 ? 0.15 : 1
+        s.steer = 0
+      }
+    }
     if (isRover && !s.dead && s.playing) {
       const target = s.throttle * ROVER.maxSpeed
       s.speed += (target - s.speed) * Math.min(1, dt * 3)
@@ -612,6 +691,22 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
     }
     if (lander.current) { lander.current.position.copy(toV(start.x, start.y)); lander.current.rotation.y = landerYaw.current }
     if (ambient.current) ambient.current.intensity = s.science ? 0.9 : 0.04
+    const rk = `${s.routeVer}:${s.origin.x}:${s.origin.y}`
+    if (routeKey.current !== rk) {
+      routeKey.current = rk
+      const pts: THREE.Vector3[] = []
+      const rp = s.route?.pts ?? []
+      for (let k = 1; k < rp.length; k++) {
+        const [ax, ay] = rp[k - 1]
+        const [bx, by] = rp[k]
+        const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 5))
+        for (let q = 0; q < n; q++) pts.push(toV(ax + ((bx - ax) * q) / n, ay + ((by - ay) * q) / n, 0.7))
+      }
+      if (rp.length) pts.push(toV(rp[rp.length - 1][0], rp[rp.length - 1][1], 0.7))
+      routeLine.geometry.dispose()
+      routeLine.geometry = new THREE.BufferGeometry().setFromPoints(pts)
+      routeLine.visible = pts.length > 1
+    }
     if (paths.current) paths.current.visible = s.mode === 'lander'
     if (beacon.current) {
       beacon.current.visible = !!s.target && s.mode === 'rover' && s.phase === 'go'
@@ -700,6 +795,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
           <meshStandardMaterial color="#3d7fd6" emissive="#0b1a33" roughness={0.6} />
         </mesh>
       </group>
+      <primitive object={routeLine} />
       <Lander ref={lander} dish={dish} />
       <group ref={beacon} visible={false}>
         <mesh position={[0, 25, 0]}>
