@@ -5,6 +5,7 @@ import { insideRing, parseAtlas, parseEphem, pointTrack, type Atlas, type PointR
 import { T, fmtPct, hours, why, type Lang } from './i18n'
 import { evaluateWindow, requiredBatteryWh, type Constraints } from './model'
 import { EngineRunner } from './runner'
+import { download, reportHtml, siteRow, toCsv, type SiteRow } from './report'
 import HorizonView from './components/HorizonView'
 import Luna, { type LunaAction } from './components/Luna'
 import type { Overlay, Pin } from './components/Globe'
@@ -51,6 +52,12 @@ const S = {
   otherDates: { en: 'Other landing dates in the window', tr: 'Penceredeki diğer iniş tarihleri' },
   standHere: { en: 'Stand on the lander', tr: 'İniş aracında dur' },
   driveHere: { en: 'Drive a rover here', tr: 'Burada gezgin sür' },
+  compare: { en: 'Compare', tr: 'Karşılaştır' },
+  compareTitle: { en: 'Side by side', tr: 'Yan yana' },
+  compareHint: { en: 'Tick ⇄ on two to four results to compare them here.', tr: 'Karşılaştırmak için iki ile dört sonuçta ⇄ işaretleyin.' },
+  csv: { en: 'CSV', tr: 'CSV' },
+  report: { en: 'Report', tr: 'Rapor' },
+  clear: { en: 'Clear', tr: 'Temizle' },
   beThere: { en: 'Be there: see what the lander sees on the best landing date, or drive a rover over the real terrain.', tr: 'Oradaymış gibi: en iyi iniş tarihinde iniş aracının gördüğünü görün ya da gerçek arazide gezgin sürün.' },
 } satisfies Record<string, Text>
 
@@ -86,6 +93,7 @@ export default function App() {
   const ephemRef = useRef<ArrayBuffer | null>(null)
   const runner = useRef<EngineRunner | null>(null)
   const [drive, setDrive] = useState<{ mode: DriveMode; start: DriveStart } | null>(null)
+  const [cmp, setCmp] = useState<number[]>([])
 
   useEffect(() => {
     (async () => {
@@ -176,6 +184,14 @@ export default function App() {
       tr.sunFraction.subarray(s * 24, s * 24 + len), series.earthVisible.slice(s * 24, s * 24 + len), 1, c).go)
     return { tr, w, need: requiredBatteryWh(sf, 1, c), series, a, len, fh, perStart, c }
   }, [pick, atlas, ran, m, dsn, eph])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // metrics for every ranked site (comparison, CSV, report)
+  const rows: SiteRow[] = useMemo(() => {
+    if (!atlas || !ran || !m || !dsn || !eph) return []
+    const c = constraints(ran.q)!
+    return top.map((r, k) => siteRow(atlas, eph, dsn, r, k + 1, ran.q, c, firstHour(ran.q), region(r) ?? null))
+  }, [top, atlas, ran, m, dsn, eph])  // eslint-disable-line react-hooks/exhaustive-deps
+  const cmpRows = rows.filter((r) => cmp.includes(r.index))
 
   if (!m || !atlas) return <div className="loading">LunaNav<small>{lang === 'tr' ? 'NASA verisi yükleniyor…' : 'loading NASA data…'}</small></div>
   const startDate = (s: number) => new Date(Date.parse(ran!.q.start + 'T00:00:00Z') + s * 86400e3)
@@ -277,12 +293,23 @@ export default function App() {
           )}
           {results && ran && (
             <div className="results">
-              <h3>{S.results[lang]}</h3>
+              <div className="results-head">
+                <h3>{S.results[lang]}</h3>
+                <span>
+                  <button className="mini" onClick={() => download(`lunanav-${ran.q.start}.csv`, toCsv(rows))}>⬇ {S.csv[lang]}</button>
+                  <button className="mini" onClick={() => {
+                    const w = window.open('', '_blank')
+                    if (w) { w.document.write(reportHtml(cmpRows.length >= 2 ? cmpRows : rows, ran.q, constraints(ran.q)!, m.sources, lang)); w.document.close() }
+                  }}>🖨 {S.report[lang]}</button>
+                </span>
+              </div>
               {top.length === 0 || top[0].goCount === 0 ? <p className="note">{S.nothing[lang]}</p> : null}
               <ol>
                 {top.map((r, k) => (
                   <li key={r.index} className={k === sel ? 'on' : ''} onClick={() => setSel(k)}>
                     <b className={r.goCount > 0 ? 'g' : 'r'}>{k + 1}</b>
+                    <button className={`cmp-tog ${cmp.includes(r.index) ? 'on' : ''}`} title={S.compare[lang]}
+                            onClick={(e) => { e.stopPropagation(); setCmp((c) => c.includes(r.index) ? c.filter((x) => x !== r.index) : [...c, r.index].slice(-4)) }}>⇄</button>
                     <span>
                       <em>{r.lat.toFixed(2)}°, {r.lon.toFixed(2)}°E{region(r) ? ` · ${region(r)}` : ''}</em>
                       {S.goDays[lang]} {r.goCount} {S.of[lang]} {ran.q.windowDays} {S.landingDates[lang]} · {S.bestDate[lang]} {fmtDate(startDate(r.bestStart))}
@@ -314,6 +341,8 @@ export default function App() {
                     note={detail.need === 0 ? '—' : `${Math.round(detail.need).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')} Wh`} />
             </div>
           </div>
+          {cmpRows.length >= 2 ? <Compare rows={cmpRows} lang={lang} onClear={() => setCmp([])} />
+            : <p className="note cmp-hint">⇄ {S.compareHint[lang]}</p>}
           <div className="card be-there">
             <p>{S.beThere[lang]}</p>
             <div className="be-btns">
@@ -349,6 +378,46 @@ export default function App() {
   )
 }
 
+
+function Compare({ rows, lang, onClear }: { rows: SiteRow[]; lang: Lang; onClear: () => void }) {
+  const tr = lang === 'tr'
+  // metric, value, higher-is-better (null = no ranking)
+  const lines: [string, (r: SiteRow) => string, ((r: SiteRow) => number) | null, boolean][] = [
+    [tr ? 'Uygun iniş tarihleri' : 'GO landing dates', (r) => `${r.goDates} / ${r.windowDays}`, (r) => r.goDates, true],
+    [tr ? 'En iyi iniş' : 'Best landing', (r) => `${r.bestLanding} · ${r.go ? 'GO' : 'NO-GO'}`, null, true],
+    [tr ? 'Güneş ışığı' : 'Sunlight', (r) => `${r.sunPct}%`, (r) => r.sunPct, true],
+    [tr ? 'Dünya bağlantısı' : 'Earth contact', (r) => `${r.earthPct}%`, (r) => r.earthPct, true],
+    [tr ? 'En uzun karanlık' : 'Longest dark', (r) => `${r.longestDarkH} h`, (r) => r.longestDarkH, false],
+    [tr ? 'Gereken batarya' : 'Battery needed', (r) => `${r.batteryNeedWh.toLocaleString()} Wh`, (r) => r.batteryNeedWh, false],
+    [tr ? 'Eğim' : 'Slope', (r) => `${r.slopeDeg.toFixed(1)}°`, (r) => r.slopeDeg, false],
+    [tr ? 'Yükseklik' : 'Height', (r) => `${r.heightM} m`, null, true],
+  ]
+  return (
+    <div className="card compare">
+      <div className="results-head"><h3>⇄ {S.compareTitle[lang]}</h3><button className="mini" onClick={onClear}>{S.clear[lang]}</button></div>
+      <table>
+        <thead><tr><th />{rows.map((r) => <th key={r.index}>#{r.rank}<small>{r.region ?? `${r.lat.toFixed(2)}°, ${r.lon.toFixed(1)}°E`}</small></th>)}</tr></thead>
+        <tbody>
+          {lines.map(([name, show, score, up]) => {
+            const vals = score ? rows.map(score) : []
+            const best = score ? (up ? Math.max(...vals) : Math.min(...vals)) : NaN
+            return (
+              <tr key={name}><td>{name}</td>
+                {rows.map((r, k) => <td key={r.index} className={score && vals[k] === best && new Set(vals).size > 1 ? 'best' : ''}>{show(r)}</td>)}
+              </tr>
+            )
+          })}
+          <tr><td>☀ {tr ? 'Gün gün güneş' : 'Sun, day by day'}</td>
+            {rows.map((r) => <td key={r.index}><span className="spark">{r.sunDaily.map((v, d) => <i key={d} style={{ background: `rgba(242,183,5,${0.1 + 0.9 * v})` }} />)}</span></td>)}</tr>
+          <tr><td>📡 {tr ? 'Gün gün bağlantı' : 'Link, day by day'}</td>
+            {rows.map((r) => <td key={r.index}><span className="spark">{r.earthDaily.map((v, d) => <i key={d} style={{ background: `rgba(78,168,222,${0.1 + 0.9 * v})` }} />)}</span></td>)}</tr>
+          <tr><td>{tr ? 'Tarih takvimi' : 'Landing dates'}</td>
+            {rows.map((r) => <td key={r.index}><span className="spark">{r.perStart.map((g, d) => <i key={d} className={g ? 'g' : 'r'} />)}</span></td>)}</tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
 function Slider({ v, min, max, step = 1, on, unit }: { v: number; min: number; max: number; step?: number; on: (v: number) => void; unit: string }) {
   return (
