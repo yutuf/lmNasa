@@ -13,6 +13,7 @@ import { R_M, altAz, bodies, conditions, diskAbove, horizonElev, horizonProfile,
   localSky, parsePatch, parseScience, planeAz, planeDir, scienceAt, findIceTarget, type Dem, type Patch, type Science, type SiteInfo } from '../terrain'
 import { dataUrl } from '../data'
 import { planRoute, type Route } from '../route'
+import { eclipseAt } from '../eclipse'
 import { connectSerial, disconnectSerial, sendSky, serialConnected, serialSupported, skyLine } from '../serial'
 
 export type DriveMode = 'lander' | 'rover'
@@ -116,6 +117,7 @@ interface Sim {
   origin: { x: number; y: number; h: number }
   profile: Float32Array | null; profileAt: { x: number; y: number }
   cond: ReturnType<typeof conditions> | null
+  ecl: number
   science: boolean; drillKey: boolean
   target: { x: number; y: number; ice: number } | null
   phase: 'go' | 'return' | 'done'; drilled: number; doneHour: number
@@ -131,7 +133,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
     hour: start.hour, warp: initialMode === 'rover' ? 60 : 600, playing: initialMode === 'rover', battery: ROVER.batteryWh,
     solarW: 0, useW: 0, driven: 0, startHour: start.hour, dead: false, steep: false, lights: true,
     cam: 'chase', pad: false, padBtn: [], yaw: 0, pitch: initialMode === 'lander' ? 0.02 : -0.12,
-    origin: { x: start.x, y: start.y, h: 0 }, profile: null, profileAt: { x: NaN, y: NaN }, cond: null,
+    origin: { x: start.x, y: start.y, h: 0 }, profile: null, profileAt: { x: NaN, y: NaN }, cond: null, ecl: 0,
     science: false, drillKey: false, target: null, phase: 'go', drilled: 0, doneHour: 0,
     route: null, routeVer: 0, routeI: 0, autopilot: false,
   })
@@ -338,6 +340,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit }:
         <div className={`status ${(c?.sunFrac ?? 0) >= 0.5 ? 'ok' : 'bad'}`}>
           ☀ {t('sun')}: {c ? `${Math.round(c.sunFrac * 100)}% · ${c.sun.alt.toFixed(1)}°` : '—'}
           {next && <em> · {next.sunUp ? t('sets') : t('rises')} {hrs(next.sunH)}</em>}
+          {s.ecl > 0 && <b className="ecl"> · 🌘 {lang === 'tr' ? 'tutulma' : 'eclipse'} {Math.round(s.ecl * 100)}%</b>}
         </div>
         <div className={`status ${c?.earthUp ? 'ok' : 'bad'}`}>
           🌍 {t('earth')}: {c ? (c.earthUp ? t('up') : t('down')) + ` · ${c.earth.alt.toFixed(1)}°` : '—'}
@@ -658,7 +661,11 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
     // ---- power
     if (s.profile) s.cond = conditions(eph, s.profile, s.x, s.y, s.hour)
     const c = s.cond
-    s.solarW = c ? ROVER.panelW * c.sunFrac * Math.max(0, Math.cos((c.sun.alt * Math.PI) / 180)) : 0
+    {
+      const la = (c?.lat ?? -90) * Math.PI / 180, lo = (c?.lon ?? 0) * Math.PI / 180
+      s.ecl = eclipseAt(eph, s.hour, [1737.4 * Math.cos(la) * Math.cos(lo), 1737.4 * Math.cos(la) * Math.sin(lo), 1737.4 * Math.sin(la)])
+    }
+    s.solarW = c ? ROVER.panelW * c.sunFrac * (1 - s.ecl) * Math.max(0, Math.cos((c.sun.alt * Math.PI) / 180)) : 0
     s.useW = ROVER.idleW + (isRover && Math.abs(s.speed) > 0.01 ? ROVER.driveW : 0) + (s.lights && isRover ? 30 : 0)
     if (isRover && s.target && s.phase === 'go' && Math.hypot(s.target.x - s.x, s.target.y - s.y) < 25 && s.drillKey && !s.dead) {
       s.useW += 300
@@ -726,7 +733,7 @@ function Scene({ world, sim, eph, start }: { world: World; sim: React.MutableRef
         sun.current.position.copy(p).addScaledVector(sd, 3000)
         sun.current.target.position.copy(p)
         sun.current.target.updateMatrixWorld()
-        sun.current.intensity = c.sun.alt > -1 ? 4.2 : 0
+        sun.current.intensity = c.sun.alt > -1 ? 4.2 * (1 - s.ecl) : 0
       }
       if (panel.current && s.mode === 'rover') {
         // vertical panel turned toward the Sun's azimuth (in the rover frame)

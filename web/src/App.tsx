@@ -5,6 +5,7 @@ import { insideRing, parseAtlas, parseEphem, pointTrack, type Atlas, type PointR
 import { T, fmtPct, hours, why, type Lang } from './i18n'
 import { evaluateWindow, requiredBatteryWh, type Constraints } from './model'
 import { EngineRunner } from './runner'
+import { listEclipses } from './eclipse'
 import { download, reportHtml, siteRow, toCsv, type SiteRow } from './report'
 import HorizonView from './components/HorizonView'
 import Luna, { type LunaAction } from './components/Luna'
@@ -166,6 +167,7 @@ export default function App() {
 
   const pick = top[sel]
   const eph = useMemo(() => (m && ephemRef.current ? parseEphem(ephemRef.current, m.n) : null), [m])
+  const eclipses = useMemo(() => (eph ? listEclipses(eph) : []), [eph])
   const region = (r: PointResult) => m?.regions?.find((g) => g.rings.some((ring) => insideRing(atlas!.xKm[r.index], atlas!.yKm[r.index], ring)))?.name.replace(/_/g, ' ')
   const detail = useMemo(() => {
     if (!pick || !atlas || !ran || !m || !dsn || !ephemRef.current) return null
@@ -363,6 +365,14 @@ export default function App() {
             <DayStrip sun={Array.from({ length: detail.len }, (_, j) => detail.series.sunFraction[detail.a + j] >= 0.5)}
                       earth={Array.from({ length: detail.len }, (_, j) => detail.series.earthVisible[detail.a + j])}
                       link={Array.from({ length: detail.len }, (_, j) => detail.tr.link[detail.a + j])} lang={lang} />
+            {eclipses.filter((e) => e.endH >= detail.fh + detail.a && e.startH <= detail.fh + detail.a + detail.len).map((e) => {
+              const when = new Date((m.start_unix + e.peakH * 3600) * 1000)
+              return (
+                <p key={e.startH} className="note eclipse">🌘 {lang === 'tr'
+                  ? `Tutulma ${fmtDate(when)}: Dünya Güneş'in %${Math.round(e.peak * 100)}'ini kapatıyor, ${(e.endH - e.startH).toFixed(1).replace('.', ',')} saat${e.totalH > 0 ? ` (${e.totalH.toFixed(1).replace('.', ',')} saat tam karanlık)` : ''}. Arama motoru bunu hesaba katmaz; bataryayı buna göre seçin.`
+                  : `Eclipse on ${fmtDate(when)}: Earth covers ${Math.round(e.peak * 100)}% of the Sun for ${(e.endH - e.startH).toFixed(1)} h${e.totalH > 0 ? ` (${e.totalH.toFixed(1)} h of total darkness)` : ''}. The search does not include eclipses; size the battery for it.`}</p>
+              )
+            })}
             <p className="note">📡 {T.dsnNote[lang]}</p>
           </div>
           <HorizonView horizon={detail.tr.horizon} series={detail.series} i0={detail.a} len={detail.len} stepH={1}
