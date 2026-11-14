@@ -2,7 +2,7 @@
 // /api/ask and use only the numbers the page sends; actions (a new search, selecting a result) are applied here.
 import { useEffect, useRef, useState } from 'react'
 import type { Lang } from '../i18n'
-import { ArrowUp, Sparkles } from 'lucide-react'
+import { ArrowUp, Sparkles, Volume2, VolumeX } from 'lucide-react'
 
 export type LunaAction =
   | { type: 'search'; params: Record<string, number | string | boolean> }
@@ -22,6 +22,14 @@ export default function Luna({ lang, context, onAction }: { lang: Lang; context:
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
+  const [voice, setVoice] = useState(false)
+  const speak = (text: string) => {
+    if (!voice || typeof speechSynthesis === 'undefined') return
+    speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = lang === 'tr' ? 'tr-TR' : 'en-US'
+    speechSynthesis.speak(u)
+  }
   const end = useRef<HTMLDivElement>(null)
   useEffect(() => { end.current?.scrollIntoView({ behavior: 'smooth' }) }, [msgs, busy])
 
@@ -37,6 +45,7 @@ export default function Luna({ lang, context, onAction }: { lang: Lang; context:
       const data = await r.json()
       if (!r.ok) throw new Error(data.error ?? `HTTP ${r.status}`)
       setMsgs((m) => [...m, { role: 'luna', text: data.reply }])
+      speak(data.reply)
       if (data.action) onAction(data.action)
     } catch (e) {
       setMsgs((m) => [...m, { role: 'luna', error: true,
@@ -54,7 +63,14 @@ export default function Luna({ lang, context, onAction }: { lang: Lang; context:
       {open && (
         <div className="luna">
           <div className="luna-head">
-            <b>Luna</b>
+            <b>Luna
+              {typeof speechSynthesis !== 'undefined' && (
+                <button className="luna-voice" onClick={() => { if (voice) speechSynthesis.cancel(); setVoice(!voice) }}
+                        aria-label={voice ? 'Mute' : 'Read answers aloud'} title={lang === 'tr' ? 'Yanıtları sesli oku' : 'Read answers aloud'}>
+                  {voice ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                </button>
+              )}
+            </b>
             <span>{lang === 'tr' ? 'Görevinizi anlatın veya sonuçları sorun' : 'Describe your mission or ask about the results'}</span>
           </div>
           <div className="luna-msgs">
