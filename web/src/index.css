@@ -286,3 +286,6 @@ button.mini:hover { border-color: var(--sun); }
 .spark i { flex: 1; height: 12px; border-radius: 2px; }
 .spark i.g { background: var(--go); } .spark i.r { background: var(--nogo); opacity: .7; }
 @media (max-width: 760px) { .compare { overflow-x: auto; } }
+.route-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.route-row button.mini.on { border-color: #5ee7ff; color: #5ee7ff; }
+.hud-sub.bad { color: #ffb0b0; }
