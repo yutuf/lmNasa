@@ -40,10 +40,10 @@
 .mi-turn { display: grid; gap: 10px; min-width: 0; }
 .mi-bubble { display: flex; max-width: 92%; }
 .mi-bubble p { margin: 0; padding: 10px 13px; border-radius: 10px; line-height: 1.45; font-size: 14px; }
-.mi-bubble.luna { justify-self: start; }
-.mi-bubble.luna p { background: #24242f; border-left: 3px solid #e10600; }
-.mi-bubble.you { justify-self: end; }
-.mi-bubble.you p { background: #fff; color: #000000; font-weight: 600; }
+.mi-bubble.mi-luna { justify-self: start; }
+.mi-bubble.mi-luna p { background: #24242f; border-left: 3px solid #e10600; }
+.mi-bubble.mi-you { justify-self: end; }
+.mi-bubble.mi-you p { background: #fff; color: #000000; font-weight: 600; }
 .mi-typing p { display: flex; gap: 4px; align-items: center; min-width: 52px; }
 .mi-typing i {
   width: 6px; height: 6px; border-radius: 50%; background: #fff; display: block;

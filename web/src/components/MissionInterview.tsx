@@ -262,7 +262,7 @@ export default function MissionInterview({ lang, onRun, onClose }: {
           {bubbles.map((bubble, index) => (
             <div className="mi-turn" key={`${index}-${bubble.who}`}>
               {bubble.text && (
-                <div className={`mi-bubble ${bubble.who}`}>
+                <div className={`mi-bubble mi-${bubble.who}`}>
                   <p>{bubble.text}</p>
                 </div>
               )}
@@ -283,7 +283,7 @@ export default function MissionInterview({ lang, onRun, onClose }: {
             </div>
           ))}
           {busy && (
-            <div className="mi-bubble luna mi-typing" aria-hidden="true">
+            <div className="mi-bubble mi-luna mi-typing" aria-hidden="true">
               <p><i /><i /><i /></p>
             </div>
           )}

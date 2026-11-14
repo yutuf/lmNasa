@@ -26,8 +26,9 @@
 }
 html, body { background: #000000; }
 #root { position: relative; z-index: 1; background: transparent; }
-/* One star field for the whole page, including the gaps around the Moon. Fixed, so scrolling moves the UI over it. */
-body::before {
+/* One star field for the whole page, including the gaps around the Moon. Fixed, so scrolling moves the UI over it.
+   Full-screen panels draw their own copy on a black ground, so the page under them does not show through. */
+body::before, .profile::before, .workshop::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -178,7 +179,8 @@ h2, .card-head h2 { font-weight: 800; letter-spacing: -0.005em; font-size: 17px;
 
 /* ---------- site profile page ---------- */
 body.no-scroll { overflow: hidden; }
-.profile { position: fixed; inset: 0; z-index: 60; overflow-y: auto; background: transparent; }
+.profile { position: fixed; inset: 0; z-index: 60; overflow-y: auto; background: #000; }
+.profile::before, .workshop::before { z-index: -1; }
 .profile-hero { position: relative; min-height: 400px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center;
   padding: 64px 40px 30px; overflow: hidden; isolation: isolate;
   background: linear-gradient(120deg, color-mix(in srgb, var(--team) 66%, #1c1c26) 0%, color-mix(in srgb, var(--team) 28%, #1c1c26) 80%); }
@@ -512,7 +514,7 @@ body.no-scroll { overflow: hidden; }
 .nav-ws { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 999px; cursor: pointer;
   background: transparent; border: 1px solid var(--border-2); color: #fff; font: 800 12px var(--display); font-stretch: 112%; letter-spacing: .05em; text-transform: uppercase; }
 .nav-ws:hover { border-color: #fff; }
-.workshop { position: fixed; inset: 0; z-index: 65; background: transparent; overflow-y: auto; display: flex; flex-direction: column; }
+.workshop { position: fixed; inset: 0; z-index: 65; background: #000; overflow-y: auto; display: flex; flex-direction: column; }
 .ws-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding: 22px 28px 14px; border-bottom: 1px solid var(--border);
   background-image: repeating-linear-gradient(115deg, rgba(255, 255, 255, .025) 0 2px, transparent 2px 9px); }
 .ws-head h1 { margin: 0; font: 900 34px var(--display); font-stretch: 125%; text-transform: uppercase; }
@@ -920,3 +922,13 @@ body.no-scroll { overflow: hidden; }
 .ph-cal.marks i.go::after { content: '✓'; color: #06140c; }
 .ph-cal.marks i.nogo::after { content: '×'; color: rgba(255, 255, 255, .4); }
 .msg-trace { display: block; margin-top: 6px; padding-top: 5px; border-top: 1px solid rgba(255, 255, 255, .1); font-size: 10.5px; line-height: 1.4; color: var(--text-3); }
+
+/* Phone: the bar keeps the switch, the film and the language on one 390 px line. The QR (for judges on a laptop),
+   pairing a phone (you are on one) and GitHub leave the bar; they stay on wider screens. */
+@media (max-width: 760px) {
+  .nav { gap: 8px; padding: 0 12px; }
+  .logo-word, .nav-qr, .nav-phone, .gh-btn { display: none; }
+  .ui-switch button { padding: 5px 9px; }
+  .nav-story { width: 34px; padding: 0; justify-content: center; }
+  .nav-story .nav-label { display: none; }
+}

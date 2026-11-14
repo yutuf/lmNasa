@@ -758,8 +758,8 @@ export default function App() {
         {ui === 'advanced' && <button className="nav-ws" onClick={() => setLab(true)}><Scale size={14} /> {lang === 'tr' ? 'Karar' : 'Decide'}</button>}
         {ui === 'advanced' && <button className="nav-ws" onClick={() => setWorkshop(true)}><Wrench size={14} /> {lang === 'tr' ? 'Atölye' : 'Workshop'}</button>}
         <button className="nav-ws nav-qr" onClick={() => { location.hash = `judges&lang=${lang}` }} title={lang === 'tr' ? 'Jüri sayfası ve QR kodu' : 'Judges page and QR code'} aria-label="QR"><QrCode size={15} /></button>
-        <button className="nav-ws" onClick={() => setPhone(true)}><Smartphone size={14} /> {lang === 'tr' ? 'Telefon' : 'Phone'}</button>
-        <button className="nav-story" onClick={() => setFilm(true)}><Sparkles size={14} /> {lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}</button>
+        <button className="nav-ws nav-phone" onClick={() => setPhone(true)}><Smartphone size={14} /> {lang === 'tr' ? 'Telefon' : 'Phone'}</button>
+        <button className="nav-story" onClick={() => setFilm(true)} aria-label={lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}><Sparkles size={14} /> <span className="nav-label">{lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}</span></button>
         <div className="nav-r">
           <div className="seg" role="group" aria-label="Language">
             {(['en', 'tr'] as Lang[]).map((l) => (
