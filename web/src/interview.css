@@ -1,5 +1,5 @@
 /* Mission interview. A side panel on a desktop, a full-screen sheet on a phone.
-   Same broadcast palette as the rest of LunaNav: black page, Saira, one red. */
+   Same broadcast palette as the rest of Touchdown: black page, Saira, one red. */
 
 .mi-root { position: fixed; inset: 0; z-index: 85; }
 .mi-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .48); }

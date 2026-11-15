@@ -1,4 +1,4 @@
-"""LunaNav — Streamlit app.  run:  streamlit run app.py"""
+"""Touchdown — Streamlit app.  run:  streamlit run app.py"""
 
 import numpy as np
 import pandas as pd
@@ -66,14 +66,14 @@ def until(mask, i, step, verb_on, verb_off):
     verb = verb_on if mask[i] else verb_off
     return f"does not {verb} before the data ends" if h is None else f"{verb}s in {fmt_hours(h)}"
 
-st.set_page_config(page_title="LunaNav", page_icon="🌘", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Touchdown", page_icon="🌘", layout="wide", initial_sidebar_state="collapsed")
 st.markdown("<style>" + (Path(__file__).resolve().parent / "lunanav" / "style.css").read_text(encoding="utf-8")
             + "</style>", unsafe_allow_html=True)
 _lang = st.query_params.get("lang", "en")
 st.session_state.setdefault("lang", "Türkçe" if _lang == "tr" else "English")
 st.segmented_control("Language", simple_view.LANGS, key="lang", label_visibility="collapsed")
 _tr = st.session_state.get("lang") == "Türkçe"
-st.title("LunaNav — Ay'a nereye ve ne zaman inmeli?" if _tr else "LunaNav — where and when should we land on the Moon?")
+st.title("Touchdown — Ay'a nereye ve ne zaman inmeli?" if _tr else "Touchdown — where and when should we land on the Moon?")
 simple_box = st.container()   # the judge-first view, filled once the mission settings are known
 st.divider()
 st.header("Planlayıcı: her nokta × her iniş tarihi (İngilizce)" if _tr else "Planner: every spot × every landing date")
@@ -87,7 +87,7 @@ with st.expander("New here? How to read this page (2 min)"):
 once a month, so a hill a few hundred metres tall can put the lander in shadow for days. Earth hangs low too and
 wobbles a little (libration), so it also slips behind hills.
 
-**What LunaNav does:** for each landing site it uses NASA's laser-altimeter terrain (LOLA) to work out the real horizon
+**What Touchdown does:** for each landing site it uses NASA's laser-altimeter terrain (LOLA) to work out the real horizon
 in every direction, and JPL's planetary ephemeris (DE440) to know where the Sun and Earth are, hour by hour, until 2028.
 
 **How to use it**
@@ -100,7 +100,7 @@ in every direction, and JPL's planetary ephemeris (DE440) to know where the Sun 
 
 **Cited vs derived points:** *cited* sites come from publications: a published point, or the centre of an
 official Artemis III region (USGS grid). The source is shown at the bottom.
-A *derived* point is LunaNav's own pick: the best spot within 1 km of a cited site with a gentle slope. For the
+A *derived* point is Touchdown's own pick: the best spot within 1 km of a cited site with a gentle slope. For the
 Artemis III regions there can also be a *best in region* point: the best spot anywhere inside the official region.
 Both are always labelled and never replace the cited site.
 
@@ -163,7 +163,7 @@ with st.sidebar:
     show = st.multiselect(
         "Sites to show", PRESENT, format_func=GROUPS.get, key="show",
         help="Published points and Artemis III region centres come from sources. Derived (≤ 1 km) and best in "
-             "region are LunaNav's own picks: most hours with Sun and Earth both in view, slope ≤ 10°.")
+             "region are Touchdown's own picks: most hours with Sun and Earth both in view, slope ≤ 10°.")
     st.caption("🔗 The page address always holds the current scenario (settings, site groups, site, start date): "
                "copy it from the browser to share exactly this view.")
 
@@ -399,7 +399,7 @@ n_steps = len(tt)
 
 if site.slope_deg is not None and site.slope_deg > MAX_SLOPE:
     st.warning(f"⚠ **Steep at the cited point:** the LOLA 40 m terrain gives a {site.slope_deg:.1f}° slope here, "
-               f"above the {MAX_SLOPE:.0f}° limit LunaNav uses for landing. The point is kept exactly as cited "
+               f"above the {MAX_SLOPE:.0f}° limit Touchdown uses for landing. The point is kept exactly as cited "
                f"(it marks a region, not a surveyed landing spot); the sunlight and Earth numbers are still valid "
                f"for this point, but a lander would need a flatter spot nearby.")
 if site.derived:
@@ -411,7 +411,7 @@ else:
         sv = data[sib.id][0]
         where = (f"the best point inside this Artemis III region, {sib.distance_m / 1000:.1f} km away"
                  if sib.search == "region" else f"a derived point {sib.distance_m:.0f} m away")
-        st.caption(f"💡 LunaNav found {where} (slope {sib.slope_deg:.1f}°). "
+        st.caption(f"💡 Touchdown found {where} (slope {sib.slope_deg:.1f}°). "
                    f"Hours with Sun **and** Earth in view — this mission: {both(v, sl):.0%} here vs "
                    f"{both(sv, sl):.0%} there; whole 2026–2028 period: {both(v):.0%} vs {both(sv):.0%}. "
                    f"Pick “{labels[sites.index(sib)]}” above to inspect it.")
@@ -537,7 +537,7 @@ with st.expander("Assumptions & limits (read before quoting a number)"):
 - **"Sunlit"** = at least half the solar disk above the terrain; **"Earth in view"** = Earth's centre above the terrain.
   No antenna pattern, no relay satellites, no thermal model.
 - **Slope** comes from the 40 m DEM; boulders and small craters (metre scale) are invisible at that resolution.
-- **Derived and best-in-region points** are LunaNav's computation, not published coordinates. "Best in region"
+- **Derived and best-in-region points** are Touchdown's computation, not published coordinates. "Best in region"
   searches the USGS region grid on a coarse grid (~1,500 points) refined to 100 m around the top 5, so a
   better spot between grid points can exist.
 - Data window: Nov 2026 – Dec 2028, hourly.
@@ -553,12 +553,12 @@ if mz_rec is not None:
            "(120 m map: smaller shadows can be closer). "
            if near is not None else "none within the search radius. ")
         + f"Independent check: NASA's 18.6-year average illumination here is {mz_rec['mazarico_sun']:.0%}"
-        + (f" (LunaNav, 2026–2028, 2 m mast: {mz_rec['lunanav_sun_mean']:.0%} of the solar disk on average). "
+        + (f" (Touchdown, 2026–2028, 2 m mast: {mz_rec['lunanav_sun_mean']:.0%} of the solar disk on average). "
            if "lunanav_sun_mean" in mz_rec else ". ")
         + (f"NASA's map reaches {mz_rec['mazarico_sun_max_near']:.0%} sunlight"
            + (f" and {mz_rec['mazarico_earth_max_near']:.0%} Earth visibility" if "mazarico_earth_max_near" in mz_rec else "")
            + f" within {(mazarico() or {}).get('near_m', 120):.0f} m: on a narrow "
-           "crest the value depends on exactly where each map puts the crest, so read LunaNav's number as the "
+           "crest the value depends on exactly where each map puts the crest, so read Touchdown's number as the "
            "upper end of what NASA's maps support here. "
            if "mazarico_sun_max_near" in mz_rec and site.search == "region" else "")
         + "Source: Mazarico et al. 2011, Icarus 211 (NASA GSFC PGDA product 69).")
@@ -567,4 +567,4 @@ st.caption(f"Site: {labels[sites.index(site)]} ({site.lat:.4f}°, {site.lon:.4f}
            f"terrain: {terrain} · ephemeris: JPL DE440 via Skyfield · no atmosphere, no refraction.")
 st.caption(f"🔭 Look at this place in NASA's own viewers: [LROC QuickMap](https://quickmap.lroc.im-ldi.com/) · "
            f"[NASA Moon Trek](https://trek.nasa.gov/moon/), then enter **{site.lat:.4f}°, {site.lon:.4f}°E**. "
-           "They are complementary viewers for imagery and terrain; LunaNav's numbers are not computed from them.")
+           "They are complementary viewers for imagery and terrain; Touchdown's numbers are not computed from them.")

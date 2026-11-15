@@ -1027,7 +1027,7 @@ export default function App() {
                   <p className="sub">{S.resultsSub[lang]}</p>
                 </div>
                 <div className="actions">
-                  <button className="btn" onClick={() => download(`lunanav-${ran.q.start}.csv`, toCsv(rows))}><Download size={14} /> CSV</button>
+                  <button className="btn" onClick={() => download(`touchdown-${ran.q.start}.csv`, toCsv(rows))}><Download size={14} /> CSV</button>
                   <button className="btn" onClick={pdfReport}><Printer size={14} /> {S.report[lang]}</button>
                   <button className="btn" onClick={() => setOrbitPanel(true)}><Orbit size={14} /> {lang === 'tr' ? 'Yörünge' : 'Orbits'}</button>
                 </div>

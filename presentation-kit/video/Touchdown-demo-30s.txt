@@ -1,0 +1,6 @@
+file 'C:/Users/kayma/Desktop/lmNasa Lunar/qa/video/takes/edit/30-hero-voiced.mp4'
+file 'C:/Users/kayma/Desktop/lmNasa Lunar/qa/video/takes/edit/30-goal-voiced.mp4'
+file 'C:/Users/kayma/Desktop/lmNasa Lunar/qa/video/takes/edit/30-site-voiced.mp4'
+file 'C:/Users/kayma/Desktop/lmNasa Lunar/qa/video/takes/edit/30-film-voiced.mp4'
+file 'C:/Users/kayma/Desktop/lmNasa Lunar/qa/video/takes/edit/30-history-voiced.mp4'
+file 'C:/Users/kayma/Desktop/lmNasa Lunar/qa/video/takes/edit/30-end.mp4'

@@ -1,10 +1,10 @@
-# LunaNav: Space Apps 2026 plan ("Where to land on the Moon")
+# Touchdown: Space Apps 2026 plan ("Where to land on the Moon")
 
 Written 14 Nov 2026, about 30 minutes into the event. The deadline is the end of 15 Nov.
 
 ## Where we are
 
-LunaNav already answers the challenge question head-on: *where and when should we land?* The aim this weekend is
+Touchdown already answers the challenge question head-on: *where and when should we land?* The aim this weekend is
 to **deepen and prove it**, not to change direction.
 
 **What's strong**
@@ -54,7 +54,7 @@ Git shows **77 commits from 10 Nov to 14 Nov 06:10**. The event runs 14–15 Nov
 - [ ] Deploy to Vercel and check it on a phone.
 
 ### Phase 4: +32 h to the deadline. Pitch (freeze code about 4 h before)
-- [ ] Put a 30-second answer at the top of the README: problem → what LunaNav does → one number. The README is 36 KB right now; move the details down.
+- [ ] Put a 30-second answer at the top of the README: problem → what Touchdown does → one number. The README is 36 KB right now; move the details down.
 - [ ] A 2-minute video: describe a mission → 1.8 s search → hazard-checked GO site → science trade-off → Artemis III comparison → "stand on the lander".
 - [ ] Fill in the submission form, with the data-source table (already written) and the prior-work disclosure.
 

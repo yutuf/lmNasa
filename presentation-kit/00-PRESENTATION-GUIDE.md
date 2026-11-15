@@ -1,4 +1,4 @@
-# LunaNav · Presentation kit
+# Touchdown · Presentation kit
 
 NASA Space Apps Challenge 2026 · Challenge: **Lunar Landing Site Navigator**
 
@@ -6,9 +6,9 @@ This folder has what you need to build the presentation: what the project is, wh
 
 ---
 
-## 1. What LunaNav is (say it in one breath)
+## 1. What Touchdown is (say it in one breath)
 
-> **LunaNav tells you where and when to land on the Moon, and whether your mission survives there.**
+> **Touchdown tells you where and when to land on the Moon, and whether your mission survives there.**
 
 It checks **21,856 points around the lunar south pole** (2 km apart) and **41,276 points across the whole Moon** (about 30 km apart). For each one it tests every landing date, hour by hour, on real NASA data. Does the lander get sunlight for power? Can it talk to Earth through NASA's Deep Space Network? Is the ground flat enough? Is water ice nearby? Then it ranks the best sites, shows each one in 3D, and estimates the chance the mission succeeds.
 
@@ -53,7 +53,7 @@ Extra if time allows: **Build your own lander** (Workshop): change panels, batte
 - **Simple page = three questions** (what for, how long, when) with an Earthrise backdrop and a terrain picture of each goal.
 - **Real NASA missions in one click:** IM-3 (Reiner Gamma), Griffin-1 (Nobile), CP-12 (Schrödinger, far side: needs a relay), Blue Ghost 3 (Gruithuisen domes).
 - **Land where Artemis III will:** the 9 official candidate regions as a goal.
-- **Our model vs real landings:** five real landings replayed through LunaNav's engine. Blue Ghost 1: the model says 14.5 days of Sun, it worked ~14. Chandrayaan-3: 11.9 vs ~11. Chang'e 6: Earth never in view → needed a relay. A great slide: "we tested our model against reality".
+- **Our model vs real landings:** five real landings replayed through Touchdown's engine. Blue Ghost 1: the model says 14.5 days of Sun, it worked ~14. Chandrayaan-3: 11.9 vs ~11. Chang'e 6: Earth never in view → needed a relay. A great slide: "we tested our model against reality".
 - **Site page:** uncertainty ranges on every key number, worst case inside the landing ellipse, an antenna-mast "what if", and a 2026–2045 calendar of every landing day (shows the long-term cycle of good seasons).
 - **Relay satellite** (like Queqiao-2) counts as contact: far-side sites become possible.
 - **Launch & orbit:** which lunar orbit can reach which site, and the fuel cost of a plane change (a 20° orbit needs +1.6 km/s to reach the pole: that is why Artemis uses polar orbits).
@@ -81,7 +81,7 @@ The submitted demo is **7 slides, including the title**, or a video of **30 seco
 
 | # | Slide | Screenshot |
 | --- | --- | --- |
-| 1 | Title: LunaNav, where and when to land on the Moon | `01-home-three-questions.png` |
+| 1 | Title: Touchdown, where and when to land on the Moon | `01-home-three-questions.png` |
 | 2 | The problem: the south pole's low Sun; 5 of 13 recent landers crashed | `09-advanced-interface.png` (globe) |
 | 3 | How it works: NASA data → hour-by-hour checks → ranked sites | data table above |
 | 4 | The answer: ranked sites with 3D terrain | `02-best-sites-south-pole.png` |
