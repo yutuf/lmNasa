@@ -17,7 +17,8 @@ function Strip({ r }: { r: Replay }) {
       ))}
       {Array.from({ length: hours }, (_, k) => (r.earth[k0 + k] ? <rect key={`e${k}`} x={x(k)} y={22} width={W / hours + 0.5} height={10} fill="#4ea4ff" /> : null))}
       {days.map((d) => <line key={d} x1={x(d * 24)} x2={x(d * 24)} y1={34} y2={d % 7 === 0 ? 46 : 40} stroke="rgba(255,255,255,.35)" />)}
-      <line x1={x(r.l.workedDays * 24)} x2={x(r.l.workedDays * 24)} y1={0} y2={34} stroke="#fff" strokeWidth={3} />
+      {r.opsDays !== null && <line x1={x(r.opsDays * 24)} x2={x(r.opsDays * 24)} y1={0} y2={34} stroke="#ff5050" strokeWidth={3} />}
+      <line x1={x(r.realDays * 24)} x2={x(r.realDays * 24)} y1={0} y2={34} stroke="#fff" strokeWidth={3} />
     </svg>
   )
 }
@@ -39,7 +40,7 @@ export default function HistoryPanel({ lang, onClose }: { lang: Lang; onClose: (
     <div className="workshop histp" role="dialog" aria-label={tr ? 'Gerçek inişler' : 'Real landings'}>
       <div className="ws-head">
         <div><h1><History size={24} /> {tr ? 'Modelimiz ve gerçek inişler' : 'Our model vs real landings'}</h1>
-          <p>{tr ? 'Beş gerçek iniş, aramanın kullandığı aynı motorla yeniden oynatıldı: Güneş ne kadar süre kaldı, Dünya ne kadar göründü. Beyaz çizgi: görevin gerçekte çalıştığı son gün.' : 'Five real landings replayed through the same engine the search uses: how long the Sun stayed up, how much Earth was in view. White line: the last day each mission actually worked.'}</p></div>
+          <p>{tr ? 'Beş gerçek iniş, aramanın kullandığı aynı motorla yeniden oynatıldı: Güneş ne kadar süre kaldı, Dünya ne kadar göründü. Kırmızı çizgi: modelin öngördüğü görev sonu (panel + batarya); beyaz çizgi: görevin gerçekte bittiği an.' : 'Five real landings replayed through the same engine the search uses: how long the Sun stayed up, how much Earth was in view. Red line: where our model says operations end (panels + battery); white line: when each mission really ended.'}</p></div>
         <button className="icon-btn" onClick={onClose} aria-label="Close"><X size={20} /></button>
       </div>
       <div className="hp-body">
@@ -55,8 +56,8 @@ export default function HistoryPanel({ lang, onClose }: { lang: Lang; onClose: (
             <div className="hp-cols">
               <div><span>{tr ? 'Modelimiz' : 'Our model'}</span>
                 <p>{tr
-                  ? `İnişte Güneş %${Math.round(r.sunAtLanding * 100)} görünür; ${r.litDays.toFixed(1)} gün sonra batar. Çalıştığı günlerde Dünya %${r.earthPct} görünür.`
-                  : `At touchdown ${Math.round(r.sunAtLanding * 100)}% of the Sun is up; it sets after ${r.litDays.toFixed(1)} days. Earth in view ${r.earthPct}% of the days it worked.`}</p></div>
+                  ? `İnişte Güneş %${Math.round(r.sunAtLanding * 100)} görünür; ${r.litDays.toFixed(1).replace('.', ',')} gün sonra batar. Batarya geceye taşır: görev ${r.opsDays === null ? '18 günden sonra' : `${r.opsDays.toFixed(1).replace('.', ',')}. günde`} biter (gerçekte ${r.realDays.toFixed(1).replace('.', ',')}). Çalıştığı günlerde Dünya %${r.earthPct} görünür.`
+                  : `At touchdown ${Math.round(r.sunAtLanding * 100)}% of the Sun is up; it sets after ${r.litDays.toFixed(1)} days. The battery carries it into the night: operations end after ${r.opsDays === null ? 'more than 18' : r.opsDays.toFixed(1)} days (really ${r.realDays.toFixed(1)}). Earth in view ${r.earthPct}% of the days it worked.`}</p></div>
               <div><span>{tr ? 'Gerçekte' : 'What happened'}</span><p>{r.l.outcome[lang]}</p></div>
             </div>
           </div>
