@@ -1,8 +1,8 @@
 // The search engine: for every candidate point near the south pole and every landing date in a window, work out
 // the Sun and Earth over that point's real terrain horizon hour by hour, then run the mission models.
 // lunanav/engine.py is the same algorithm in Python; src/engine.test.ts checks the two agree.
-import { relayMask } from './relay'
-import { evaluateWindow, type Constraints } from './model'
+import { relayMask } from './relay.js'
+import { evaluateWindow, type Constraints } from './model.js'
 
 export interface Atlas {
   n: number
