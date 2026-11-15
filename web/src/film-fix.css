@@ -3,11 +3,56 @@ html.mission-film-open, html.mission-film-open body {
   height: 100%;
   max-height: 100dvh;
 }
-.film .film-stage { isolation: isolate; }
+.film .film-stage { isolation: isolate; z-index: 0; }
+/* Flat broadcast cards; the decorative hero retains the owner's live glow. */
+.film .fs-title { background: #160d10; }
+.film .fs-site, .film .fv-verdict.fs-verdict, .film .fv-verdict.fs-verdict.nogo {
+  background: color-mix(in srgb, var(--team) 42%, #15151b);
+  background-image: none;
+}
+.film .fs-title::before, .film .fs-site::before, .film .fs-verdict::before { background-image: none; }
+.film .fs-verdict::after { background: none; }
+.film .fs-window, .film .fs-odds, .film .fs-ellipse, .film .fx-wait { background: #101117; }
+.film .fs-boxes.grid { grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(680px, 60vw); max-width: none; }
+.film .fs-boxes.grid .fs-box { min-width: 0; box-sizing: border-box; }
+.film .fv-summary { box-sizing: border-box; }
+.film .fv-verdict.go h1, .film .fv-verdict.nogo h1 { color: transparent; -webkit-text-stroke: 2px #fff; text-shadow: none; }
 .film .fs-rover-live, .film .fs-premount { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
 .film .fs-premount { visibility: hidden; pointer-events: none; }
 .film .fs-rover-live .drive, .film .fs-premount .drive { position: absolute; inset: 0; z-index: 0; }
 .film .drive.cinematic .compass { display: none; }
+.film .drive.cinematic .landing-hud, .film .drive.cinematic .drive-scene-note { display: none; }
+.film .film-scene, .film .film-ctl, .film .film-sub { z-index: 60; }
+.film .film-bar { z-index: 30; pointer-events: none; }
+.film .film-landing-telemetry {
+  position: absolute; z-index: 60; top: 8vh; left: 50%; transform: translateX(-50%);
+  display: grid; gap: 4px; width: max-content; max-width: calc(100% - 32px); box-sizing: border-box;
+  padding: 9px 14px; background: rgba(12,12,17,.92); text-align: center;
+}
+.film .film-landing-telemetry b { font: 800 14px var(--display); font-variant-numeric: tabular-nums; }
+.film .film-landing-telemetry span { color: #aaa; font-size: 10px; }
+
+.film .fs-ground-loading { position: absolute; inset: 0; z-index: 1; background: #000; }
+.film .fs-ground-loading img { width: 100%; height: 100%; object-fit: cover; opacity: .7; }
+.film .fs-ground-loading p { position: absolute; top: 40%; left: 16px; right: 16px; text-align: center; color: #fff; }
+.film .film-drive-status { position: absolute; z-index: 5; top: 13vh; left: 24px; display: grid; gap: 7px; max-width: 320px; padding: 12px 16px; background: rgba(0,0,0,.86); }
+.film .film-drive-status b { font: 800 18px var(--display); }
+.film .film-drive-status span { font-size: 14px; }
+.film .film-drive-status small { color: #aaa; font-size: 11px; }
+.film .fv-verdict.fs-verdict { display: flex; align-items: center; justify-content: center; padding: 10vh 6vw 13vh; overflow: auto; }
+.film .fv-verdict .fs-bg { opacity: .16; }
+.film .fv-summary { position: relative; z-index: 1; width: min(1040px, 100%); }
+.film .fv-summary h1 { margin: 14px 0 22px; font-size: clamp(64px, 8vw, 112px); }
+.film .fv-site { margin: 0; font: 700 clamp(22px, 3vw, 38px)/1.15 var(--display); }
+.film .fv-date { margin: 10px 0 30px; color: #ccc; font-size: 18px; }
+.film .fv-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px 32px; margin: 0; }
+.film .fv-metrics > div { border-top: 1px solid #666; padding-top: 12px; }
+.film .fv-metrics dt { font-size: 15px; color: #bbb; }
+.film .fv-metrics dd { margin: 10px 0 0; font: 800 44px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.film .fv-metrics dd small { font-size: 22px; }
+.film .fv-limit { margin: 28px 0 0; font-size: 12px; color: #999; }
+.film .fv-summary .fs-actions { margin-top: 24px; }
+.film .fx-flight-note { color: #aaa; font-size: 10px; line-height: 1.4; margin: 8px 0 0; }
 .film .fs-note { max-width: min(440px, 40vw); text-align: right; }
 .film .film-sub {
   box-sizing: border-box;
@@ -24,10 +69,33 @@ html.mission-film-open, html.mission-film-open body {
 @media (max-width: 600px) {
   .film .film-sub { font-size: 14px; line-height: 1.4; padding: 10px 12px; }
   .film .fs-note { top: 74px; right: 16px; max-width: 200px; font-size: 9px; }
-  .film .fx-hud-coast, .film .fx-hud-descent { top: 100px; left: 16px; right: auto; width: 185px; }
+  .film .fx-hud-coast, .film .fx-hud-descent { top: 100px; left: 16px; right: auto; width: 215px; }
+  .film .fx-hud li span { display: grid; gap: 2px; }
+  .film .fx-hud li em { white-space: normal; overflow: visible; }
+  /* The site already presents these computed values in its six-card board. */
+  .film .fx-hud-site { display: none; }
+  .film .fs-site .fs-boxes.grid { left: 16px; width: calc(100% - 32px); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .film .fs-site-name { left: 16px; right: 16px; max-width: none; z-index: 2; }
+  .film .fs-site-name h2 { font-size: 28px; }
+  .film .fs-site-img { opacity: .55; }
   .film .s-launch .fs-boxes.left { top: 110px; left: 16px; max-width: 205px; }
   .film .film-ctl { gap: 6px; padding: 0 12px; }
   .film .film-ctl > button { width: 30px; height: 30px; flex: none; }
   .film .fs-title .fx-meta { gap: 6px 12px; }
   .film .fs-title .fx-meta b { font-size: 11px; }
+  .film .film-landing-telemetry { top: 78px; padding: 8px 10px; }
+  .film .film-landing-telemetry b { font-size: 11px; line-height: 1.5; }
+  .film .film-landing-telemetry span { font-size: 9px; }
+  .film .film-drive-status { top: 90px; left: 16px; right: 16px; max-width: 230px; padding: 10px 12px; }
+  .film .film-drive-status b { font-size: 16px; }
+  .film .film-drive-status span { font-size: 12px; }
+  .film .fv-verdict.fs-verdict { align-items: flex-start; padding: 100px 24px 90px; }
+  .film .fv-summary h1 { font-size: clamp(40px, 15vw, 62px); line-height: 1; margin: 16px 0 24px; overflow-wrap: anywhere; }
+  .film .fv-site { font-size: 25px; }
+  .film .fv-summary { padding-left: 16px; }
+  .film .fv-date { font-size: 16px; margin-bottom: 26px; }
+  .film .fv-metrics { grid-template-columns: 1fr 1fr; gap: 24px 22px; }
+  .film .fv-metrics dt { font-size: 12px; }
+  .film .fv-metrics dd { font-size: 32px; }
+  .film .fv-metrics dd small { font-size: 18px; }
 }

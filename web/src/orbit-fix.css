@@ -1,0 +1,2 @@
+.orbit-scale-note { position: absolute; z-index: 3; top: 60px; left: 16px; right: 16px; margin: 0; width: fit-content; max-width: calc(100% - 32px); padding: 7px 10px; box-sizing: border-box; background: rgba(0,0,0,.88); color: #bbb; font-size: 11px; pointer-events: none; }
+@media (max-width: 600px) { .orbit-scale-note { top: 96px; font-size: 10px; line-height: 1.5; } }

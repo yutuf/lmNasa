@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coastReadout, dayIndex, descentReadout, ellipseDots, fmtClock, fmtKm, fmtLat, fmtLon, fmtVel, ODDS_FALL, oddsDotY, oddsLayout, oddsSettled, PROFILE, revealCount, rise, shareCounts, siteReadout, windowModel, windowPlan, windowShownGo } from './filmProfile'
+import { coastReadout, dayIndex, descentReadout, ellipseDots, FILM_DUR, filmRuntime, filmScenes, fmtClock, fmtKm, fmtLat, fmtLon, fmtVel, ODDS_FALL, oddsDotY, oddsLayout, oddsSettled, PROFILE, revealCount, rise, shareCounts, siteReadout, windowModel, windowPlan, windowShownGo } from './filmProfile'
 
 describe('film profile', () => {
   it('starts the coast where the launch card leaves it and hands the clock to the burn', () => {
@@ -188,5 +188,27 @@ describe('odds and ellipse schematics', () => {
     expect(ellipseDots(4, -2).every((d) => !d.pass)).toBe(true)
     expect(ellipseDots(0, 3)).toEqual([])
     expect(ellipseDots(4.8, 2)).toHaveLength(4)
+  })
+})
+
+describe('judge film cut', () => {
+  const full = { landing: true, rover: true, ellipse: true, odds: true }
+  it('plays the short flight and leaves the charts off', () => {
+    const cut = filmScenes(false, full)
+    expect(cut).toEqual(['title', 'launch', 'coast', 'descent', 'landing', 'rover', 'verdict'])
+    expect(filmRuntime(cut)).toBe(43)
+    expect(cut).not.toContain('window')
+    expect(cut).not.toContain('site')
+    expect(cut).not.toContain('ellipse')
+    expect(cut).not.toContain('odds')
+  })
+  it('keeps a whole-Moon cut without a surface scene', () => {
+    const cut = filmScenes(false, { landing: false, rover: false, ellipse: true, odds: true })
+    expect(cut).toEqual(['title', 'launch', 'coast', 'descent', 'verdict'])
+    expect(filmRuntime(cut)).toBe(FILM_DUR.title + FILM_DUR.launch + FILM_DUR.coast + FILM_DUR.descent + FILM_DUR.verdict)
+  })
+  it('puts the diagnostic inserts back only in technical mode', () => {
+    expect(filmScenes(true, full)).toEqual(['title', 'launch', 'window', 'coast', 'descent', 'landing', 'site', 'ellipse', 'rover', 'odds', 'verdict'])
+    expect(filmScenes(true, { landing: true, rover: false, ellipse: false, odds: false })).toEqual(['title', 'launch', 'window', 'coast', 'descent', 'landing', 'site', 'verdict'])
   })
 })

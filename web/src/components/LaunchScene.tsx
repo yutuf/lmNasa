@@ -25,9 +25,9 @@ function Earth() {
 function Flight({ t }: { t: number }) {
   const playback = useMissionPlayback()
   const craft = useRef<THREE.Group>(null), flame = useRef<THREE.Mesh>(null)
-  const { camera } = useThree()
+  const { camera, size } = useThree()
   const tmp = useMemo(() => ({ p: new THREE.Vector3(), ahead: new THREE.Vector3(), axis: new THREE.Vector3(), eye: new THREE.Vector3(),
-    look: new THREE.Vector3(), radial: new THREE.Vector3(), started: false }), [])
+    look: new THREE.Vector3(), target: new THREE.Vector3(), radial: new THREE.Vector3(), started: false }), [])
   const trail = useMemo(() => {
     const pts = Array.from({ length: 501 }, (_, k) => launchPosition(k / 500, new THREE.Vector3()).applyMatrix4(frame))
     return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#b7c8d6', transparent: true, opacity: .55 }))
@@ -36,10 +36,16 @@ function Flight({ t }: { t: number }) {
   useFrame((state, dt) => {
     if (!craft.current) return
     const u = playback ? sceneProgress(playback.current) : t
-    const { p, ahead, axis, eye, look, radial } = tmp
+    const { p, ahead, axis, eye, look, target, radial } = tmp
     launchPosition(u, p).applyMatrix4(frame)
     launchPosition(Math.min(1, u + .0001), ahead).applyMatrix4(frame)
     axis.subVectors(ahead, p).normalize()
+    if (u < .18) {
+      radial.copy(p).normalize()
+      axis.addScaledVector(radial, -axis.dot(radial)).normalize()
+      const pitch = ease(u / .18) * Math.PI / 2
+      axis.multiplyScalar(Math.sin(pitch)).addScaledVector(radial, Math.cos(pitch)).normalize()
+    }
     if (u >= 1) axis.copy(east)
     craft.current.position.copy(p)
     craft.current.quaternion.setFromUnitVectors(UP, axis)
@@ -49,9 +55,13 @@ function Flight({ t }: { t: number }) {
       flame.current.scale.y = .96 + .04 * Math.sin(state.clock.elapsedTime * 38)
     }
     const wide = ease((u - .04) / .22)
-    radial.copy(pad).multiplyScalar(.35).addScaledVector(normal, .23)
-    eye.copy(p).add(radial).lerp(radial.copy(normal).multiplyScalar(u < .72 ? 3.7 : 4.5).addScaledVector(pad, 1.5), wide)
-    look.copy(p).lerp(radial.copy(p).multiplyScalar(u < .72 ? 0 : .45), wide)
+    target.copy(p).multiplyScalar(u < .72 ? 0 : .45)
+    const radius = u < .72 ? 1.25 : Math.max(1.25, (p.length() + 1) * .5)
+    const distance = radius / (Math.tan(20 * RAD) * Math.min(1, size.width / size.height)) * 1.1
+    radial.copy(normal).multiplyScalar(distance).addScaledVector(pad, .5).add(target)
+    eye.copy(p).addScaledVector(pad, .35).addScaledVector(normal, .23).lerp(radial, wide)
+    look.copy(p).lerp(target, wide)
+    craft.current.scale.setScalar(1 + wide * 2)
     if (!tmp.started) { camera.position.copy(eye); tmp.started = true }
     camera.position.lerp(eye, 1 - Math.exp(-dt * 6))
     camera.up.copy(pad).lerp(UP, wide).normalize()
@@ -72,8 +82,9 @@ function Flight({ t }: { t: number }) {
 }
 
 export default function LaunchScene({ t, launch }: { t: number; launch: Date }) {
+  const playback = useMissionPlayback()
   const sun = useMemo(() => earthSunAt(launch.getTime(), new THREE.Vector3()).multiplyScalar(20), [launch])
-  return <Canvas camera={{ position: pad.clone().multiplyScalar(1.4).addScaledVector(normal, .25), fov: 40, near: .002, far: 100 }} dpr={[1, 1.5]}
+  return <Canvas camera={{ position: pad.clone().multiplyScalar(1.4).addScaledVector(normal, .25), fov: 40, near: .002, far: 100 }} dpr={[1, 1.5]} frameloop={playback?.current.paused ? 'demand' : 'always'}
     onCreated={({ gl }) => { gl.debug.checkShaderErrors = false }}>
     <color attach="background" args={['#000']} />
     <ambientLight intensity={.035} />

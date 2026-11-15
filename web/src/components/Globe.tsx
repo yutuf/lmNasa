@@ -7,6 +7,8 @@ import { surfacePoint, toThree } from '../geometry'
 import { NasaModel } from './Models'
 import type { Approach } from '../flight'
 import Flight from './RouteFlight'
+import { useMissionPlayback } from '../missionPlayback'
+import '../orbit-fix.css'
 
 export interface PoleCapInfo { albedo: string; normal: string; r_max_m: number; edge_lat: number }
 // `under`: a second layer drawn beneath this one (the whole-Moon map under the south-pole cap)
@@ -106,11 +108,17 @@ function CapMesh({ overlay, r }: { overlay: Overlay; r: number }) {
   )
 }
 
-function CameraFlight({ target, wide, whole = false }: { target: THREE.Vector3 | null; wide: { earth: THREE.Vector3; normal: THREE.Vector3 } | null; whole?: boolean }) {
+function CameraFlight({ target, wide, whole = false, orbitRadius = null }: { target: THREE.Vector3 | null; wide: { earth: THREE.Vector3; normal: THREE.Vector3 } | null; whole?: boolean; orbitRadius?: number | null }) {
   const { camera } = useThree()
   const goal = useRef<{ pos: THREE.Vector3; look: THREE.Vector3 } | null>(null)
   const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3; update: () => void } | null
+  const aspect = useThree(s => s.size.width / s.size.height)
   useEffect(() => {
+    if (orbitRadius && !wide) {
+      const distance = orbitRadius * 3.6 / Math.min(1, aspect)
+      goal.current = { pos: new THREE.Vector3(.35, -.25, 1).normalize().multiplyScalar(distance), look: new THREE.Vector3() }
+      return
+    }
     if (wide) {
       // the whole Earth-Moon route: look at the middle of it from the side
       // look down onto the orbit plane (so the polar orbit is a ring, not a line), a little tilted, framing Earth too
@@ -128,7 +136,7 @@ function CameraFlight({ target, wide, whole = false }: { target: THREE.Vector3 |
     }
     const side = new THREE.Vector3(0, 0, 1).cross(up).normalize()
     goal.current = { pos: up.clone().multiplyScalar(1.3).add(side.multiplyScalar(0.22)), look: up.clone().multiplyScalar(0.99) }
-  }, [target, wide, controls, whole])
+  }, [target, wide, controls, whole, orbitRadius, aspect])
   useFrame((_, dt) => {
     if (!goal.current) return
     const a = 1 - Math.exp(-dt * 6)
@@ -226,6 +234,7 @@ export type FlightView = 'overview' | 'chase' | 'pilot' | 'site'
  *  time-lapse (one revolution in about 12 s). Periapsis over the north, apoapsis over the south, as in the Workshop. */
 function OrbitPath({ orbit }: { orbit: { periKm: number; apoKm: number; incDeg: number } }) {
   const R = 1737.4
+  const markerRadius = Math.max(.035, (1 + Math.max(orbit.periKm, orbit.apoKm) / R) * .012)
   const { line, at } = useMemo(() => {
     const rp = (R + Math.min(orbit.periKm, orbit.apoKm)) / R, ra = (R + Math.max(orbit.periKm, orbit.apoKm)) / R
     const a = (rp + ra) / 2, e = (ra - rp) / (ra + rp), inc = (orbit.incDeg * Math.PI) / 180, w = Math.PI / 2
@@ -250,29 +259,34 @@ function OrbitPath({ orbit }: { orbit: { periKm: number; apoKm: number; incDeg: 
   return (
     <>
       <primitive object={line} />
-      <mesh ref={sat}><sphereGeometry args={[0.035, 16, 12]} /><meshBasicMaterial color="#ffd27a" toneMapped={false} /></mesh>
+      <mesh ref={sat}><sphereGeometry args={[markerRadius, 16, 12]} /><meshBasicMaterial color="#ffd27a" toneMapped={false} /></mesh>
     </>
   )
 }
 
 export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthDir, earthLabel, onPick, flight, targets, onTarget, labels = true, paused = false, orbit = null }: Props & { paused?: boolean }) {
+  const playback = useMissionPlayback()
   const closeUp = !!flight && flight.view !== 'overview'
+  const orbitRadius = orbit ? 1 + Math.max(orbit.periKm, orbit.apoKm) / 1737.4 : null
   const sun = useMemo(() => toThree(sunDir).normalize(), [sunDir])
   const earth = useMemo(() => toThree(earthDir).normalize(), [earthDir])
   const globalLayer = !!(overlay?.under?.sphere || overlay?.sphere)
+  const globalViewLon = Math.atan2(sunDir[1], sunDir[0]) * 180 / Math.PI + 45
   const target = useMemo(() => globalLayer
-    ? surfacePoint(10, Math.atan2(sunDir[1], sunDir[0]) * 180 / Math.PI + 45, 1)
+    ? surfacePoint(10, globalViewLon, 1)
     : selected ? surfacePoint(selected.lat, selected.lon, 1) : surfacePoint(-89.9, 0, 1),
-    [selected, globalLayer, sunDir[0], sunDir[1]])
+    [selected, globalLayer, globalViewLon])
   const flat = flight?.lat, flon = flight?.lon
   const wide = useMemo(() => {
     if (flat === undefined || flon === undefined) return null
-    const n = new THREE.Vector3().crossVectors(surfacePoint(-90, 0, 1), surfacePoint(flat, flon, 1)).normalize()
+    const n = new THREE.Vector3().crossVectors(surfacePoint(-90, 0, 1), surfacePoint(flat, flon, 1))
+    if (n.lengthSq() < 1e-8) n.set(1, 0, 0)
+    n.normalize()
     return { earth: earth.clone().multiplyScalar(5.2), normal: n }
   }, [flat, flon, earth.x, earth.y, earth.z])  // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <Canvas style={{ touchAction: 'pan-y', background: '#000' }} camera={{ position: [0.6, -3.6, 2.2], fov: 36, near: 0.01, far: 200 }} dpr={[1, 1.5]} frameloop={paused ? 'never' : 'always'} gl={{ alpha: true }} onCreated={({ gl, scene }) => { gl.debug.checkShaderErrors = false; scene.background = null; gl.setClearColor(0x000000, 0) }}>
-      <SunGlow dir={sun} />
+    <><Canvas style={{ touchAction: 'pan-y', background: '#000' }} camera={{ position: [0.6, -3.6, 2.2], fov: 36, near: 0.01, far: Math.max(200, (orbitRadius ?? 1) * 20) }} dpr={[1, 1.5]} frameloop={paused ? 'never' : playback?.current.paused ? 'demand' : 'always'} gl={{ alpha: true }} onCreated={({ gl, scene }) => { gl.debug.checkShaderErrors = false; scene.background = null; gl.setClearColor(0x000000, 0) }}>
+      {(!orbit || flight) && <SunGlow dir={sun} />}
       <ambientLight intensity={0.05} />
       
       <directionalLight position={sun.clone().multiplyScalar(20)} intensity={3.2} color="#fff6e8" />
@@ -281,11 +295,11 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
       {poleCap && <PoleCap cap={poleCap} />}
       {overlay?.under && !closeUp && <OverlayCap overlay={overlay.under} />}
       {overlay && !closeUp && <OverlayCap overlay={overlay} r={overlay.under ? 1.0019 : 1.0014} />}
-      <group position={earth.clone().multiplyScalar(5.2)}>
+      {(!orbit || flight) && <group position={earth.clone().multiplyScalar(5.2)}>
         <Suspense fallback={null}><EarthBall /></Suspense>
         {labels && <Html center zIndexRange={[40, 0]} className="tag tag-earth">{earthLabel}</Html>}
-      </group>
-      {!closeUp && targets?.map((t) => (
+      </group>}
+      {!closeUp && !orbit && targets?.map((t) => (
         <group key={t.id} position={surfacePoint(t.lat, t.lon, 1.004)}>
           <mesh onClick={(e) => { e.stopPropagation(); onTarget?.(t.id) }}>
             <octahedronGeometry args={[t.selected ? 0.016 : 0.01, 0]} />
@@ -298,7 +312,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
           )}
         </group>
       ))}
-      {!closeUp && pins.map((p, k) => (
+      {!closeUp && !orbit && pins.map((p, k) => (
         <group key={k} position={surfacePoint(p.lat, p.lon, 1.003)}>
           <mesh onClick={(e) => { e.stopPropagation(); onPick?.(k) }}>
             <sphereGeometry args={[0.009, 12, 12]} />
@@ -312,7 +326,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
           )}
         </group>
       ))}
-      {selected && !closeUp && (
+      {selected && !closeUp && !orbit && (
         <group position={surfacePoint(selected.lat, selected.lon, 1.004)}>
           <mesh>
             <sphereGeometry args={[0.014, 16, 16]} />
@@ -321,9 +335,11 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
           <Html center zIndexRange={[40, 0]} className="tag tag-spot">{selected.label}</Html>
         </group>
       )}
-      {flight ? <Flight {...flight} earthDir={earth} showLabel={labels} /> : <Orbiter />}
-      <OrbitControls makeDefault enabled={!flight || flight.view === 'overview'} enablePan={false} enableZoom={false} minDistance={1.06} maxDistance={flight ? 16 : 8} rotateSpeed={0.5} />
-      {(!flight || flight.view === 'overview') && <CameraFlight target={target} wide={wide} whole={globalLayer} />}
-    </Canvas>
+      {flight ? <Flight {...flight} earthDir={earth} showLabel={labels} lang={earthLabel === 'Dünya' ? 'tr' : 'en'} /> : !orbit && <Orbiter />}
+      <OrbitControls makeDefault enabled={!flight || flight.view === 'overview'} enablePan={false} enableZoom={false} minDistance={1.06} maxDistance={orbitRadius ? orbitRadius * 10 : flight ? 16 : 8} rotateSpeed={0.5} />
+      {(!flight || flight.view === 'overview') && <CameraFlight target={target} wide={wide} whole={globalLayer} orbitRadius={orbitRadius} />}
+    </Canvas>{orbit && !flight && <p className="orbit-scale-note">{earthLabel === 'Dünya'
+      ? 'İki cisim şeması · irtifa ölçekli · araç büyütülmüş · tur başına 12 sn'
+      : 'Two-body schematic · altitude to scale · vehicle enlarged · 12 s/revolution'}</p>}</>
   )
 }

@@ -1,4 +1,5 @@
 // Local visual/numerical test surface, deliberately absent from the application's normal production entry.
+/* eslint-disable react-refresh/only-export-components -- Standalone QA entry renders its own root. */
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'

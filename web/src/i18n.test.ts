@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { catalogueSources, fmtHoursShort, fmtIsoDate, fmtPercent, landingPeriod, localizeReportHtml, verdictLabel } from './i18n'
+import { calendarLegend, catalogueSources, fmtHoursShort, fmtIsoDate, fmtLonEast, fmtPercent, fmtWhText, landingPeriod, localizeReportHtml, verdictLabel } from './i18n'
 import { SCIENCE_SITES, siteLabel } from './scienceSites'
 
 describe('Turkish number and date formats', () => {
@@ -18,6 +18,16 @@ describe('Turkish number and date formats', () => {
     expect(fmtIsoDate('2027-09-10', 'en')).toBe('10 Sept 2027')
     expect(landingPeriod('tr')).toBe('2019 – 2025 ortası')
     expect(landingPeriod('en')).toBe('2019 – mid-2025')
+    expect(fmtLonEast(18.52, 'tr', 2)).toBe('18.52°D')
+    expect(fmtLonEast(18.52, 'en', 2)).toBe('18.52°E')
+    expect(fmtLonEast(207.1, 'tr', 1)).toBe('207.1°D')
+    expect(fmtLonEast(-10, 'en', 1)).toBe('350.0°E')
+    expect(fmtWhText('12000 Wh', 'tr')).toBe('12.000 Wh')
+    expect(fmtWhText('a 12000 Wh battery', 'en')).toBe('a 12,000 Wh battery')
+    expect(fmtWhText('0 Wh', 'tr')).toBe('0 Wh')
+    expect(calendarLegend(12, 'tr')).toContain('Yeşil: UYGUN')
+    expect(calendarLegend(12, 'tr')).not.toContain('GO')
+    expect(calendarLegend(12, 'en')).toContain('Green: GO.')
   })
   it('names the shipped catalogue JPL DE421', () => {
     expect(catalogueSources(['JPL DE440 ephemeris via Skyfield'])).toEqual(['JPL DE421 ephemeris via Skyfield'])

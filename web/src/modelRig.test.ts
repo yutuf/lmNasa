@@ -12,6 +12,8 @@ describe('real-model wheel rig', () => {
     expect(wheel.spin.rotation.z).toBeCloseTo(1)
     rollWheels([wheel], { travel: 0, heading: 1, wheelSteer: .2 })
     expect(wheel.spin.rotation.z).toBeCloseTo(-2.5)
+    rollWheels([wheel], { travel: 0, heading: -Math.PI, wheelYaw: Math.PI, wheelSteer: 0 })
+    expect(wheel.spin.rotation.z).toBeCloseTo(-Math.PI * .5 / .2)
   })
   it('removes disconnected decorative specks without changing the cached original mesh', () => {
     const geo = new THREE.BufferGeometry()

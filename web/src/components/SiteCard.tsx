@@ -6,7 +6,7 @@ import type { PointResult } from '../engine'
 import { fmtPercent, verdictLabel, type Lang } from '../i18n'
 import type { SiteRow } from '../report'
 import { renderSite } from '../siteRender'
-import { splitPlaceTitle } from '../places'
+import { splitName } from '../teams'
 import type { Probability } from '../probability'
 
 export interface CardSite {
@@ -27,14 +27,13 @@ export interface CardSite {
   ellipse?: EllipseCheck | null   // worst case across the landing ellipse (south pole only)
 }
 
-/** Light words, then the place name in the large face, then any words that follow it. */
-export function PlaceTitle({ text, placeName, light, bold }: { text: string; placeName?: string; light: string; bold: string }) {
-  const p = splitPlaceTitle(text, placeName ?? '')
+/** The card and site-page title: light words, then the last word in the large face (as on the live site). */
+export function PlaceTitle({ text, light, bold }: { text: string; placeName?: string; light: string; bold: string }) {
+  const [l, b] = splitName(text)
   return (
     <>
-      {p.before && <span className={light}>{p.before}</span>}
-      <span className={bold}>{p.name}</span>
-      {p.after && <span className={light}>{p.after}</span>}
+      {l && <span className={light}>{l}</span>}
+      <span className={bold}>{b}</span>
     </>
   )
 }

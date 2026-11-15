@@ -2,7 +2,7 @@
 // ephemeris puts them for the chosen landing date. Terrain: 10 m LOLA site maps where available, else the 200 m polar
 // grid (curvature included). Lighting: the real Sun direction, nearby relief shadows from a shadow map, distant
 // ridges from a horizon ray-march per vertex. Power and radio use the same horizon method as the search engine.
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useTexture } from '@react-three/drei'
@@ -20,7 +20,10 @@ import { landerById, roverById } from '../vehicles'
 import { BatteryMedium, Car, Crosshair, Footprints, Flashlight, Earth, LogOut, Navigation, PlaneLanding, Radio, Snowflake, Sun, Thermometer, Usb, Zap } from 'lucide-react'
 import { connectSerial, disconnectSerial, sendSky, serialConnected, serialSupported, skyLine } from '../serial'
 import { clearsLander, ease, finalApproach, UP } from '../motion3d'
-import { useMissionPlayback } from '../missionPlayback'
+import { filmDescentSeconds, sceneProgress, useMissionPlayback } from '../missionPlayback'
+import { chooseApproach } from '../flight'
+import type { MeshSpec, SurfaceMesh } from '../surfaceMesh'
+import { filmSurfaceRoute, filmWarp } from '../filmSurfaceRoute'
 
 export type DriveMode = 'lander' | 'rover' | 'walk' | 'landing'
 export interface DriveStart { x: number; y: number; hour: number; missionH: number; label: string; startMs: number; lander?: string; rover?: string; rough?: boolean }
@@ -143,7 +146,7 @@ interface Sim {
   mode: DriveMode
   x: number; y: number; heading: number      // stereographic metres; heading = plane angle (rad)
   speed: number; throttle: number; steer: number
-  travel: number; wheelSteer: number
+  travel: number; wheelSteer: number; wheelYaw: number
   hour: number; warp: number; playing: boolean
   battery: number; solarW: number; useW: number
   driven: number; startHour: number; dead: boolean; steep: boolean; lights: boolean
@@ -169,9 +172,10 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
   const PARK = useMemo(() => parking(start), [start])
   Object.assign(ROVER, { maxSpeed: rv.maxSpeed, maxSlope: rv.maxSlope, batteryWh: rv.batteryWh, panelW: rv.panelW, driveW: rv.driveW, idleW: rv.idleW })
   const [world, setWorld] = useState<World | null>(null)
+  const [surfaceReady, setSurfaceReady] = useState(false)
   const [hud, setHud] = useState(0)
   const sim = useRef<Sim>({
-    mode: initialMode, x: start.x + PARK[0], y: start.y + PARK[1], heading: 0, speed: 0, throttle: 0, steer: 0, travel: 0, wheelSteer: 0,
+    mode: initialMode, x: start.x + PARK[0], y: start.y + PARK[1], heading: 0, speed: 0, throttle: 0, steer: 0, travel: 0, wheelSteer: 0, wheelYaw: 0,
     hour: start.hour, warp: initialMode === 'rover' ? 60 : initialMode === 'walk' ? 1 : 600, playing: initialMode === 'rover' || initialMode === 'walk', battery: ROVER.batteryWh,
     solarW: 0, useW: 0, driven: 0, startHour: start.hour, dead: false, steep: false, lights: true,
     cam: 'chase', pad: false, padBtn: [], yaw: 0, pitch: initialMode === 'lander' ? 0.02 : initialMode === 'walk' ? -0.05 : -0.12,
@@ -194,7 +198,9 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
       const sky = conditions(eph, horizonProfile(ground.height, start.x, start.y), start.x, start.y, start.hour)
       const [dx, dy] = planeDir(sky.lon, sky.sun.az)
       s.heading = initialMode === 'rover' ? Math.atan2(-PARK[1], -PARK[0]) : Math.atan2(dy, dx)
-      s.sunHeading = Math.atan2(dy, dx)
+      const approach = chooseApproach(sky.sun.az)
+      const [ax, ay] = planeDir(sky.lon, approach.headingDeg + 180)
+      s.sunHeading = Math.atan2(ay, ax)
       if (initialMode === 'walk') placeWalker(s, start)
       const tg = sci ? findIceTarget(sci, start.x, start.y) : null
       s.target = tg && { x: tg.x, y: tg.y, ice: tg.ice }
@@ -261,8 +267,17 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
   }
   const planRef = useRef(plan)
   planRef.current = plan
-  // film mode: once the terrain is in, plan the route to the ice and drive it
-  useEffect(() => { if (cinematic && world && initialMode === 'rover') { sim.current.warp = 30; sim.current.lights = true; planRef.current() } }, [cinematic, world, initialMode])
+  // Prepare a short illustrative departure before the cut, independent of the long science traverse.
+  const departure = useMemo(() => cinematic && world
+    ? filmSurfaceRoute(world.ground.height, [start.x + PARK[0], start.y + PARK[1]], [start.x, start.y], Math.max(3, ld.heightM * .65) + 1.5, rv.maxSlope - 2)
+    : null, [cinematic, world, start.x, start.y, PARK, ld.heightM, rv.maxSlope])
+  const filmScene = playback?.current.scene
+  const filmVisit = playback?.current.visit
+  useEffect(() => {
+    if (!cinematic || !surfaceReady || !world) return
+    playback?.current.onSurfaceReady?.('landing')
+    playback?.current.onSurfaceReady?.('rover')
+  }, [cinematic, surfaceReady, world, playback])
   // film: the same world (terrain, shaders, models already loaded) switches from the landing to the rover drive
   useEffect(() => {
     if (cinematic && world && filmMode === 'landing') {
@@ -271,15 +286,18 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
       if (hud) hud.style.display = ''
       return
     }
-    if (!cinematic || !world || filmMode !== 'rover') return
+    if (!cinematic || !world || !(filmMode === 'rover' || !filmMode && initialMode === 'rover')) return
     const s = sim.current
-    if (s.mode === 'rover') return
-    s.mode = 'rover'; s.x = start.x + PARK[0]; s.y = start.y + PARK[1]; s.pitch = -0.12; s.yaw = 0
+    Object.assign(s, { mode: 'rover', x: start.x + PARK[0], y: start.y + PARK[1], pitch: -.12, yaw: 0,
+      speed: 0, travel: 0, driven: 0, wheelYaw: 0, wheelSteer: 0, throttle: 0, steer: 0,
+      battery: rv.batteryWh, dead: false, steep: false, hour: start.hour, startHour: start.hour,
+      route: departure, routeI: 0, routeS: 0, autopilot: !!departure, playing: !!departure, warp: filmWarp(rv.maxSpeed) })
+    s.routeVer++
+    if (departure && departure.pts.length > 1) s.heading = Math.atan2(departure.pts[1][1] - s.y, departure.pts[1][0] - s.x)
     const hud = document.getElementById('landing-hud')
     if (hud) hud.style.display = 'none'                      // the touchdown banner belongs to the landing only
-    s.warp = 30; s.lights = true; s.playing = true; s.profileAt = { x: NaN, y: NaN }
-    planRef.current()
-  }, [cinematic, world, filmMode, start, PARK])
+    s.lights = true; s.profileAt = { x: NaN, y: NaN }
+  }, [cinematic, world, filmMode, initialMode, start, PARK, departure, rv.batteryWh, rv.maxSpeed, filmScene, filmVisit])
 
   // keyboard
   useEffect(() => {
@@ -319,7 +337,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
   const c = s.cond
   const next = useMemo(() => (c && s.profile ? nextChanges(eph, s.profile, s.x, s.y, s.hour, 720) : null),
     [Math.floor(s.hour * 4), s.profileAt.x, s.profileAt.y])  // eslint-disable-line react-hooks/exhaustive-deps
-  const hrs = (h: number | null) => (h === null ? '> 30 d' : h < 48 ? `${h} h` : `${(h / 24).toFixed(1)} d`)
+  const hrs = (h: number | null) => h === null ? `> 30 ${lang === 'tr' ? 'g' : 'd'}` : h < 48 ? `${h} ${lang === 'tr' ? 'sa' : 'h'}` : `${(h / 24).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB', { maximumFractionDigits: 1 })} ${lang === 'tr' ? 'g' : 'd'}`
   const date = new Date(start.startMs + (s.hour - start.hour) * 3600e3)
   const dsnUp = dsn[Math.floor(s.hour)] ?? false
   const link = !!c?.earthUp && dsnUp
@@ -345,23 +363,35 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
       <div id="landing-hud" className="landing-hud" />
       {!cinematic && s.mode === 'landing' && <button className="big ghost descent-exit" onClick={onExit}><LogOut size={14} /> {t('exit')}</button>}
       {!cinematic && s.mode === 'landing' && s.descT >= LAND.secs && <button className="big ghost descent-exit landing-enter" onClick={() => { s.mode = 'lander'; s.pitch = .02; s.yaw = 0; s.playing = false }}>{lang === 'tr' ? 'İniş aracına geç' : 'Enter the lander'}</button>}
-      {!world && <div className="drive-loading">{t('loading')}</div>}
+      {(!world || !surfaceReady) && <div className="drive-loading">{t('loading')}</div>}
       {world && (
         <Canvas shadows gl={{ logarithmicDepthBuffer: true, antialias: true }} dpr={cinematic ? [1, 1.25] : [1, 1.6]}
-                frameloop={cinematic && playback && (playback.current.paused || !['landing', 'rover'].includes(playback.current.scene)) ? 'demand' : 'always'}
+                frameloop={!surfaceReady || cinematic && playback && (playback.current.paused || !['landing', 'rover'].includes(playback.current.scene)) ? 'never' : 'always'}
                 camera={{ fov: 62, near: 0.3, far: 600000, position: [0, 3, 0] }}
-                onCreated={({ gl }) => { gl.debug.checkShaderErrors = false; gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 1.15 }}>
-          <Suspense fallback={null}><Scene world={world} sim={sim} eph={eph} start={start} lang={lang} /></Suspense>
+                onCreated={({ gl }) => { gl.debug.checkShaderErrors = false; gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = cinematic ? 1.8 : 1.15 }}>
+          <Suspense fallback={null}><Scene world={world} sim={sim} eph={eph} start={start} lang={lang} onReady={setSurfaceReady} /></Suspense>
         </Canvas>
       )}
       <LookDrag sim={sim} />
-      {s.mode === 'landing' && <p className="drive-scene-note">{lang === 'tr' ? 'Nominal son yaklaşma · 180 sn / 26 sn · arazi çözünürlüğüyle sınırlı' : 'Nominal final approach · 180 s / 26 s · limited by terrain resolution'}</p>}
-      {coarse && (s.mode === 'rover' || s.mode === 'walk') && !s.dead && <TouchStick sim={sim} />}
+      {cinematic && s.mode === 'rover' && <div className="film-drive-status" data-moving={s.speed > .001 && s.playing && !s.dead ? '1' : '0'} data-distance={s.driven.toFixed(3)}>
+        <b>{rv.name}</b>
+        <span>{!surfaceReady ? (lang === 'tr' ? 'Arazi hazırlanıyor…' : 'Preparing terrain…')
+          : s.dead ? (lang === 'tr' ? 'Durdu: batarya tükendi.' : 'Stopped: battery depleted.')
+          : !s.route ? (lang === 'tr' ? 'Durdu: bu arazide güvenli rota bulunamadı.' : 'Stopped: no safe route on this terrain.')
+          : s.steep ? (lang === 'tr' ? 'Durdu: arazi gezgin için çok dik.' : 'Stopped: terrain exceeds the rover’s slope limit.')
+          : !s.autopilot ? (lang === 'tr' ? 'Kısa sürüş tamamlandı.' : 'Short drive complete.')
+          : (lang === 'tr' ? `Sürüş · ${Math.round(s.driven)} m yol alındı` : `Driving · ${Math.round(s.driven)} m travelled`)}</span>
+        <small>{Math.round(s.warp)}× · {lang === 'tr' ? 'temsili yüzey sürüşü' : 'illustrative surface drive'}{(c?.sunFrac ?? 1) < .5 ? (lang === 'tr' ? ' · gölgede, batarya ile' : ' · in shadow, on battery') : ''}</small>
+      </div>}
+      {s.mode === 'landing' && <p className="drive-scene-note">{cinematic
+        ? (lang === 'tr' ? 'Nominal son yaklaşma · 180 sn, bu sahneye sığdırıldı · arazi çözünürlüğüyle sınırlı' : 'Nominal final approach · 180 s, fit into this shot · limited by terrain resolution')
+        : (lang === 'tr' ? 'Nominal son yaklaşma · 180 sn / 26 sn · arazi çözünürlüğüyle sınırlı' : 'Nominal final approach · 180 s / 26 s · limited by terrain resolution')}</p>}
+      {coarse && (s.mode === 'rover' || s.mode === 'walk') && !s.dead && <TouchStick sim={sim} lang={lang} />}
 
       <div className="hud top-left">
         <div className="hud-title">{s.mode === 'lander' ? `${t('lander')} · ${ld.name}` : s.mode === 'walk' ? t('walk') : `${t('rover')} · ${rv.name}`}</div>
         <div className="hud-sub">{start.label}</div>
-        <div className="hud-sub">{lat.toFixed(3)}°, {(((lon % 360) + 360) % 360).toFixed(2)}°E · {src ? `${t('terrain10')} · ${src.name}` : t('terrain200')}</div>
+        <div className="hud-sub">{lat.toFixed(3)}°, {(((lon % 360) + 360) % 360).toFixed(2)}°{lang === 'tr' ? 'D' : 'E'} · {src ? `${t('terrain10')} · ${src.name}` : t('terrain200')}</div>
       </div>
 
       {s.mode === 'rover' && (
@@ -407,7 +437,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
           <button className={s.playing ? 'on' : ''} onClick={() => { s.playing = !s.playing }}>{s.playing ? '⏸' : '▶'}</button>
           {WARPS.map((w, k) => (
             <button key={w} className={s.warp === w ? 'on' : ''} onClick={() => { s.warp = w; s.playing = true }} title={`${k + 1}`}>
-              {w >= 3600 ? '1h/s' : w >= 60 ? `${w / 60}m/s` : `${w}×`}
+              {w >= 3600 ? (lang === 'tr' ? '1 sa/sn' : '1 h/s') : w >= 60 ? `${w / 60} ${lang === 'tr' ? 'dk/sn' : 'min/s'}` : `${w}×`}
             </button>
           ))}
         </div>
@@ -432,7 +462,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
           {next && <em> · {next.earthUp ? t('sets') : t('rises')} {hrs(next.earthH)}</em>}
         </div>
         <div className={`status ${link ? 'ok' : 'bad'}`}><Radio size={12} /> {t('link')}: {link ? t('dsnOk') : c?.earthUp ? t('noDsn') : '—'}</div>
-        {s.mode === 'rover' && <div className="hud-sub">{t('driven')} {(s.driven / 1000).toFixed(2)} km · {(s.speed * 100).toFixed(0)} cm/s</div>}
+        {s.mode === 'rover' && <div className="hud-sub">{t('driven')} {s.driven < 1000 ? `${Math.round(s.driven)} m` : `${(s.driven / 1000).toFixed(2)} km`} · {(s.speed * 100).toFixed(0)} {lang === 'tr' ? 'cm/sn' : 'cm/s'}</div>}
         {s.mode === 'walk' && <div className="hud-sub"><Footprints size={12} /> {t('walked')} {s.driven < 1000 ? `${Math.round(s.driven)} m` : `${(s.driven / 1000).toFixed(2)} km`} · <Flashlight size={12} /> {s.torch ? t('torchOn') : t('torchOff')}</div>}
       </div>
 
@@ -478,9 +508,10 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
 }
 
 /** On-screen joystick for touch screens: up/down drives, left/right steers. */
-function TouchStick({ sim }: { sim: React.MutableRefObject<Sim> }) {
+function TouchStick({ sim, lang }: { sim: React.MutableRefObject<Sim>; lang: Lang }) {
   const [knob, setKnob] = useState<[number, number]>([0, 0])
   const base = useRef<HTMLDivElement>(null)
+  const pointer = useRef<number | null>(null)
   const move = (e: React.PointerEvent) => {
     const r = base.current!.getBoundingClientRect()
     const dx = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (r.width / 2)))
@@ -489,12 +520,13 @@ function TouchStick({ sim }: { sim: React.MutableRefObject<Sim> }) {
     const s = sim.current
     s.throttle = Math.abs(dy) > 0.2 ? -dy : 0
     s.steer = Math.abs(dx) > 0.2 ? -dx : 0
-    if (s.throttle || s.steer) s.autopilot = false
+    if (s.throttle || s.steer) { s.autopilot = false; s.playing = true }
   }
-  const end = () => { setKnob([0, 0]); sim.current.throttle = 0; sim.current.steer = 0 }
+  const end = () => { pointer.current = null; setKnob([0, 0]); sim.current.throttle = 0; sim.current.steer = 0 }
   return (
-    <div className="stick" ref={base} onPointerDown={(e) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); move(e) }}
-         onPointerMove={(e) => e.buttons && move(e)} onPointerUp={end} onPointerCancel={end}>
+    <div className="stick" ref={base} role="group" aria-label={lang === 'tr' ? 'Hareket çubuğu: sürmek için sürükleyin' : 'Movement stick: drag to drive'}
+         onPointerDown={(e) => { pointer.current = e.pointerId; e.currentTarget.setPointerCapture(e.pointerId); move(e) }}
+         onPointerMove={(e) => pointer.current === e.pointerId && move(e)} onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end}>
       <i style={{ transform: `translate(${knob[0] * 34}px, ${knob[1] * 34}px)` }} />
     </div>
   )
@@ -526,7 +558,7 @@ function LookDrag({ sim }: { sim: React.MutableRefObject<Sim> }) {
 function Compass({ az, sunAz, earthAz, sunUp, earthUp, lang, target }: { az: number; sunAz: number; earthAz: number; sunUp: boolean; earthUp: boolean; lang: Lang; target: number | null }) {
   const span = 120
   const marks: [number, string, string][] = [[0, lang === 'tr' ? 'K' : 'N', 'cdir'], [90, lang === 'tr' ? 'D' : 'E', 'cdir'],
-    [180, 'S', 'cdir'], [270, lang === 'tr' ? 'B' : 'W', 'cdir'], [sunAz, '☀', sunUp ? 'sun' : 'sun off'], [earthAz, '🌍', earthUp ? 'earth' : 'earth off']]
+    [180, lang === 'tr' ? 'G' : 'S', 'cdir'], [270, lang === 'tr' ? 'B' : 'W', 'cdir'], [sunAz, '☀', sunUp ? 'sun' : 'sun off'], [earthAz, '🌍', earthUp ? 'earth' : 'earth off']]
   for (let a = 0; a < 360; a += 30) if (a % 90) marks.push([a, String(a), 'deg'])
   if (target !== null) marks.push([target, '◆', 'tgt'])
   return (
@@ -544,12 +576,24 @@ function Compass({ az, sunAz, earthAz, sunUp, earthUp, lang, target }: { az: num
 
 // ---------------------------------------------------------------- 3D scene
 
-function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.MutableRefObject<Sim>; eph: Ephem; start: DriveStart; lang: Lang }) {
+function preparedGeometry(data: SurfaceMesh) {
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.BufferAttribute(data.position, 3))
+  g.setAttribute('normal', new THREE.BufferAttribute(data.normal, 3))
+  g.setAttribute('uv', new THREE.BufferAttribute(data.uv, 2))
+  g.setAttribute('color', new THREE.BufferAttribute(data.color, 3))
+  g.setAttribute('sunlit', new THREE.BufferAttribute(data.sunlit, 1))
+  g.setIndex(new THREE.BufferAttribute(data.index, 1))
+  g.userData = data.grid
+  return g
+}
+
+function Scene({ world, sim, eph, start, lang, onReady }: { world: World; sim: React.MutableRefObject<Sim>; eph: Ephem; start: DriveStart; lang: Lang; onReady: (ready: boolean) => void }) {
   const playback = useMissionPlayback()
   const ld = landerById(start.lander)
   const PARK = useMemo(() => parking(start), [start])
   const rv = roverById(start.rover)
-  const { camera, scene } = useThree()
+  const { camera, scene, gl, invalidate, advance } = useThree()
   const h = world.ground.height
   const sun = useRef<THREE.DirectionalLight>(null)
   const earthshine = useRef<THREE.DirectionalLight>(null)
@@ -580,6 +624,11 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
   const nearMesh = useRef<THREE.Mesh>(null)
   const farMesh = useRef<THREE.Mesh>(null)
   const chunk = useRef({ cx: NaN, cy: NaN, ox: NaN, oy: NaN, litHour: NaN, litX: NaN, litY: NaN, sci: false, nearHalf: NaN })
+  const prepared = useRef(false)
+  const modelReady = useRef({ lander: false, rover: false, finish: null as (() => void) | null })
+  const landerReady = useCallback(() => { modelReady.current.lander = true; modelReady.current.finish?.() }, [])
+  const roverReady = useCallback(() => { modelReady.current.rover = true; modelReady.current.finish?.() }, [])
+  const roverTerrain = useRef<{ near: SurfaceMesh; far: SurfaceMesh } | null>(null)
   const ambient = useRef<THREE.AmbientLight>(null)
   const beacon = useRef<THREE.Group>(null)
   // regolith PBR texture from NASA's Artemis south-pole simulation kit (USGS Astrogeology, 84S project), 1024 px
@@ -591,6 +640,54 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
   }, [regColor, regNormal, earthMap])
   const glareRef = useRef<THREE.Sprite>(null)
   const landerYaw = useRef(sim.current.heading)
+  useEffect(() => {
+    let live = true, timer = 0
+    const readiness = modelReady.current
+    const worker = new Worker(new URL('../driveTerrain.worker.ts', import.meta.url), { type: 'module' })
+    const s = sim.current, landing = s.mode === 'landing', near = landing ? NEAR_LANDING : NEAR
+    const sky = bodies(eph, s.hour), hour = s.hour
+    const nearSpec: MeshSpec = { cx: Math.round(s.x / near.step) * near.step, cy: Math.round(s.y / near.step) * near.step,
+      ...near, origin: { ...s.origin }, sun: sky.sun, sunR: sky.sunR, sub: landing ? 4 : 8, reach: landing ? 30000 : 60000 }
+    const farSpec: MeshSpec = { cx: s.origin.x, cy: s.origin.y, ...FAR, origin: { ...s.origin },
+      hole: { cx: s.x, cy: s.y, half: near.half }, sun: sky.sun, sunR: sky.sunR, sub: 4, reach: 60000 }
+    const fallback = () => {
+      worker.terminate()
+      const finish = () => {
+        if (!live || !readiness.lander || !readiness.rover) return
+        readiness.finish = null; prepared.current = true; onReady(true); invalidate()
+      }
+      readiness.finish = finish; finish()
+    }
+    worker.onerror = (event) => { event.preventDefault(); clearTimeout(timer); fallback() }
+    worker.onmessage = (event: MessageEvent<{ near?: SurfaceMesh; far?: SurfaceMesh; roverNear?: SurfaceMesh; roverFar?: SurfaceMesh }>) => {
+      if (!live) return
+      const data = event.data
+      if (data.roverNear && data.roverFar) { roverTerrain.current = { near: data.roverNear, far: data.roverFar }; worker.terminate(); return }
+      if (!data.near || !data.far || !nearMesh.current || !farMesh.current) return
+      clearTimeout(timer)
+      nearMesh.current.geometry.dispose(); nearMesh.current.geometry = preparedGeometry(data.near)
+      farMesh.current.geometry.dispose(); farMesh.current.geometry = preparedGeometry(data.far)
+      Object.assign(chunk.current, { cx: s.x, cy: s.y, ox: s.origin.x, oy: s.origin.y, nearHalf: near.half,
+        litHour: hour, litX: s.x, litY: s.y, sci: false })
+      // Compile real attributes before the first visible frame. An unseen world gets one warm-up
+      // frame; the film clock and HUD must not redraw its terrain throughout the orbital shot.
+      const finish = () => {
+        if (!live || !readiness.lander || !readiness.rover) return
+        readiness.finish = null
+        void gl.compileAsync(scene, camera).then(() => {
+          if (!live) return
+          prepared.current = true
+          if (playback && !['landing', 'rover'].includes(playback.current.scene)) advance(performance.now() / 1000)
+          onReady(true); invalidate()
+        }).catch(fallback)
+      }
+      readiness.finish = finish; finish()
+      if (!landing) worker.terminate()
+    }
+    timer = window.setTimeout(fallback, 10000)
+    worker.postMessage({ dem: world.dem, patches: world.patches, near: nearSpec, far: farSpec })
+    return () => { live = false; clearTimeout(timer); readiness.finish = null; worker.terminate() }
+  }, [world.dem, world.patches, eph, sim, onReady, invalidate, gl, scene, camera, advance]) // eslint-disable-line react-hooks/exhaustive-deps
   const scratch = useMemo(() => ({
     vectors: Array.from({ length: 96 }, () => new THREE.Vector3()), matrices: Array.from({ length: 4 }, () => new THREE.Matrix4()),
     quat: new THREE.Quaternion(), printPos: new THREE.Vector3(), approach: { altitude: 0, range: 0, vertical: 0, horizontal: 0, tilt: 0 },
@@ -617,8 +714,8 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
 
   useEffect(() => {
     scene.background = new THREE.Color('#000000')
-    if (import.meta.env.DEV) Object.assign(window, { __drive: { sim: sim.current, camera, scene } })
-  }, [scene, camera, sim])
+    if (import.meta.env.DEV) Object.assign(window, { __drive: { sim: sim.current, camera, scene, gl, ground: world.ground } })
+  }, [scene, camera, sim, gl, world.ground])
   useEffect(() => {
     const l = head.current
     if (!l) return
@@ -779,8 +876,8 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
     const active = !playback || !playback.current.paused && (playback.current.scene === 'landing' || playback.current.scene === 'rover')
     const dt = active ? Math.min(dtRaw, .1) : 0
     scratch.elapsed += dt
-    if (!nearMesh.current || !farMesh.current) return
-    readPad(s)
+    if (!nearMesh.current || !farMesh.current || !prepared.current) return
+    readPad(s, dt)
 
     // ---- rebase the origin when far from it (keeps curvature and float precision honest)
     if (Math.hypot(s.x - s.origin.x, s.y - s.origin.y) > 4000) {
@@ -793,6 +890,13 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
       ck.ox = s.origin.x; ck.oy = s.origin.y; ck.cx = NaN; ck.litHour = NaN
     }
     const near = s.mode === 'landing' ? NEAR_LANDING : NEAR
+    const cached = roverTerrain.current
+    if (near.half === NEAR.half && ck.nearHalf !== near.half && cached) {
+      nearMesh.current.geometry.dispose(); nearMesh.current.geometry = preparedGeometry(cached.near)
+      farMesh.current.geometry.dispose(); farMesh.current.geometry = preparedGeometry(cached.far)
+      ck.cx = s.x; ck.cy = s.y; ck.nearHalf = near.half
+      roverTerrain.current = null
+    }
     if (!(Math.abs(s.x - ck.cx) < near.half * 0.45 && Math.abs(s.y - ck.cy) < near.half * 0.45) || ck.nearHalf !== near.half) {
       buildGrid(nearMesh.current, Math.round(s.x / near.step) * near.step, Math.round(s.y / near.step) * near.step, near.half, near.step)
       buildGrid(farMesh.current, s.origin.x, s.origin.y, FAR.half, FAR.step, { cx: s.x, cy: s.y, half: near.half })
@@ -878,7 +982,9 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
         }
       } else s.steep = false
     }
-    s.wheelSteer = Math.max(-.55, Math.min(.55, Math.atan2((s.heading - beforeHeading) * 1.5, Math.max(.01, Math.abs(s.speed) * simDt))))
+    const yawStep = Math.atan2(Math.sin(s.heading - beforeHeading), Math.cos(s.heading - beforeHeading))
+    s.wheelYaw += yawStep
+    s.wheelSteer = Math.max(-.55, Math.min(.55, Math.atan2(yawStep * 1.5, Math.max(.01, Math.abs(s.speed) * simDt))))
     s.hour = Math.min(s.hour + simDt / 3600, eph.n - 2)
 
     // ---- power
@@ -891,7 +997,7 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
     }
     const c = s.cond
     s.solarW = c ? ROVER.panelW * c.sunFrac * (1 - s.ecl) * Math.max(0, Math.cos((c.sun.alt * Math.PI) / 180)) : 0
-    s.useW = ROVER.idleW + (isRover && Math.abs(s.speed) > 0.01 ? ROVER.driveW : 0) + (s.lights && isRover ? 30 : 0)
+    s.useW = ROVER.idleW + (isRover && Math.abs(s.speed) > .0001 ? ROVER.driveW : 0) + (s.lights && isRover ? 30 : 0)
     if (isRover && s.target && s.phase === 'go' && Math.hypot(s.target.x - s.x, s.target.y - s.y) < 25 && s.drillKey && !s.dead) {
       s.useW += 300
       s.drilled += simDt / 3600
@@ -931,7 +1037,13 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
     }
     let landing = null as typeof scratch.landing | null
     if (s.mode === 'landing' && lander.current) {
-      s.descT = playback ? Math.max(0, playback.current.time() - playback.current.start) : s.descT + dt
+      if (playback) {
+        const pb = playback.current
+        // The film shot is shorter than the 26 s approach. Map its progress onto that
+        // approach so the lander touches down inside the shot. A hidden premount during
+        // descent must not spend that clock.
+        if (pb.scene === 'landing') s.descT = filmDescentSeconds(sceneProgress(pb), LAND.secs)
+      } else s.descT += dt
       const x = Math.min(1, s.descT / LAND.secs)
       landCam.current.touchT = Math.max(0, s.descT - LAND.secs)
       const profile = finalApproach(x, scratch.approach)
@@ -952,6 +1064,11 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
       landing = scratch.landing
       landing.vel.copy(dir).multiplyScalar(profile.horizontal).addScaledVector(UP, profile.vertical).normalize()
       landing.alt = Math.max(0, pos.y - ground - contact.lift); landing.x = x
+      if (playback?.current.surface) {
+        const telemetry = playback.current.surface
+        telemetry.altitude = landing.alt; telemetry.range = profile.range
+        telemetry.seconds = Math.max(0, (1 - x) * LAND.physicalSecs); telemetry.landed = x >= 1
+      }
       if (plumeG.current) {
         plumeG.current.visible = x < 1
         plumeG.current.position.copy(pos)
@@ -990,7 +1107,7 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
         dust.current.visible = material.opacity > .001
       } else dust.current.visible = false
     }
-    if (ambient.current) ambient.current.intensity = s.science ? .16 : .025
+    if (ambient.current) ambient.current.intensity = s.science ? .16 : s.cinematic ? .09 : .025
     const mat = ribbon.material as THREE.ShaderMaterial
     mat.uniforms.uTime.value = st.clock.elapsedTime
     mat.uniforms.uProgress.value = s.routeS
@@ -1025,9 +1142,10 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
         sun.current.intensity = c.sun.alt > -1 ? 4.2 * (1 - s.ecl) : 0
       }
       if (earthshine.current) {
+        earthshine.current.visible = c.earthUp
         earthshine.current.position.copy(p).addScaledVector(ed, 3000)
         earthshine.current.target.position.copy(p); earthshine.current.target.updateMatrixWorld()
-        earthshine.current.intensity = c.earthUp ? .035 : 0
+        earthshine.current.intensity = c.earthUp ? (s.cinematic ? .12 : .035) : 0
       }
       if (panel.current && s.mode === 'rover') {
         // vertical panel turned toward the Sun's azimuth (in the rover frame)
@@ -1062,9 +1180,13 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
       // Track the moving craft directly: smoothing its world position trails hundreds of metres
       // behind during the accelerated descent. Keep a fixed offset from the craft instead.
       const height = ld.heightM
-      const distance = Math.max(12, height * 3)
+      // The cinematic touchdown holds a readable, roughly quarter-frame lander.
+      const distance = s.cinematic ? height * 3.2 : Math.max(18, height * 3.5)
+      // At altitude, look down past the craft onto distant terrain. A low horizontal chase shot
+      // made a kilometre-high lander look as though it was hovering just above a nearby ridge.
+      const overhead = s.cinematic ? distance * .2 * ease(landing.alt / 40) : distance * .95 * ease((landing.alt - 40) / 360)
       const eye = copyV(landing.pos).addScaledVector(dir, distance)
-        .addScaledVector(side, distance * 0.45).add(V(0, height * 1.3, 0))
+        .addScaledVector(side, distance * 0.45).add(V(0, height * (s.cinematic ? .85 : 1.3) + overhead, 0))
       const ground = toV(start.x + eye.x - site.x, start.y - eye.z + site.z).y + 1.2
       eye.y = Math.max(eye.y, ground)
       camera.position.copy(eye)
@@ -1075,12 +1197,16 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
     // Two deliberate shots; cut between them rather than moving the camera through the rover.
     if (s.cinematic && s.mode === 'rover') {
       if (torch.current) torch.current.intensity = 0
-      const t = playback ? playback.current.time() - playback.current.start : scratch.elapsed
-      const shot = t < 6.5 ? 0 : 1
+      const pb = playback?.current
+      const t = pb ? Math.max(0, pb.time() - pb.start) : scratch.elapsed
+      const cut = pb && pb.duration > 0 ? pb.duration * 0.5 : 6.5
+      const shot = t < cut ? 0 : 1
       const length = rv.id === 'pragyan' ? .92 : rv.id === 'yutu' ? 1.5 : rv.id === 'viper' ? 2.5 : 3.1
       const side = V().crossVectors(fwd, nrm).normalize()
-      const eye = copyV(p).addScaledVector(fwd, shot ? length * .7 : -length * 2.7)
-        .addScaledVector(side, shot ? length * 2.8 : length * 1.2).add(V(0, length * (shot ? .65 : 1.1), 0))
+      const litSide = c && side.dot(skyDir(c.sun.alt, c.sun.az, lon)) < 0 ? -1 : 1
+      const sideDistance = (camera as THREE.PerspectiveCamera).aspect < .8 ? 2.65 : 2.1
+      const eye = copyV(p).addScaledVector(fwd, shot ? length * 1.2 : -length)
+        .addScaledVector(side, length * sideDistance * litSide).add(V(0, length * (shot ? .55 : .75), 0))
       safeEye(eye)
       if (shot !== scratch.shot) { camera.position.copy(eye); scratch.shot = shot }
       else camera.position.lerp(eye, 1 - Math.exp(-dt * 7))
@@ -1121,7 +1247,8 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
       dir.addScaledVector(nrm, Math.tan(s.pitch)).normalize()
       camera.lookAt(copyV(eye).add(dir))
     } else {
-      const back = copyV(fwd).applyAxisAngle(V(0, 1, 0), s.yaw)
+      // A rear three-quarter view keeps a vertical solar panel from hiding the chassis edge-on.
+      const back = copyV(fwd).applyAxisAngle(V(0, 1, 0), s.yaw + (s.mode === 'rover' ? .55 : 0))
       const length = rv.id === 'pragyan' ? 0.92 : rv.id === 'yutu' ? 1.5 : rv.id === 'viper' ? 2.5 : 3.1
       const eye = copyV(p).addScaledVector(back, -length * 2.5)
         .add(V(0, Math.max(0.9, length * 0.9 - s.pitch * 3), 0))
@@ -1146,9 +1273,9 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
   return (
     <>
       <ambientLight ref={ambient} intensity={.025} />
-      <directionalLight ref={earthshine} intensity={.035} color="#b9c8da" />
+      <directionalLight ref={earthshine} intensity={.035} color="#b9c8da" visible={false} />
       <directionalLight ref={sun} castShadow intensity={4} color="#fff6e6"
-                        shadow-mapSize={sim.current.cinematic ? [2048, 2048] : [4096, 4096]} shadow-bias={-0.0001} shadow-normalBias={0.02}
+                        shadow-mapSize={[2048, 2048]} shadow-bias={-0.0001} shadow-normalBias={0.02}
                         shadow-camera-left={-90} shadow-camera-right={90} shadow-camera-top={90} shadow-camera-bottom={-90}
                         shadow-camera-near={10} shadow-camera-far={8000} />
       <mesh ref={nearMesh} receiveShadow castShadow>
@@ -1173,7 +1300,7 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
         </mesh>
       </group>
       <primitive object={ribbon} />
-      <Lander ref={lander} dish={dish} id={ld.id} />
+      <Lander ref={lander} dish={dish} id={ld.id} onReady={landerReady} />
       <group ref={beacon} visible={false}>
         <mesh position={[0, 25, 0]}>
           <cylinderGeometry args={[0.6, 0.6, 50, 16, 1, true]} />
@@ -1227,7 +1354,7 @@ function Scene({ world, sim, eph, start, lang }: { world: World; sim: React.Muta
         <meshStandardMaterial color="#3b3833" roughness={1} />
       </instancedMesh>
       <group ref={rover}>
-        <RoverModel panel={panel} id={rv.id} motion={sim} />
+        <RoverModel panel={panel} id={rv.id} motion={sim} onReady={roverReady} />
         <spotLight ref={head} position={[1, 1.1, 0]} angle={0.5} penumbra={0.4} distance={120} decay={1} color="#eaf2ff" castShadow={false} />
       </group>
     </>
@@ -1359,7 +1486,7 @@ function sunlitShader(shader: { vertexShader: string; fragmentShader: string }) 
   shader.fragmentShader = shader.fragmentShader
     .replace('#include <common>', '#include <common>\nvarying float vSunlit;')
     .replace('#include <lights_fragment_begin>', THREE.ShaderChunk.lights_fragment_begin.replace(
-      'getDirectionalLightInfo( directionalLight, directLight );', 'getDirectionalLightInfo( directionalLight, directLight );\n\t\tdirectLight.color *= vSunlit;'))
+      'getDirectionalLightInfo( directionalLight, directLight );', 'getDirectionalLightInfo( directionalLight, directLight );\n\t\tif (UNROLLED_LOOP_INDEX == 0) directLight.color *= vSunlit;'))
 }
 
 function sunGlare() {
@@ -1404,8 +1531,10 @@ function starField() {
 
 const dz = (v: number) => (Math.abs(v) < 0.15 ? 0 : v)
 /** Game controller: left stick / triggers drive, right stick looks, A camera, Y lights, bumpers time speed. */
-function readPad(s: Sim) {
-  const gp = navigator.getGamepads?.().find((g) => g)
+function readPad(s: Sim, dt: number) {
+  const pads = navigator.getGamepads?.()
+  let gp: Gamepad | null = null
+  if (pads) for (const pad of pads) if (pad) { gp = pad; break }
   if (!gp) return
   const ax = gp.axes
   const btn = (i: number) => gp.buttons[i]?.pressed ?? false
@@ -1413,8 +1542,8 @@ function readPad(s: Sim) {
   const thr = Math.abs(trig) > 0.05 ? trig : -dz(ax[1] ?? 0)
   const steer = -dz(ax[0] ?? 0)
   if (thr || steer || s.pad) { s.throttle = thr; s.steer = steer; s.pad = !!(thr || steer) }
-  s.yaw -= dz(ax[2] ?? 0) * 0.04
-  s.pitch = Math.max(-1.2, Math.min(1.2, s.pitch - dz(ax[3] ?? 0) * 0.03))
+  s.yaw -= dz(ax[2] ?? 0) * 2.4 * dt
+  s.pitch = Math.max(-1.2, Math.min(1.2, s.pitch - dz(ax[3] ?? 0) * 1.8 * dt))
   const edge = (i: number) => btn(i) && !s.padBtn[i]
   if (edge(0)) s.cam = s.cam === 'chase' ? 'mast' : 'chase'
   if (edge(1)) s.science = !s.science
@@ -1424,20 +1553,20 @@ function readPad(s: Sim) {
   const wi = WARPS.indexOf(s.warp)
   if (edge(5)) s.warp = WARPS[Math.min(WARPS.length - 1, wi + 1)]
   if (edge(4)) s.warp = WARPS[Math.max(0, wi - 1)]
-  s.padBtn = gp.buttons.map((b) => b.pressed)
+  for (let i = 0; i < gp.buttons.length; i++) s.padBtn[i] = gp.buttons[i].pressed
 }
 
-const Lander = ({ ref, dish, id }: { ref: React.Ref<THREE.Group>; dish: React.Ref<THREE.Group>; id: string }) => (
+const Lander = ({ ref, dish, id, onReady }: { ref: React.Ref<THREE.Group>; dish: React.Ref<THREE.Group>; id: string; onReady: () => void }) => (
   <group ref={ref}>
-    <LanderBody id={id} />
+    <LanderBody id={id} onReady={onReady} />
     <group ref={dish} position={[0, landerEye(id) + 0.4, 0]} />
   </group>
 )
 
-const RoverModel = ({ panel, id, motion }: { panel: React.Ref<THREE.Group>; id: string; motion: React.RefObject<Sim> }) => (
+const RoverModel = ({ panel, id, motion, onReady }: { panel: React.Ref<THREE.Group>; id: string; motion: React.RefObject<Sim>; onReady: () => void }) => (
   // forward = +x
   <group>
-    <RoverBody id={id} motion={motion} />
+    <RoverBody id={id} motion={motion} onReady={onReady} />
     <group ref={panel} />
   </group>
 )

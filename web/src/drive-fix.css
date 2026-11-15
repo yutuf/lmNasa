@@ -27,3 +27,29 @@
 .drive .hud.objective .ico { display: block; }
 .drive .descent-exit { position: absolute; z-index: 5; right: 16px; top: 16px; background: #14141c; }
 .drive .hud.bottom-right .keys { max-width: 240px; margin: 0; text-align: right; white-space: normal; }
+.drive .stick { z-index: 8; }
+.drive .landing-enter { top: 62px; }
+@media (max-width: 760px) {
+  .drive .hud.top-left { top: 12px; left: 12px; right: 12px; max-width: none; }
+  .drive .hud.top-left .hud-sub { font-size: 10px; }
+  .drive .hud.top-right { top: 78px; right: 12px; left: 12px; font-size: 11px; }
+  .drive .hud.top-right .clock, .drive .hud.top-right > .hud-sub { display: inline; margin-left: 8px; }
+  .drive .warps { justify-content: flex-end; margin-top: 4px; }
+  .drive .compass { top: 128px; width: calc(100% - 24px); }
+  .drive .hud.objective { top: 168px; left: 12px; max-width: min(230px, calc(100vw - 48px)); font-size: 11px; }
+  .drive .hud.objective .hud-sub { font-size: 10px; }
+  .drive .hud.bottom-left { box-sizing: border-box; left: 10px; bottom: 12px; width: calc(50vw - 18px); max-width: 168px; padding: 8px; gap: 4px; }
+  .drive .hud.bottom-left .status, .drive .hud.bottom-left .hud-sub { font-size: 10px; }
+  .drive .hud.bottom-right { right: 10px; left: auto; bottom: 12px; max-width: calc(50vw - 12px); padding: 8px; gap: 6px; }
+  .drive .hud.bottom-right .big { font-size: 11px; padding: 6px; min-height: 36px; }
+  .drive .stick { left: 22px; bottom: 254px; transform: none; width: 100px; height: 100px; }
+  .drive .landing-hud { max-width: calc(100% - 32px); width: max-content; box-sizing: border-box; top: 86px; font-size: 11px; white-space: normal; text-align: center; }
+  .drive .landing-hud[data-done='1'] { font-size: 13px; }
+}
+/* Keep the owned surface layout authoritative over late, shared release overrides. */
+@media (max-width: 760px) {
+  html body .drive .stick { left: 22px; bottom: 254px; transform: none; width: 100px; height: 100px; z-index: 8; }
+  html body .drive .hud.bottom-left { left: 10px; bottom: 12px; width: calc(50vw - 18px); max-width: 168px; max-height: 32vh; padding: 8px; overflow-y: auto; }
+  html body .drive .hud.bottom-right { left: auto; right: 10px; bottom: 12px; width: max-content; max-width: calc(50vw - 12px); padding: 8px; }
+  html body .drive .hud.bottom-right .big { min-height: 36px; padding: 6px; }
+}

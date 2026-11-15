@@ -2,6 +2,7 @@
 // Parsing lives in interview.ts and works with the network off. /api/ask may fill a missing date, length, or ice goal.
 import { useEffect, useRef, useState } from 'react'
 import { ArrowUp, Pencil, Rocket, Sparkles, X } from 'lucide-react'
+import { fmtWhText } from '../i18n'
 import '../interview.css'
 import {
   acknowledge,
@@ -269,12 +270,12 @@ export default function MissionInterview({ lang, onRun, onClose }: {
               {bubble.card && (
                 <article className="mi-card">
                   <h3>{bubble.card.title}</h3>
-                  <p className="mi-body">{bubble.card.body}</p>
+                  <p className="mi-body">{fmtWhText(bubble.card.body, lang)}</p>
                   <div className="mi-rows">
                     {bubble.card.rows.map((row) => (
                       <div key={row.key}>
                         <small>{row.label}</small>
-                        <b>{row.value}</b>
+                        <b>{fmtWhText(row.value, lang)}</b>
                       </div>
                     ))}
                   </div>

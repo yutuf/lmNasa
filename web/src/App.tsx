@@ -2,7 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { dataUrl, FIRST_DATE, LAST_DATE, loadManifest, type Manifest, type Series } from './data'
 import { gcKm, insideRing, parseAtlas, parseGlobalAtlas, parseEphem, parseHazard, parseIceReach, passesIce, passesTerrain, pointTrack, searchPoint, sunlitMap, zoneSlopeAt, type Atlas, type Hazard, type IceReach, type PointResult } from './engine'
 import { resolvePin } from './pinSite'
-import { T, catalogueSources, fmtHoursShort, fmtIsoDate, fmtPct, fmtPercent, hours, localizeReportHtml, verdictLabel, why, type Lang } from './i18n'
+import { T, catalogueSources, fmtHoursShort, fmtIsoDate, fmtLonEast, fmtPct, fmtPercent, hours, localizeReportHtml, verdictLabel, why, type Lang } from './i18n'
 import { evaluateWindow, requiredBatteryWh, type Constraints } from './model'
 import { EngineRunner } from './runner'
 import { chooseApproach, PHASES } from './flight'
@@ -25,6 +25,7 @@ const ArtemisCompare = lazy(() => import('./components/Artemis'))
 import Patch from './components/Patch'
 import SimpleView from './components/SimpleView'
 import { MissionBar, Ticker, type NextWindow } from './components/MissionBar'
+import CoordinateSearch from './components/CoordinateSearch'
 import SiteProfile from './components/SiteProfile'
 const MissionStory = lazyOverlay(() => import('./components/MissionStory'))
 const MissionInterview = lazyOverlay(() => import('./components/MissionInterview'))
@@ -223,6 +224,16 @@ export default function App() {
   const [story, setStory] = useState(false)
   const [interview, setInterview] = useState(false)
   const [film, setFilm] = useState(() => /(^|[#&])film=1/.test(location.hash))
+  useEffect(() => {
+    if (!film) return
+    document.documentElement.classList.add('mission-film-open')
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFilm(false) }
+    addEventListener('keydown', onKey)
+    return () => {
+      document.documentElement.classList.remove('mission-film-open')
+      removeEventListener('keydown', onKey)
+    }
+  }, [film])
   const [phone, setPhone] = useState(false)
   const [workshop, setWorkshop] = useState(false)
   const [lab, setLab] = useState(false)
@@ -366,7 +377,7 @@ export default function App() {
     const described = describePlace(result.lat, lon360, feats, lang)
     const row = siteRow(grid, eph, dsn, result, 1, mission, c, fh, [regionName, described?.text].filter(Boolean).join(' · ') || null, { zoneSlopeDeg, iceKm })
     const tr = lang === 'tr'
-    const name = described?.text ?? regionName ?? `${result.lat.toFixed(2)}°, ${lon360.toFixed(1)}°E`
+    const name = described?.text ?? regionName ?? `${result.lat.toFixed(2)}°, ${fmtLonEast(lon360, lang, 1)}`
     const placeName = described?.name ?? name
     const sky = localSky(eph, grid.xKm[result.index] * 1000, grid.yKm[result.index] * 1000, fh + result.bestStart * 24 + 12)
     const best = new Date(Date.parse(qParams.start + 'T00:00:00Z') + result.bestStart * 86400e3)
@@ -498,7 +509,7 @@ export default function App() {
       const reg = region(r) ?? null
       // the place name is the card title (several sites can share a region); the region is the coloured label
       const described = describePlace(r.lat, ((r.lon % 360) + 360) % 360, feats, lang)
-      const name = described?.text ?? reg ?? `${r.lat.toFixed(2)}°, ${(((r.lon % 360) + 360) % 360).toFixed(1)}°E`
+      const name = described?.text ?? reg ?? `${r.lat.toFixed(2)}°, ${fmtLonEast(r.lon, lang, 1)}`
       const placeName = described?.name ?? name
       const sky = localSky(eph, atlas.xKm[r.index] * 1000, atlas.yKm[r.index] * 1000, fh + r.bestStart * 24 + 12)
       const best = new Date(Date.parse(ran.q.start + 'T00:00:00Z') + r.bestStart * 86400e3)
@@ -626,7 +637,7 @@ export default function App() {
   enterRef.current = enter
   const loc = lang === 'tr' ? 'tr-TR' : 'en-US'
   const place = (r: PointResult) => describePlace(r.lat, ((r.lon % 360) + 360) % 360, feats, lang)?.text
-  const coords = (r: PointResult) => `${r.lat.toFixed(2)}°, ${(((r.lon % 360) + 360) % 360).toFixed(1)}°E`
+  const coords = (r: PointResult) => `${r.lat.toFixed(2)}°, ${fmtLonEast(r.lon, lang, 1)}`
   const siteName = (r: PointResult) => region(r) ?? place(r) ?? coords(r)
   const scenario = matchScenario(p)
   const dirty = !!ran && (Object.keys(p) as (keyof Params)[]).some((k) => p[k] !== ran.asked[k])
@@ -755,7 +766,7 @@ export default function App() {
                 )}
                 {mapMode === 'sun' && ran && (
                   <div className="map-time">
-                    <button className="icon-btn" onClick={() => setMapPlay(!mapPlay)} aria-label="Play">{mapPlay ? <Pause size={14} /> : <Play size={14} />}</button>
+                    <button className="icon-btn" onClick={() => setMapPlay(!mapPlay)} aria-label={mapPlay ? (lang === 'tr' ? 'Duraklat' : 'Pause') : (lang === 'tr' ? 'Oynat' : 'Play')}>{mapPlay ? <Pause size={14} /> : <Play size={14} />}</button>
                     <input className="rng" type="range" min={0} max={Math.max(1, mapSpan - 1)} value={mapH}
                            style={{ ['--p' as string]: `${(mapH / Math.max(1, mapSpan - 1)) * 100}%` }}
                            onChange={(e) => { setMapPlay(false); setMapH(+e.target.value) }} />
@@ -811,13 +822,13 @@ export default function App() {
           <a href="#site">{S.navSite[lang]}</a>
           <a href="#method">{S.navMethod[lang]}</a>
         </nav>}
-        {ui === 'advanced' && <button className="nav-ws" onClick={() => setLab(true)}><Scale size={14} /> {lang === 'tr' ? 'Karar' : 'Decide'}</button>}
-        {ui === 'advanced' && <button className="nav-ws" onClick={() => setWorkshop(true)}><Wrench size={14} /> {lang === 'tr' ? 'Atölye' : 'Workshop'}</button>}
+        {ui === 'advanced' && <button className="nav-ws" onClick={() => setLab(true)} aria-label={lang === 'tr' ? 'Karar' : 'Decide'}><Scale size={14} /> <span className="nav-label">{lang === 'tr' ? 'Karar' : 'Decide'}</span></button>}
+        {ui === 'advanced' && <button className="nav-ws" onClick={() => setWorkshop(true)} aria-label={lang === 'tr' ? 'Atölye' : 'Workshop'}><Wrench size={14} /> <span className="nav-label">{lang === 'tr' ? 'Atölye' : 'Workshop'}</span></button>}
         <button className="nav-ws nav-qr" onClick={() => { location.hash = `judges&lang=${lang}` }} title={lang === 'tr' ? 'Jüri sayfası ve QR kodu' : 'Judges page and QR code'} aria-label="QR"><QrCode size={15} /></button>
-        <button className="nav-ws nav-phone" onClick={() => setPhone(true)}><Smartphone size={14} /> {lang === 'tr' ? 'Telefon' : 'Phone'}</button>
+        <button className="nav-ws nav-phone" onClick={() => setPhone(true)}><Smartphone size={14} /> <span className="nav-label">{lang === 'tr' ? 'Telefon' : 'Phone'}</span></button>
         <button className="nav-story" onClick={() => setFilm(true)} aria-label={lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}><Sparkles size={14} /> <span className="nav-label">{lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}</span></button>
         <div className="nav-r">
-          <div className="seg" role="group" aria-label="Language">
+          <div className="seg" role="group" aria-label={lang === 'tr' ? 'Dil' : 'Language'}>
             {(['en', 'tr'] as Lang[]).map((l) => (
               <button key={l} className={l === lang ? 'on' : ''} onClick={() => setLang(l)}>{l.toUpperCase()}</button>
             ))}
@@ -870,6 +881,9 @@ export default function App() {
           <div className="group">
             <div className="group-label">{lang === 'tr' ? 'Kapsam ve hedef' : 'Scope and target'}</div>
             {scopeTarget}
+          </div>
+          <div className="group">
+            <CoordinateSearch lang={lang} onGo={openPin} />
           </div>
           <div className="group">
             <div className="group-label">{S.mission[lang]}</div>
@@ -1045,7 +1059,7 @@ export default function App() {
                             <span className="num">{r.goCount}/{ran.q.windowDays}</span>
                           </div>
                         </td>
-                        <td>{fmtDate(startDate(r.bestStart))}</td>
+                        <td className="col-date">{fmtDate(startDate(r.bestStart))}</td>
                         <td className="num">{fmtPercent(r.sunFrac * 100, lang)}</td>
                         <td className="num">{fmtPercent(r.commFrac * 100, lang)}</td>
                         <td className="num">{atlas.slope[r.index].toFixed(1)}°</td>
@@ -1084,7 +1098,7 @@ export default function App() {
                   <div>
                     <div className="eyebrow">{S.siteN[lang]}{pickRank ? ` ${pickRank}` : ''}{region(pick) ? ` · ${S.inRegion[lang]}` : ''}</div>
                     <h2>{siteName(pick)}</h2>
-                    <p className="sub">{region(pick) && place(pick) ? `${place(pick)} · ` : ''}{pick.lat.toFixed(3)}°, {(((pick.lon % 360) + 360) % 360).toFixed(3)}°E · {S.bestDate[lang]} {fmtDate(startDate(pick.bestStart))} · {ran.q.days} {S.days[lang]} ·{' '}
+                    <p className="sub">{region(pick) && place(pick) ? `${place(pick)} · ` : ''}{pick.lat.toFixed(3)}°, {fmtLonEast(pick.lon, lang, 3)} · {S.bestDate[lang]} {fmtDate(startDate(pick.bestStart))} · {ran.q.days} {S.days[lang]} ·{' '}
                       {lang === 'tr' ? 'eğim' : 'slope'} {atlas.slope[pick.index].toFixed(1)}° · {lang === 'tr' ? 'yükseklik' : 'height'} {atlas.height[pick.index].toLocaleString(loc)} m</p>
                   </div>
                   <div className="actions">
@@ -1281,7 +1295,12 @@ export default function App() {
       })()}
       {film && (() => {
         const c = cards.find((x) => x.r.goCount > 0) ?? cards[0]
-        if (!c || !ran || !eph || !dsn) return null
+        if (!c || !ran || !eph || !dsn) return (
+          <div className="film film-wait" role="dialog" aria-label={lang === 'tr' ? 'Görev filmi' : 'Mission film'}>
+            <p>{lang === 'tr' ? 'Bir iniş yeri aranıyor.' : 'Finding a landing site.'}</p>
+            <button type="button" className="btn" onClick={() => setFilm(false)}>{lang === 'tr' ? 'Kapat' : 'Close'}</button>
+          </div>
+        )
         const l = landerById(p.lander)
         const sc = matchScenario(ran.asked) ?? null
         const landingDay = new Date(Date.parse(c.row.bestLanding + 'T00:00:00Z'))
@@ -1327,7 +1346,7 @@ function Compare({ rows, lang, onClear }: { rows: SiteRow[]; lang: Lang; onClear
     [tr ? 'Güneş ışığı' : 'Sunlight', (r) => fmtPercent(r.sunPct, lang), (r) => r.sunPct, true],
     [tr ? 'Dünya bağlantısı' : 'Earth contact', (r) => fmtPercent(r.earthPct, lang), (r) => r.earthPct, true],
     [tr ? 'En uzun karanlık' : 'Longest dark', (r) => fmtHoursShort(r.longestDarkH, lang), (r) => r.longestDarkH, false],
-    [tr ? 'Gereken batarya' : 'Battery needed', (r) => `${r.batteryNeedWh.toLocaleString()} Wh`, (r) => r.batteryNeedWh, false],
+    [tr ? 'Gereken batarya' : 'Battery needed', (r) => `${r.batteryNeedWh.toLocaleString(tr ? 'tr-TR' : 'en-US')} Wh`, (r) => r.batteryNeedWh, false],
     [tr ? 'Eğim' : 'Slope', (r) => `${r.slopeDeg.toFixed(1)}°`, (r) => r.slopeDeg, false],
     [tr ? 'İniş alanı eğimi (%95)' : 'Landing zone slope (95%)', (r) => (r.zoneSlopeDeg === null ? '–' : `${r.zoneSlopeDeg.toFixed(1)}°`), (r) => r.zoneSlopeDeg ?? 99, false],
     [tr ? 'En yakın buz' : 'Nearest ice', (r) => (r.iceKm === null ? '–' : `${r.iceKm.toFixed(1)} km`), (r) => r.iceKm ?? 999, false],
@@ -1338,7 +1357,7 @@ function Compare({ rows, lang, onClear }: { rows: SiteRow[]; lang: Lang; onClear
     <section className="card compare">
       <div className="card-head"><div><h2>{S.compareTitle[lang]}</h2></div><div className="actions"><button className="btn" onClick={onClear}>{S.clear[lang]}</button></div></div>
       <div className="table-wrap"><table className="table">
-        <thead><tr><th />{rows.map((r) => <th key={r.index}>#{r.rank}<small>{r.region ?? `${r.lat.toFixed(2)}°, ${r.lon.toFixed(1)}°E`}</small></th>)}</tr></thead>
+        <thead><tr><th />{rows.map((r) => <th key={r.index}>#{r.rank}<small>{r.region ?? `${r.lat.toFixed(2)}°, ${fmtLonEast(r.lon, lang, 1)}`}</small></th>)}</tr></thead>
         <tbody>
           {lines.map(([name, show, score, up]) => {
             const vals = score ? rows.map(score) : []

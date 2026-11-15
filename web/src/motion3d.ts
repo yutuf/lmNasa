@@ -6,6 +6,17 @@ export const ease = (x: number) => { const u = clamp01(x); return u * u * (3 - 2
 export const UP = new THREE.Vector3(0, 1, 0)
 
 export interface SurfacePose { altitude: number; range: number; vertical: number; horizontal: number; tilt: number }
+export interface OrbitalPose { altKm: number; rangeKm: number; velKms: number; ttlS: number; kind: 'profile' }
+/** The orbital shot either reaches the surface, or hands off continuously to the final 180-second approach. */
+export function orbitalDescent(t: number, handoff: boolean, out: OrbitalPose = { altKm: 0, rangeKm: 0, velKms: 0, ttlS: 0, kind: 'profile' }) {
+  const b = 1 - clamp01(t)
+  const finalVelocity = handoff ? Math.hypot(1600 * 2.4 / 180, 2400 * 3.2 / 180) / 1000 : 0
+  out.altKm = (handoff ? 1.6 : 0) + (handoff ? 98.4 : 100) * b ** 2.4
+  out.rangeKm = (handoff ? 2.4 : 0) + (handoff ? 477.6 : 480) * b ** 1.15
+  out.velKms = finalVelocity + (6000 / 3600 - finalVelocity) * b ** 2.8
+  out.ttlS = (handoff ? 180 : 0) + (handoff ? 540 : 720) * b
+  return out
+}
 /** Final 180 s, played in 26 s. Acceleration opposes both the horizontal and vertical velocity. */
 export function finalApproach(t: number, out: SurfacePose) {
   const b = 1 - clamp01(t)
@@ -66,12 +77,13 @@ export function transferMoon(t: number, out: THREE.Vector3) {
   return out.set(5.2 * Math.cos(a), 0, -5.2 * Math.sin(a))
 }
 const transferEnd = transferMoon(1, new THREE.Vector3())
+export const LUNAR_ARRIVAL_RADIUS = .18 * (1 + 100 / 1737.4)
 export function transferPosition(t: number, out: THREE.Vector3) {
   const u = ease(t), a = -.6 + MOON_ADVANCE * .2
   // Cubic Hermite-like Bezier: depart Earth prograde, meet the leading limb on the lunar tangent.
   const b = 1 - u
-  const endX = transferEnd.x - .28 * Math.sin(-.6 + MOON_ADVANCE)
-  const endZ = transferEnd.z - .28 * Math.cos(-.6 + MOON_ADVANCE)
+  const endX = transferEnd.x - LUNAR_ARRIVAL_RADIUS * Math.sin(-.6 + MOON_ADVANCE)
+  const endZ = transferEnd.z - LUNAR_ARRIVAL_RADIUS * Math.cos(-.6 + MOON_ADVANCE)
   return out.set(b ** 3 * .72 + 3 * b * b * u * 1.3 + 3 * b * u * u * (endX + .8 * Math.cos(a)) + u ** 3 * endX,
     0, 3 * b * b * u * -1.2 + 3 * b * u * u * (endZ + .8 * Math.sin(a)) + u ** 3 * endZ)
 }

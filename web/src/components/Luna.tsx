@@ -81,8 +81,10 @@ export default function Luna({ lang, context, onAction, onPlan }: { lang: Lang; 
 
   return (
     <>
-      <button className={`luna-fab ${open ? 'on' : ''}`} onClick={() => setOpen(!open)}>
-        <Sparkles size={14} /> {lang === 'tr' ? "Luna'ya sor" : 'Ask Luna'}
+      <button className={`luna-fab ${open ? 'on' : ''}`} onClick={() => setOpen(!open)}
+              aria-label={lang === 'tr' ? "Luna'ya sor" : 'Ask Luna'}>
+        <Sparkles size={16} />
+        <span className="luna-fab-label">{lang === 'tr' ? "Luna'ya sor" : 'Ask Luna'}</span>
       </button>
       {open && (
         <div className="luna">

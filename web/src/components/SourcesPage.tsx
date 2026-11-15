@@ -81,7 +81,7 @@ export default function SourcesPage({ lang, onClose }: { lang: Lang; onClose: ()
     <div className="workshop sources" role="dialog" aria-label={t('title')}>
       <div className="ws-head">
         <div><h1><BookOpen size={24} /> {t('title')}</h1><p>{t('sub')}</p></div>
-        <button className="icon-btn" onClick={onClose} aria-label="Close"><X size={20} /></button>
+        <button className="icon-btn" onClick={onClose} aria-label={lang === 'tr' ? 'Kapat' : 'Close'}><X size={20} /></button>
       </div>
       <div className="src-body">
         <section><h2>{t('data')}</h2>

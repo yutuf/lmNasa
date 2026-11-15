@@ -24,6 +24,26 @@ export function verdictLabel(go: boolean, lang: Lang): string {
   return go ? 'GO' : 'NO-GO'
 }
 
+/** East longitude on a 0–360° circle. Turkish writes doğu as D: "18.52°D". */
+export function fmtLonEast(lon: number, lang: Lang, digits = 1): string {
+  const v = ((lon % 360) + 360) % 360
+  return `${v.toFixed(digits)}°${lang === 'tr' ? 'D' : 'E'}`
+}
+
+/** "12000 Wh" → "12.000 Wh" / "12,000 Wh". Counts under 1000 stay as written. */
+export function fmtWhText(text: string, lang: Lang): string {
+  const loc = lang === 'tr' ? 'tr-TR' : 'en-US'
+  return text.replace(/\d{4,}(?=\s*Wh\b)/g, (n) => Number(n).toLocaleString(loc))
+}
+
+/** The 2026–2045 calendar caption. English keeps GO; Turkish uses UYGUN. */
+export function calendarLegend(share: number, lang: Lang): string {
+  if (lang === 'tr') {
+    return `Bu görev burada iniş günlerinin %${share}’inde işe yarar. Yeşil: ${verdictLabel(true, 'tr')}. Beyaz: şu anki 30 günlük pencere.`
+  }
+  return `This mission works on ${share}% of landing days here. Green: GO. White: the current 30-day window.`
+}
+
 const MONTH_SHORT = {
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'],
   tr: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],

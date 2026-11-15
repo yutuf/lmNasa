@@ -2,7 +2,7 @@
 // rank and the name, then the numbers that decide the landing, and the ways to go deeper.
 import { useEffect } from 'react'
 import { ArrowLeft, Car, Footprints, Microscope, PlaneLanding, Rocket } from 'lucide-react'
-import { fmtHoursShort, fmtPercent, verdictLabel, type Lang } from '../i18n'
+import { fmtHoursShort, fmtLonEast, fmtPercent, verdictLabel, type Lang } from '../i18n'
 import { PlaceTitle, useSiteImage, type CardSite } from './SiteCard'
 import VehiclePhoto from './VehiclePhoto'
 import ProbabilityPanel from './ProbabilityPanel'
@@ -34,7 +34,8 @@ export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand
     [tr ? 'Güneş ışığı' : 'Sunlight', fmtPercent(r.sunPct, lang), 'sun', rangePct(pr?.sunPct)],
     [tr ? 'Dünya bağlantısı' : 'Earth contact', fmtPercent(r.earthPct, lang), 'earth', rangePct(pr?.earthPct)],
     [tr ? 'En uzun karanlık' : 'Longest darkness', fmtHoursShort(r.longestDarkH, lang), 'dark', rangeH(pr?.darkH)],
-    [tr ? 'Gereken batarya' : 'Battery needed', `${r.batteryNeedWh.toLocaleString(tr ? 'tr-TR' : 'en-US')} Wh`, 'batt'],
+    [tr ? 'Gereken batarya' : 'Battery needed', `${r.batteryNeedWh.toLocaleString(tr ? 'tr-TR' : 'en-US')} Wh`, 'batt',
+      r.batteryNeedWh === 0 ? (tr ? 'köprüleyecek gece yok' : 'no night to bridge') : undefined],
     [tr ? 'İniş alanı eğimi (%95)' : 'Landing zone slope (95%)', r.zoneSlopeDeg === null ? '–' : `${r.zoneSlopeDeg.toFixed(1)}°`, 'safe', r.zoneSlopeDeg === null ? undefined : (tr ? 'LOLA 40 m eğim haritası' : 'LOLA 40 m slope map')],
     [tr ? 'En yakın buz' : 'Nearest water ice', r.iceKm === null ? '–' : `${r.iceKm.toFixed(1)} km`, 'ice', r.iceKm === null ? undefined : (tr ? 'Diviner + kalıcı gölge haritası' : 'Diviner + shadow map')],
     [tr ? 'Yaklaşma' : 'Approach', `${r.approachDeg === 0 ? (tr ? 'Kuzeye' : 'Heading N') : (tr ? 'Güneye' : 'Heading S')} · ${tr ? 'Güneş' : 'Sun'} ${r.sunOffDeg}°`, 'route'],
@@ -47,7 +48,7 @@ export default function SiteProfile({ s, lang, lander, onClose, onWatch, onStand
         <div className="ph-text">
           <span className="ph-rank">{String(s.rank).padStart(2, '0')}</span>
           <PlaceTitle text={s.name} placeName={s.placeName} light="ph-first" bold="ph-last" />
-          <span className="ph-region">{s.region ?? (tr ? 'Açık arazi' : 'Open terrain')} · {r.lat.toFixed(3)}°, {r.lon.toFixed(2)}°E</span>
+          <span className="ph-region">{s.region ?? (tr ? 'Açık arazi' : 'Open terrain')} · {r.lat.toFixed(3)}°, {fmtLonEast(r.lon, lang, 2)}</span>
           <span className={`ph-verdict ${r.goDates > 0 ? 'go' : 'nogo'}`}>{verdictLabel(r.goDates > 0, lang)}</span>
           {s.note && <span className="ph-note-chip">{s.note}</span>}
         </div>

@@ -33,5 +33,27 @@ describe('place title split', () => {
     expect(splitPlaceTitle('Mons Mouton Plateau', 'Mons Mouton Plateau')).toEqual({ before: '', name: 'Mons Mouton Plateau', after: '' })
     expect(splitPlaceTitle('-89.40°, 12.0°E', 'Missing')).toEqual({ before: '', name: '-89.40°, 12.0°E', after: '' })
   })
+  it('keeps the Turkish compass word with the rim phrase and bolds the name', () => {
+    expect(splitPlaceTitle('Shoemaker krater kenarı,\u00A0GB', 'Shoemaker')).toEqual({
+      before: '', name: 'Shoemaker', after: 'krater kenarı,\u00A0GB',
+    })
+    expect(splitPlaceTitle('Simpelius D üzerinde', 'Simpelius D')).toEqual({
+      before: '', name: 'Simpelius D', after: 'üzerinde',
+    })
+    expect(splitPlaceTitle('Drygalski krater kenarı,\u00A0KB', 'Drygalski')).toEqual({
+      before: '', name: 'Drygalski', after: 'krater kenarı,\u00A0KB',
+    })
+    const dirs = /(?:K|KD|D|GD|G|GB|B|KB)$/
+    for (const [lat, lon] of [[-88.64, 18.52], [-89.69, 198.05], [-84.6, 31]] as const) {
+      const tr = describePlace(lat, lon, feats, 'tr')!
+      const en = describePlace(lat, lon, feats, 'en')!
+      const ts = splitPlaceTitle(tr.text, tr.name)
+      const es = splitPlaceTitle(en.text, en.name)
+      expect(ts.name).toBe(tr.name)
+      expect(es.name).toBe(en.name)
+      if (tr.kind === 'rim' || tr.kind === 'near') expect(tr.text).toMatch(new RegExp(`\u00A0${dirs.source}`))
+      if (en.kind === 'rim') expect(es.before).toMatch(/rim of$/)
+    }
+  })
 })
 

@@ -21,6 +21,7 @@ export interface ModelProps {
   yaw?: number                     // extra turn about +y after normalising (rad)
   shadows?: boolean
   motion?: RefObject<RoverMotion>
+  onReady?: () => void
 }
 
 /** Physical materials (glass-like transmission, clearcoat, sheen) cost a second render of the whole scene every frame
@@ -46,7 +47,7 @@ function lighten(mat: THREE.Material): THREE.Material {
   return out
 }
 
-export function NasaModel({ file, size, fit = 'max', yaw = 0, shadows = true, motion }: ModelProps) {
+export function NasaModel({ file, size, fit = 'max', yaw = 0, shadows = true, motion, onReady }: ModelProps) {
   const { scene } = useGLTF(modelUrl(file), DRACO)
   const wheels = useMemo<Wheel[]>(() => [], [])
   const obj = useMemo(() => {
@@ -66,6 +67,16 @@ export function NasaModel({ file, size, fit = 'max', yaw = 0, shadows = true, mo
         for (const mat of mats) {
           const sm = mat as THREE.MeshStandardMaterial
           if (sm.isMeshStandardMaterial) { sm.envMap = null; sm.envMapIntensity = 0; sm.roughness = Math.max(.65, sm.roughness); sm.metalness = Math.min(.65, sm.metalness) }
+          // The checked-in Pragyan palette paints its cells pure blue. Retain the authored
+          // cell grid and aluminium frame, but use a dark silicon colour under the real light.
+          if (file === 'pragyan.glb' && sm.isMeshStandardMaterial) {
+            sm.onBeforeCompile = shader => {
+              shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+                if (diffuseColor.b > diffuseColor.r * 1.6 && diffuseColor.b > diffuseColor.g * 1.6)
+                  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(.025, .045, .07), .96);`)
+            }
+            sm.customProgramCacheKey = () => 'pragyan-silicon-cells'
+          }
         }
       }
     })
@@ -93,6 +104,7 @@ export function NasaModel({ file, size, fit = 'max', yaw = 0, shadows = true, mo
     return model
   }, [scene, file, size, fit, yaw, shadows, motion, wheels])
   useFrame(() => { if (motion) rollWheels(wheels, motion.current) })
+  useEffect(() => { onReady?.() }, [obj, onReady])
   useEffect(() => () => {
     const materials = new Set<THREE.Material>()
     obj.traverse(o => {
@@ -109,5 +121,7 @@ export function NasaModel({ file, size, fit = 'max', yaw = 0, shadows = true, mo
 }
 
 /** Start loading and decoding a model before a scene needs it (so the scene does not stall on its first frames). */
+// eslint-disable-next-line react-refresh/only-export-components -- The shared preload and component use the same GLTF cache.
 export const preloadModel = (f: ModelFile) => useGLTF.preload(modelUrl(f), DRACO)
+// eslint-disable-next-line react-refresh/only-export-components -- Existing public preload API, also used outside React scenes.
 export const preloadModels = () => (['lander.glb', 'rover.glb', 'lro.glb'] as const).forEach((f) => useGLTF.preload(modelUrl(f), DRACO))

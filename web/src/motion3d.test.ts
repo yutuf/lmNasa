@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as THREE from 'three'
-import { clearsLander, earthSunAt, finalApproach, launchPosition, MOON_ADVANCE, transferMoon, transferPosition } from './motion3d'
+import { clearsLander, earthSunAt, finalApproach, launchPosition, LUNAR_ARRIVAL_RADIUS, MOON_ADVANCE, orbitalDescent, transferMoon, transferPosition } from './motion3d'
 
 describe('3D mission motion contracts', () => {
   it('ascends from the surface and joins orbit and injection without teleporting', () => {
@@ -30,11 +30,21 @@ describe('3D mission motion contracts', () => {
     expect(clearsLander(-20, 6, 20, 6, 0, 0, 5)).toBe(true)
     expect(clearsLander(8, 0, 8, 0, 0, 0, 5)).toBe(true)
   })
+  it('hands the orbital shot to the surface approach without resetting altitude, range, speed or T-minus', () => {
+    const end = orbitalDescent(1, true)
+    const start = finalApproach(0, { altitude: 0, range: 0, vertical: 0, horizontal: 0, tilt: 0 })
+    expect(end.altKm * 1000).toBe(start.altitude)
+    expect(end.rangeKm * 1000).toBe(start.range)
+    expect(end.velKms * 1000).toBeCloseTo(Math.hypot(start.vertical, start.horizontal))
+    expect(end.ttlS).toBe(180)
+    expect(orbitalDescent(0, true)).toMatchObject({ altKm: 100, rangeKm: 480, ttlS: 720 })
+    expect(orbitalDescent(1, false)).toMatchObject({ altKm: 0, rangeKm: 0, ttlS: 0 })
+  })
   it('shows a prograde Moon and arrives at its future limb', () => {
     const a = transferMoon(0, new THREE.Vector3()), b = transferMoon(1, new THREE.Vector3())
     expect(a.angleTo(b)).toBeCloseTo(MOON_ADVANCE)
     expect(a.clone().cross(b).y).toBeGreaterThan(0)
-    expect(transferPosition(1, new THREE.Vector3()).distanceTo(b)).toBeCloseTo(.28)
+    expect(transferPosition(1, new THREE.Vector3()).distanceTo(b)).toBeCloseTo(LUNAR_ARRIVAL_RADIUS)
   })
   it('places the subsolar point near Greenwich noon and the right seasonal hemisphere', () => {
     const v = new THREE.Vector3()

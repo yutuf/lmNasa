@@ -15,7 +15,6 @@ import MissionCompare, { type MissionSnap } from './MissionCompare'
 import SiteCard, { type CardSite } from './SiteCard'
 import VehiclePhoto from './VehiclePhoto'
 import VehicleShowroom from './VehicleShowroom'
-import CoordinateSearch from './CoordinateSearch'
 
 type T = Record<Lang, string>
 // line illustrations (public/art). Transparent webps, one handbook line style.
@@ -66,7 +65,7 @@ function GoalRender({ goal, lang }: { goal: ScienceKind | null; lang: Lang }) {
   )
 }
 
-export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, busy, progress, cards, windowLabel, onScenario, onStart, onRun, onOpen, onDrive, onAdvanced, lander, rover, onLander, onRover, onStory, onDecide, onWorkshop, onSources, onMission, onOrbits, onHistory, onTour, onLibration, pinned, current, onPin, onClearPin, polarCards, points, targetName, scope, goal, onScope, onGoal, rankBy, onRankBy, onCoordinate }: {
+export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, busy, progress, cards, windowLabel, onScenario, onStart, onRun, onOpen, onDrive, onAdvanced, lander, rover, onLander, onRover, onStory, onDecide, onWorkshop, onSources, onMission, onOrbits, onHistory, onTour, onLibration, pinned, current, onPin, onClearPin, polarCards, points, targetName, scope, goal, onScope, onGoal, rankBy, onRankBy }: {
   onDrive: (site: CardSite) => void
   rankBy: 'go' | 'prob'; onRankBy: (v: 'go' | 'prob') => void
   polarCards: CardSite[]; points: number; targetName: string | null
@@ -146,15 +145,14 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
           </li>
         </ol>
 
-        {onCoordinate && <CoordinateSearch lang={lang} onGo={onCoordinate} />}
 
         <div className="s-clps">
           <span><Rocket size={15} /> {tr ? 'Ya da gerçek bir NASA CLPS görevini dene:' : 'Or try a real NASA CLPS mission:'}</span>
           <div>{CLPS.map((m) => {
             const site = SCIENCE_SITES.find((x) => x.id === m.target)
             return (
-              <button key={m.id} onClick={() => onMission(m)} title={m.note[lang]}>
-                <b>{m.name}</b><small>{m.company} · {clpsChipWhen(m, lang, minDate)} · {site ? siteLabel(site, lang) : ''}</small>
+              <button key={m.id} onClick={() => onMission(m)} title={`${clpsChipWhen(m, lang, minDate)}. ${m.note[lang]}`}>
+                <b>{m.name}</b><small>{m.company} · {m.year} · {site ? siteLabel(site, lang) : ''}</small>
               </button>
             )
           })}</div>
