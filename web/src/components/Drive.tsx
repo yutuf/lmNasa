@@ -8,9 +8,9 @@ import * as THREE from 'three'
 import { useTexture } from '@react-three/drei'
 import '../drive-fix.css'
 import type { Ephem } from '../engine'
-import { pointLatLon } from '../engine'
+import { latLonAt, localDem, setDriveFrame, type DriveFrame } from '../localDem'
 import type { Lang } from '../i18n'
-import { R_M, altAz, bodies, conditions, diskAbove, horizonElev, horizonProfile, makeGround, nextChanges, parseDem,
+import { R_M, altAz, bodies, conditions, diskAbove, heightAt, horizonElev, horizonProfile, makeGround, nextChanges, parseDem,
   localSky, parsePatch, parseScience, parseThermal, thermalAt, type Thermal, planeAz, planeDir, scienceAt, findIceTarget, type Dem, type Patch, type Science, type SiteInfo } from '../terrain'
 import { dataUrl } from '../data'
 import { planRoute, pursue, routeProgress, type Route } from '../route'
@@ -66,6 +66,7 @@ const L = {
   restart: { en: 'Try again', tr: 'Tekrar dene' },
   terrain10: { en: 'LOLA 10 m terrain', tr: 'LOLA 10 m arazi' },
   terrain200: { en: 'LOLA 200 m terrain', tr: 'LOLA 200 m arazi' },
+  terrainMoon: { en: 'LOLA ~3.8 km terrain · finer detail synthetic', tr: 'LOLA ~3,8 km arazi · ince ayrıntı sentetik' },
   keys: { en: 'W/S drive · A/D steer · P plan route · E drill · V science view · C camera · L lights · 1–5 time speed · drag to look',
     tr: 'W/S sür · A/D dön · P rota · E del · V bilim görünümü · C kamera · L far · 1–5 zaman hızı · sürükle: bak' },
   target: { en: 'Ice target', tr: 'Buz hedefi' },
@@ -76,6 +77,7 @@ const L = {
   bringBack: { en: 'Sample collected: bring it back into sunlight', tr: 'Örnek alındı: güneş ışığına geri getirin' },
   complete: { en: 'Mission complete', tr: 'Görev tamam' },
   noTarget: { en: 'No permanent shadow within 6 km: explore freely', tr: '6 km içinde kalıcı gölge yok: serbest keşif' },
+  noPolarLayers: { en: 'Polar ice and shadow maps unavailable here: explore freely', tr: 'Burada kutup buz ve gölge haritaları yok: serbest keşif' },
   science: { en: 'Science view: blue = permanent shadow (never sunlit), cyan = ice-favourable',
     tr: 'Bilim görünümü: mavi = kalıcı gölge (hiç güneş görmez), camgöbeği = buz için elverişli' },
   psrHere: { en: 'You are in permanent shadow', tr: 'Kalıcı gölgedesiniz' },
@@ -110,7 +112,7 @@ const L = {
   compassOn: { en: 'Sky compass connected', tr: 'Gökyüzü pusulası bağlı' },
 } as const
 
-interface World { dem: Dem; patches: Patch[]; ground: ReturnType<typeof makeGround>; sci: Science | null; thermal: Thermal | null }
+interface World { frame: DriveFrame; dem: Dem; patches: Patch[]; ground: ReturnType<typeof makeGround>; sci: Science | null; thermal: Thermal | null }
 
 let demPromise: Promise<{ dem: Dem; sites: SiteInfo[]; sci: Science | null; thermal: Thermal | null }> | null = null
 function loadDem() {
@@ -147,7 +149,7 @@ interface Sim {
   x: number; y: number; heading: number      // stereographic metres; heading = plane angle (rad)
   speed: number; throttle: number; steer: number
   travel: number; wheelSteer: number; wheelYaw: number
-  hour: number; warp: number; playing: boolean
+  hour: number; warp: number; driveWarp: number; playing: boolean
   battery: number; solarW: number; useW: number
   driven: number; startHour: number; dead: boolean; steep: boolean; lights: boolean
   cam: 'chase' | 'mast'; yaw: number; pitch: number; pad: boolean; padBtn: boolean[]
@@ -172,11 +174,12 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
   const PARK = useMemo(() => parking(start), [start])
   Object.assign(ROVER, { maxSpeed: rv.maxSpeed, maxSlope: rv.maxSlope, batteryWh: rv.batteryWh, panelW: rv.panelW, driveW: rv.driveW, idleW: rv.idleW })
   const [world, setWorld] = useState<World | null>(null)
+  const [globalTerrain, setGlobalTerrain] = useState(false)
   const [surfaceReady, setSurfaceReady] = useState(false)
   const [hud, setHud] = useState(0)
   const sim = useRef<Sim>({
     mode: initialMode, x: start.x + PARK[0], y: start.y + PARK[1], heading: 0, speed: 0, throttle: 0, steer: 0, travel: 0, wheelSteer: 0, wheelYaw: 0,
-    hour: start.hour, warp: initialMode === 'rover' ? 60 : initialMode === 'walk' ? 1 : 600, playing: initialMode === 'rover' || initialMode === 'walk', battery: ROVER.batteryWh,
+    hour: start.hour, driveWarp: 0, warp: initialMode === 'rover' ? 60 : initialMode === 'walk' ? 1 : 600, playing: initialMode === 'rover' || initialMode === 'walk', battery: ROVER.batteryWh,
     solarW: 0, useW: 0, driven: 0, startHour: start.hour, dead: false, steep: false, lights: true,
     cam: 'chase', pad: false, padBtn: [], yaw: 0, pitch: initialMode === 'lander' ? 0.02 : initialMode === 'walk' ? -0.05 : -0.12,
     origin: { x: start.x, y: start.y, h: 0 }, profile: null, profileAt: { x: NaN, y: NaN }, cond: null, ecl: 0,
@@ -188,9 +191,17 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
   // load the 200 m grid and any 10 m site maps within reach of the start
   useEffect(() => {
     let live = true
-    loadDem().then(async ({ dem, sites, sci, thermal }) => {
-      const patches = await Promise.all(sites.filter((s) => near(s, start.x, start.y, 30000)).map(loadPatch))
+    loadDem().then(async (pole) => {
+      // off the 200 m polar grid: a local grid from the whole-Moon map (src/localDem.ts), in true metres
+      const polar = !Number.isNaN(heightAt(pole.dem, start.x, start.y))
+      const local = polar ? null : await localDem(start.x, start.y)
       if (!live) return
+      setDriveFrame(local && { xs: start.x, ys: start.y, k: local.k })
+      const dem = local ? local.dem : pole.dem
+      const sci = polar ? pole.sci : null, thermal = polar ? pole.thermal : null
+      const patches = polar ? await Promise.all(pole.sites.filter((s) => near(s, start.x, start.y, 30000)).map(loadPatch)) : []
+      if (!live) return
+      setGlobalTerrain(!polar)
       const ground = makeGround(dem, patches)
       const s = sim.current
       s.origin = { x: start.x, y: start.y, h: ground.height(start.x, start.y) }
@@ -204,9 +215,9 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
       if (initialMode === 'walk') placeWalker(s, start)
       const tg = sci ? findIceTarget(sci, start.x, start.y) : null
       s.target = tg && { x: tg.x, y: tg.y, ice: tg.ice }
-      setWorld({ dem, patches, ground, sci, thermal })
+      setWorld({ frame: local ? { xs: start.x, ys: start.y, k: local.k } : null, dem, patches, ground, sci, thermal })
     })
-    return () => { live = false }
+    return () => { live = false; setDriveFrame(null) }
   }, [start.x, start.y])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // HUD refresh at 6 Hz
@@ -217,7 +228,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
       const s = sim.current
       const c = s.cond
       if (!c || !serialConnected()) return
-      const [, lon] = pointLatLon(s.x / 1000, s.y / 1000)
+      const [, lon] = latLonAt(s.x, s.y)
       const yaw = s.heading + (s.mode === 'lander' ? s.yaw : 0)
       const nose = planeAz(lon, Math.cos(yaw), Math.sin(yaw))
       const sci = sciRef.current ? scienceAt(sciRef.current, s.x, s.y) : null
@@ -233,7 +244,9 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
   const plan = () => {
     if (!world || planning === 'busy') return
     const s = sim.current
-    const goal: [number, number] = s.phase === 'go' && s.target ? [s.target.x, s.target.y] : [start.x + PARK[0], start.y + PARK[1]]
+    const goal: [number, number] = s.phase === 'go'
+      ? s.target ? [s.target.x, s.target.y] : [s.x + 600 * Math.cos(s.heading), s.y + 600 * Math.sin(s.heading)]
+      : [start.x + PARK[0], start.y + PARK[1]]
     setPlanning('busy')
     setTimeout(() => {
       const h = world.ground.height
@@ -246,7 +259,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
         const key = `${Math.round(x / lat)},${Math.round(y / lat)}`
         let v = cache.get(key)
         if (v === undefined) {
-          const [la, lo] = pointLatLon(x / 1000, y / 1000)
+          const [la, lo] = latLonAt(x, y)
           const sun = altAz(b.sun, la, lo)
           v = sun.alt < -1 ? 0 : diskAbove(sun.alt, horizonElev(h, x, y, lo, sun.az, 1, reach), b.sunR)
           cache.set(key, v)
@@ -342,7 +355,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
   const dsnUp = dsn[Math.floor(s.hour)] ?? false
   const link = !!c?.earthUp && dsnUp
   const pct = Math.max(0, s.battery / ROVER.batteryWh)
-  const [lat, lon] = pointLatLon(s.x / 1000, s.y / 1000)
+  const [lat, lon] = latLonAt(s.x, s.y)
   const src = world?.ground.source(s.x, s.y)
   const headingAz = planeAz(lon, Math.cos(s.heading + (s.mode === 'lander' ? s.yaw : 0)), Math.sin(s.heading + (s.mode === 'lander' ? s.yaw : 0)))
   void hud
@@ -391,12 +404,12 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
       <div className="hud top-left">
         <div className="hud-title">{s.mode === 'lander' ? `${t('lander')} · ${ld.name}` : s.mode === 'walk' ? t('walk') : `${t('rover')} · ${rv.name}`}</div>
         <div className="hud-sub">{start.label}</div>
-        <div className="hud-sub">{lat.toFixed(3)}°, {(((lon % 360) + 360) % 360).toFixed(2)}°{lang === 'tr' ? 'D' : 'E'} · {src ? `${t('terrain10')} · ${src.name}` : t('terrain200')}</div>
+        <div className="hud-sub">{lat.toFixed(3)}°, {(((lon % 360) + 360) % 360).toFixed(2)}°{lang === 'tr' ? 'D' : 'E'} · {src ? `${t('terrain10')} · ${src.name}` : t(globalTerrain ? 'terrainMoon' : 'terrain200')}</div>
       </div>
 
       {s.mode === 'rover' && (
         <div className="hud objective">
-          {!tgt && <div>{t('noTarget')}</div>}
+          {!tgt && <div>{t(globalTerrain ? 'noPolarLayers' : 'noTarget')}</div>}
           {tgt && s.phase === 'go' && (
             <>
               <div className="ico"><Crosshair size={13} /><b>{t('target')}</b> · {tDist < 1000 ? `${Math.round(tDist)} m` : `${(tDist / 1000).toFixed(2)} km`} · {Math.round(tAz ?? 0)}°</div>
@@ -414,7 +427,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
           {s.phase !== 'done' && (
             <div className="route-row">
               <button className="mini" disabled={planning === 'busy'} onClick={plan}>
-                <Navigation size={12} /> {planning === 'busy' ? t('planning') : `${t('plan')}${s.phase === 'return' || !tgt ? ` (${t('toLander')})` : ''}`}
+                <Navigation size={12} /> {planning === 'busy' ? t('planning') : `${t('plan')}${s.phase === 'return' ? ` (${t('toLander')})` : ''}`}
               </button>
               {s.route && <button className={`mini ${s.autopilot ? 'on' : ''}`} onClick={() => { s.autopilot = !s.autopilot; s.playing = true }}>{s.autopilot ? '⏸' : '▶'} {t('auto')}</button>}
               {s.route && <button className="mini" onClick={() => { s.route = null; s.autopilot = false; s.routeS = 0; s.routeVer++ }}>{t('clearRoute')}</button>}
@@ -462,7 +475,7 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
           {next && <em> · {next.earthUp ? t('sets') : t('rises')} {hrs(next.earthH)}</em>}
         </div>
         <div className={`status ${link ? 'ok' : 'bad'}`}><Radio size={12} /> {t('link')}: {link ? t('dsnOk') : c?.earthUp ? t('noDsn') : '—'}</div>
-        {s.mode === 'rover' && <div className="hud-sub">{t('driven')} {s.driven < 1000 ? `${Math.round(s.driven)} m` : `${(s.driven / 1000).toFixed(2)} km`} · {(s.speed * 100).toFixed(0)} {lang === 'tr' ? 'cm/sn' : 'cm/s'}</div>}
+        {s.mode === 'rover' && <div className="hud-sub">{t('driven')} {s.driven < 1000 ? `${Math.round(s.driven)} m` : `${(s.driven / 1000).toFixed(2)} km`} · {(s.speed * 100).toFixed(s.speed < .1 ? 1 : 0)} {lang === 'tr' ? 'cm/sn' : 'cm/s'}{s.driveWarp > 0 && ` · ${lang === 'tr' ? 'sürerken zaman' : 'time while driving'} ×${s.driveWarp}`}</div>}
         {s.mode === 'walk' && <div className="hud-sub"><Footprints size={12} /> {t('walked')} {s.driven < 1000 ? `${Math.round(s.driven)} m` : `${(s.driven / 1000).toFixed(2)} km`} · <Flashlight size={12} /> {s.torch ? t('torchOn') : t('torchOff')}</div>}
       </div>
 
@@ -483,8 +496,8 @@ export default function Drive({ start, eph, dsn, lang, initialMode, onExit, cine
         {rv.id === 'viper' && s.mode !== 'walk' && <p className="keys">{lang === 'tr' ? 'VIPER için ölçeklenmiş Perseverance görsel modeli.' : 'Scaled Perseverance visual model for VIPER.'}</p>}
         {!['apollo', 'vikram', 'hls'].includes(ld.id) && <p className="keys">{lang === 'tr' ? 'İniş aracı: boyutu ölçeklenmiş Apollo görsel modeli.' : 'Lander: Apollo visual model scaled to vehicle height.'}</p>}
         {s.mode !== 'walk' && <p className="keys">{lang === 'tr'
-          ? `${rv.name}: ${rv.panelW ? `${rv.panelW} W panel, ` : 'güneş paneli yok, '}${(rv.batteryWh / 1000).toFixed(1)} kWh batarya, ${rv.maxSpeed} m/sn, en çok ${rv.maxSlope}° eğim (yaklaşık değerler); arazi, Güneş, Dünya ve DSN gerçek veridir.`
-          : `${rv.name}: ${rv.panelW ? `${rv.panelW} W panel, ` : 'no solar panel, '}${(rv.batteryWh / 1000).toFixed(1)} kWh battery, ${rv.maxSpeed} m/s, up to ${rv.maxSlope}° slopes (approximate); terrain, Sun, Earth and DSN are real data.`}</p>}
+          ? `${rv.name}: ${rv.panelW ? `${rv.panelW} W panel, ` : 'güneş paneli yok, '}${(rv.batteryWh / 1000).toFixed(1)} kWh batarya, ${rv.maxSpeed} m/sn, en çok ${rv.maxSlope}° eğim (yaklaşık değerler); Güneş, Dünya ve DSN gerçek veridir. ${globalTerrain ? 'Arazi: kaba LOLA ve sentetik ince ayrıntı.' : 'Arazi: LOLA.'}`
+          : `${rv.name}: ${rv.panelW ? `${rv.panelW} W panel, ` : 'no solar panel, '}${(rv.batteryWh / 1000).toFixed(1)} kWh battery, ${rv.maxSpeed} m/s, up to ${rv.maxSlope}° slopes (approximate); Sun, Earth and DSN use real data. ${globalTerrain ? "Terrain: coarse LOLA with synthetic finer detail." : "Terrain: LOLA."}`}</p>}
       </div>
 
       {s.mode === 'lander' && (
@@ -674,18 +687,20 @@ function Scene({ world, sim, eph, start, lang, onReady }: { world: World; sim: R
       const finish = () => {
         if (!live || !readiness.lander || !readiness.rover) return
         readiness.finish = null
-        void gl.compileAsync(scene, camera).then(() => {
-          if (!live) return
+        // compileAsync keeps polling shader programs after an early Exit disposes this renderer;
+        // three.js can then throw from that orphaned poll. Compile once while the scene is live.
+        try {
+          gl.compile(scene, camera)
           prepared.current = true
           if (playback && !['landing', 'rover'].includes(playback.current.scene)) advance(performance.now() / 1000)
           onReady(true); invalidate()
-        }).catch(fallback)
+        } catch { fallback() }
       }
       readiness.finish = finish; finish()
       if (!landing) worker.terminate()
     }
     timer = window.setTimeout(fallback, 10000)
-    worker.postMessage({ dem: world.dem, patches: world.patches, near: nearSpec, far: farSpec })
+    worker.postMessage({ frame: world.frame, dem: world.dem, patches: world.patches, near: nearSpec, far: farSpec })
     return () => { live = false; clearTimeout(timer); readiness.finish = null; worker.terminate() }
   }, [world.dem, world.patches, eph, sim, onReady, invalidate, gl, scene, camera, advance]) // eslint-disable-line react-hooks/exhaustive-deps
   const scratch = useMemo(() => ({
@@ -799,7 +814,7 @@ function Scene({ world, sim, eph, start, lang, onReady }: { world: World; sim: R
         if (hole && Math.abs(sx - hole.cx) < hole.half && Math.abs(sy - hole.cy) < hole.half) y -= 250
         const k = i * n + j
         pos.set([dx, y, -dy], k * 3)
-        uv.set([sx / 26, sy / 26], k * 2)          // regolith detail repeats every 26 m (shorter repeats flicker at a distance)
+        uv.set([(dx + o.x % 26) / 26, (dy + o.y % 26) / 26], k * 2) // 26 m repeat, bounded UVs preserve northern texture detail
         col.set([1, 1, 1], k * 3)
       }
     }
@@ -836,7 +851,7 @@ function Scene({ world, sim, eph, start, lang, onReady }: { world: World; sim: R
       for (let c = 0; c < m; c++) {
         const sx = cx - half + c * sub * step
         const sy = cy + half - a * sub * step
-        const [lat, lon] = pointLatLon(sx / 1000, sy / 1000)
+        const [lat, lon] = latLonAt(sx, sy)
         const s = altAz(b.sun, lat, lon)
         if (s.alt < -2) { lit[a * m + c] = 0; continue }
         const hz = horizonElev(h, sx, sy, lon, s.az, 1, maxM)
@@ -919,7 +934,11 @@ function Scene({ world, sim, eph, start, lang, onReady }: { world: World; sim: R
 
     // ---- time and driving
     const isRover = s.mode === 'rover'
-    const simDt = s.playing && !s.dead ? dt * s.warp : 0
+    // Real rovers crawl (Pragyan 1 cm/s): driving by hand at the chosen time speed looks frozen. While the driver
+    // holds the throttle, time runs fast enough to cover about 2.5 m per screen second; the clock, Sun and battery
+    // all follow that same faster time, and the HUD shows the speed-up.
+    s.driveWarp = isRover && s.throttle !== 0 && !s.autopilot ? Math.max(s.warp, Math.round(2.5 / Math.max(.001, ROVER.maxSpeed))) : 0
+    const simDt = s.playing && !s.dead ? dt * (s.driveWarp || s.warp) : 0
     const lon = Math.atan2(s.x, s.y) * 180 / Math.PI
     const beforeHeading = s.heading
     // Plane heading matches the step below (0 = +x, π/2 = +y). Look-ahead is metres along the curve.

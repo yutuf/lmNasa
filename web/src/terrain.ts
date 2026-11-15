@@ -2,7 +2,7 @@
 // (LOLA 5 m/px, Barker et al. 2021) where we have them, the sky at any position and hour, and a horizon ray-march
 // (same method as adaptlab/horizon.py: mast height, lunar curvature, out to 150 km).
 import type { Ephem } from './engine'
-import { pointLatLon } from './engine'
+import { latLonAt } from './localDem'
 
 export interface Dem { rows: number; cols: number; mPerPx: number; line0: number; sample0: number; scale: number; h: Int16Array }
 export interface Patch { id: string; name: string; rows: number; cols: number; mPerPx: number; x0: number; y0: number; scale: number; h: Int16Array }
@@ -126,7 +126,7 @@ export function horizonElev(h: Sampler, x: number, y: number, lonDeg: number, az
 
 /** Horizon elevation for every whole degree of azimuth (index 0 = north). */
 export function horizonProfile(h: Sampler, x: number, y: number, mast = 2): Float32Array {
-  const [, lon] = pointLatLon(x / 1000, y / 1000)
+  const [, lon] = latLonAt(x, y)
   const h0 = h(x, y)
   const out = new Float32Array(360)
   for (let a = 0; a < 360; a++) out[a] = horizonElev(h, x, y, lon, a, mast, 150000, h0)
@@ -165,7 +165,7 @@ export function altAz(v: number[], latDeg: number, lonDeg: number) {
 
 /** Sun and Earth seen from a stereographic point (m) at a fractional ephemeris hour. */
 export function localSky(eph: Ephem, xM: number, yM: number, hr: number) {
-  const [lat, lon] = pointLatLon(xM / 1000, yM / 1000)
+  const [lat, lon] = latLonAt(xM, yM)
   const b = bodies(eph, hr)
   const la = lat * RAD
   const lo = lon * RAD

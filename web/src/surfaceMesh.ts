@@ -1,4 +1,4 @@
-import { pointLatLon } from './engine'
+import { latLonAt } from './localDem'
 import { altAz, diskAbove, horizonElev, R_M, type Sampler } from './terrain'
 
 export interface MeshSpec {
@@ -25,7 +25,8 @@ export function buildSurfaceMesh(height: Sampler, spec: MeshSpec): SurfaceMesh {
     let y = z - o.h - (dx * dx + dy * dy) / (2 * R_M)
     if (hole && Math.abs(sx - hole.cx) < hole.half && Math.abs(sy - hole.cy) < hole.half) y -= 250
     position[k * 3] = dx; position[k * 3 + 1] = y; position[k * 3 + 2] = -dy
-    uv[k * 2] = sx / 26; uv[k * 2 + 1] = sy / 26
+    // Keep float32 UVs small even in the northern stereographic coordinates.
+    uv[k * 2] = (dx + o.x % 26) / 26; uv[k * 2 + 1] = (dy + o.y % 26) / 26
   }
   const index = new Uint32Array((n - 1) * (n - 1) * 6)
   let q = 0
@@ -48,7 +49,7 @@ export function buildSurfaceMesh(height: Sampler, spec: MeshSpec): SurfaceMesh {
   const m = Math.floor((n - 1) / sub) + 1, lit = new Float32Array(m * m)
   for (let a = 0; a < m; a++) for (let c = 0; c < m; c++) {
     const sx = cx - half + c * sub * step, sy = cy + half - a * sub * step
-    const [lat, lon] = pointLatLon(sx / 1000, sy / 1000), s = altAz(sun, lat, lon)
+    const [lat, lon] = latLonAt(sx, sy), s = altAz(sun, lat, lon)
     lit[a * m + c] = s.alt < -2 ? 0 : diskAbove(s.alt, horizonElev(height, sx, sy, lon, s.az, 1, reach), sunR)
   }
   for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {

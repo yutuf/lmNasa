@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import { dataUrl } from './data'
 import { heightAt, parseDem, planeDir, type Dem } from './terrain'
 import { afterResultsPaint } from './resultsPaint'
+import { globalHeight, loadGlobalDem as loadGlobal } from './localDem'
 
 const W = 520, H = 400
 const HALF_M = 9000                 // the relief covers 18 km x 18 km
@@ -14,20 +15,6 @@ const N = 120                       // grid cells per side
 const EXAG = 2.2                    // vertical exaggeration, so 200 m slopes read at card size
 
 let demP: Promise<Dem> | null = null
-interface Global { ppd: number; rows: number; cols: number; unit: number; h: Int16Array }
-let globP: Promise<Global> | null = null
-const loadGlobal = () => (globP ??= fetch(dataUrl('global_dem.bin')).then((r) => r.arrayBuffer()).then((b) => {
-  const v = new DataView(b)
-  return { ppd: v.getUint16(0, true), rows: v.getUint16(2, true), cols: v.getUint16(4, true), unit: v.getFloat32(6, true), h: new Int16Array(b.slice(10)) }
-}))
-/** Height (m) from the whole-Moon grid, bilinear; longitude wraps. */
-function globalHeight(g: Global, lat: number, lon: number) {
-  const col = g.ppd * (((lon % 360) + 360) % 360) - 0.5, row = Math.min(g.rows - 1.001, Math.max(0, g.ppd * (90 - lat) - 0.5))
-  const c0 = Math.floor(col), r0 = Math.floor(row), fc = col - c0, fr = row - r0
-  const C = (c: number) => ((c % g.cols) + g.cols) % g.cols
-  const at = (r: number, c: number) => g.h[r * g.cols + C(c)] * g.unit
-  return at(r0, c0) * (1 - fc) * (1 - fr) + at(r0, c0 + 1) * fc * (1 - fr) + at(r0 + 1, c0) * (1 - fc) * fr + at(r0 + 1, c0 + 1) * fc * fr
-}
 let renderer: THREE.WebGLRenderer | null = null
 const cache = new Map<string, Promise<string>>()
 let queue: Promise<unknown> = Promise.resolve()

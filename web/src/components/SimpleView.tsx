@@ -213,10 +213,8 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
 
       <section className="s-results" id="results">
         {cards[0] && <div className="s-rover-access">
-          <button className="btn primary" disabled={scope !== 'pole'} onClick={() => onDrive(cards[0])}><Car size={17} /> {tr ? `${roverName ?? 'Gezgin'} sür` : `Drive ${roverName ?? 'the rover'}`}</button>
-          <p className="s-vnote">{scope === 'pole'
-            ? (tr ? 'İlk sonuçta sürüşü açar. W/S: sür · A/D: dön · P: rota planla.' : 'Drive at the first result. W/S: drive · A/D: steer · P: plan a route.')
-            : (tr ? 'Gezgin sürüş arazisi yalnızca güney kutbunda mevcut. Sürmek için kapsamı Güney kutbu yapın.' : 'Rover driving terrain is available at the south pole. Choose South pole to drive.')}</p>
+          <button className="btn primary" onClick={() => onDrive(cards[0])}><Car size={17} /> {tr ? `${roverName ?? 'Gezgin'} sür` : `Drive ${roverName ?? 'the rover'}`}</button>
+          <p className="s-vnote">{tr ? 'İlk sonuçta sürüşü açar. W/S: sür · A/D: dön · P: rota planla. Kutup dışında LOLA ~3,8 km; ince ayrıntı sentetiktir.' : 'Drive at the first result. W/S: drive · A/D: steer · P: plan a route. Outside the pole: LOLA ~3.8 km; finer detail is synthetic.'}</p>
         </div>}
         <div className="s-head">
           <h2>{targetName ? (tr ? `${targetName} için en iyi iniş yerleri` : `Best landing sites for ${targetName}`) : polarCards.length ? (tr ? 'En iyi iniş yerleri · kutuplar dışında' : 'Top landing sites · away from the poles') : (tr ? 'En iyi iniş yerleri' : 'Top landing sites')}</h2>

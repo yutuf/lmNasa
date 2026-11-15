@@ -57,10 +57,13 @@ export default function RouteFlight({ lat, lon, approach, earthDir, labels, view
     if (!craft.current) return
     const dt = Math.min(rawDt, .1)
     if (t0.current === null) t0.current = clock.elapsedTime
-    const total = view === 'overview' ? 24 : view === 'site' ? 22 : 32
-    const a = view === 'overview' ? .32 : view === 'site' ? .12 : .22
-    const b = view === 'overview' ? .28 : view === 'site' ? .2 : .3
-    const c = view === 'overview' ? .3 : view === 'site' ? .58 : .4
+    // Chase follows lunar orbit and descent. From-the-site starts at descent: the far side of a parking orbit is
+    // occluded by the Moon from this stationary viewpoint. Pilot and overview keep the whole route.
+    const near = view === 'chase' || view === 'site'
+    const total = view === 'overview' ? 24 : near ? 20 : 32
+    const a = view === 'overview' ? .32 : near ? 0 : .22
+    const b = view === 'overview' ? .28 : view === 'site' ? 0 : .3
+    const c = view === 'overview' ? .3 : view === 'site' ? .88 : near ? .58 : .4
     const u = ((clock.elapsedTime - t0.current) / total + start) % 1
     let phase = u < a ? 0 : u < a + b ? 1 : u < a + b + c ? 2 : 3
     let s = phase === 0 ? u / a : phase === 1 ? (u - a) / b : phase === 2 ? (u - a - b) / c : 1

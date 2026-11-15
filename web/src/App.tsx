@@ -649,9 +649,7 @@ export default function App() {
   // the mission comes from the scenario, the hardware (battery, landing precision, slope limit, longest stay) from the lander
   const withLander = (q: Params, l: Lander): Params => ({ ...q, lander: l.id, rover: compatibleRover(l.id, q.rover), batt: l.batt, zone: l.zone, zslope: l.zslope, days: Math.min(q.days, l.maxDays) })
   const watchLanding = () => {
-    if (atlas.kind === 'pole') { setPendingDrive('landing'); return }
-    setMapMode('route'); setFlightView('pilot')
-    setTimeout(() => document.querySelector('.map-card')?.scrollIntoView({ behavior: 'smooth' }), 60)
+    setPendingDrive('landing')
   }
   const chooseScope = (s: 'pole' | 'moon') => {
     const t = SCIENCE_SITES.find((x) => x.id === p.target)
@@ -1312,7 +1310,6 @@ export default function App() {
         const landingDay = new Date(Date.parse(c.row.bestLanding + 'T00:00:00Z'))
         const ds = { x: c.xKm * 1000, y: c.yKm * 1000, hour: firstHour(ran.q) + c.r.bestStart * 24, missionH: ran.q.days * 24,
           startMs: landingDay.getTime(), label: `${c.name} · ${fmtDate(landingDay)}`, lander: p.lander, rover: p.rover, rough: p.landing === 'rough' }
-        const polar = atlas.kind === 'pole'
         const ap = chooseApproach(localSky(eph, ds.x, ds.y, ds.hour).sun.az)
         return (
           <MissionFilm lang={lang} card={c} lander={l} roverName={ROVERS.find((r) => r.id === p.rover)?.name ?? 'Rover'}
@@ -1326,14 +1323,14 @@ export default function App() {
                          labels: [S.phCoast[lang], S.phOrbit[lang], S.phDescent[lang], S.phLanded[lang]] }} />
               </Suspense>
             )}
-            touchdown={polar ? (mode: 'landing' | 'rover') => (
+            touchdown={(mode: 'landing' | 'rover') => (
               <Suspense fallback={null}><Drive start={ds} eph={eph} dsn={dsn} lang={lang} initialMode="landing" filmMode={mode} onExit={() => {}} cinematic /></Suspense>
-            ) : null}
-            rover={polar ? () => (
+            )}
+            rover={() => (
               <Suspense fallback={null}><Drive start={ds} eph={eph} dsn={dsn} lang={lang} initialMode="rover" onExit={() => {}} cinematic /></Suspense>
-            ) : null}
+            )}
             onClose={() => setFilm(false)}
-            onWalk={polar ? () => { setFilm(false); setPinned(c.r); setPendingDrive('walk') } : null} />
+            onWalk={() => { setFilm(false); setPinned(c.r); setPendingDrive('walk') }} />
         )
       })()}
       {interview && <MissionInterview lang={lang} onRun={runInterview} onClose={() => setInterview(false)} />}
