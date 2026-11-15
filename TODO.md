@@ -1,37 +1,51 @@
-# LunaNav · what is left (live tracker)
+# Touchdown · what is left (live tracker)
 
-Updated by the agents as work lands. `[x]` done and verified · `[~]` in progress (who) · `[ ]` not started.
+Updated 15 Nov 2026. `[x]` done and verified · `[~]` in progress (who) · `[ ]` not started.
 Rules: test with `npm test` + `npx tsc -b` in `web/`; show the owner locally before committing; never push `main` without asking.
+The owner wants the F1 card look: flat colours, no gradients, no side-line accents.
+Compare against the live site (https://lunanav-theta.vercel.app) before publishing.
+Make visual changes one small step at a time.
 
-## Live-site problems found 14 Nov ~23:45 (next session: start here)
+## Open (15 Nov, start here)
+
+- [ ] **Team member names** on the pitch deck and on the submission
+- [ ] **Demo video**, in progress (`presentation-kit/video/`)
+- [ ] **Phone pairing view:** a red bar. Those files belong to another agent
+- [ ] **Pinned point rank:** a pinned point shows rank "01" on its site page
+- [ ] **"Drive Pragyan"** on the Simple page: decide whether to keep the button
+
+## Done on 15 Nov
+
+- [x] Mission film rework (`web/src/components/MissionFilm.tsx`)
+- [x] Phone layout fixes and Turkish copy fixes
+- [x] Site-page countdowns (Sun and Earth set and rise) and the 0–10 day launch-slip strip (`SiteTimeline.tsx`)
+- [x] Advanced pin search: type coordinates (`CoordinateSearch.tsx`)
+- [x] Flat style: F1 cards, flat colours, no gradients, no side-line accents
+- [x] Pitch deck: `presentation-kit/NoLimitsLunar-Touchdown-pitch.pptx`, notes in `presentation-kit/PITCH_DECK.md`
+- [x] Published to `main` as `4c42e33`. Live: https://lunanav-theta.vercel.app
+
+## Live-site problems found 14 Nov ~23:45
 - [ ] **Slow first load ("doesn't load")**: before anything shows, the app downloads ~9 MB (atlas 4.1, ephem 4.7 MB) while the
       card renders pull pole_dem 4.6 MB, psr 6.4 MB, thermal 4.8 MB in parallel; measured 0.3–0.5 MB/s from the live server,
       so the first screen takes over a minute. Fixes: (1) `web/vercel.json` cache headers (added, repeat visits fast);
       (2) gzip the .bin files at build (psr → 35 %, thermal → 40 %, atlas → 57 %) and inflate with `DecompressionStream`;
       (3) do not start psr/thermal/pole_dem until the first results are on screen; (4) show the page shell while loading.
-- [ ] **Phone layout collapses**: on a 390 px phone the page is 461 px wider than the screen (find the overflowing element;
-      likely the header nav with the new Phone button or the ticker) — fix with wrapping/hiding in the 390 px breakpoint.
+- [x] **Phone layout collapses**: phone fixes landed 15 Nov. The pairing view's red bar is still open (see above; another agent's files).
 - [ ] **Rough Earth and Moon textures**: `moon_albedo.jpg` is only 0.31 MB (low resolution), used close-up in the Earthrise
       backdrop and the globe. Proposal: NASA SVS "CGI Moon Kit" LROC colour map (4k/8k, public domain) and a 4k Earth
       (NASA Blue Marble) → resize to 4k JPEG (~1.5 MB each). Needs the owner's OK to download (AGENTS.md rule).
 - [ ] **Luna on the live site**: `GEMINI_API_KEY` is still missing in Vercel (`/api/ask` → 503). ElevenLabs works (key set).
 - [ ] **adaptlabs.us** does not resolve (DNS: non-existent domain); nothing in the code points to it any more.
-- [ ] Grok #8 (`SiteTimeline.tsx`: countdowns, slip what-if, nearest dates) and #9 (`CoordinateSearch.tsx` + `pinSite.ts`)
-      finished their files: review, then mount (SiteTimeline in `SiteProfile` next to `SiteExtras`; CoordinateSearch in
-      `SimpleView` under the steps, evaluating the point with `searchPoint` and opening its site page).
+- [x] Grok #8 (`SiteTimeline.tsx`) and #9 (`CoordinateSearch.tsx`): mounted 15 Nov. Countdowns and the slip strip are on the site page. Typing coordinates is in the Advanced sidebar, not under the Simple steps.
 - [ ] Grok #7 QA report: `C:/Users/kayma/AppData/Local/Temp/claude/.../scratchpad/qa/REPORT.md` (if it finished).
 
 ## In progress
-- [~] **Countdowns** (sunset/Earthset, "right now"), **launch-slip what-if**, **nearest dates that work** (Grok #8)
-- [~] **Drop a pin / type coordinates** anywhere on the Moon (Grok #9)
+- [~] **Demo video** (`presentation-kit/video/`). A project video longer than 30 seconds is not eligible for Global Judging, so keep any recording local.
 - [~] **Full QA pass** of the production build, every feature, EN/TR, desktop/phone; report only (Grok #7) → then fixes (Claude)
 
 ## Not started
 - [ ] **Final speed check** of the film and 3D scenes on a quiet machine (production build)
-- [ ] **Publish today's later work** (art fix, phone mode, QA fixes) the same way: one new commit on top of `main`, no force push
-- [ ] **Refresh the Drive presentation kit** (guide updated locally; new screenshots; add the 7-slide deck)
 - [ ] **Owner, Vercel keys:** the live `/api/ask` still answers 503 `GEMINI_API_KEY missing`. Add `GEMINI_API_KEY` and `ELEVENLABS_API_KEY` in Vercel → Settings → Environment Variables (Production), then redeploy. There is no key in the repo.
-- [ ] **New demo video** recorded from the app. The 7-slide deck is the submission. A project video longer than 30 seconds is not eligible for Global Judging, so keep any recording local.
 
 ## Done (this session)
 - [x] Rescan fixes: ellipse follows the landing zone; "400 m scale" slope label; relay checked against the terrain horizon; ranges relabelled "across simulations"; the 7.6 M figure explained (flat-enough points × every hour)
@@ -40,7 +54,7 @@ Rules: test with `npm test` + `npx tsc -b` in `web/`; show the owner locally bef
 - [x] Illustrations with Grok Imagine: 17 engineering-line drawings (goal diagrams, "What next?" cards, judges page), transparent WebP, 0.5 MB total (Grok #6 + review)
 - [x] Mission interview chatbot (Grok #5), wired in via Luna "Plan a mission with me"
 - [x] Phone mode (tilt-to-look viewer paired with the desktop; added by the other agent, compiles and tests pass)
-- [x] **Demo deck**: `presentation-kit/LunaNav-demo.pptx`, 7 English slides, from `presentation-kit/screenshots/`
+- [x] **Demo deck**: `presentation-kit/Touchdown-demo.pptx`, 7 English slides, from `presentation-kit/screenshots/`
 - [x] **Go live**: the reviewed hackathon tree is published on `main` as one new commit on the previous live history. `main` was not force-pushed. The phone screen stays in the working tree and is not in this publish.
 - [x] Space UI: page background `#000000`; the 3D moon has no card frame and runs to the edges of the view
 - [x] Presentation kit: submitted-deck limit is 7 slides including the title; ellipse, relay, and real models are no longer "next"

@@ -14,7 +14,7 @@ mission settings (14 days, 70 % sunlight, 50 % Earth, 2,000 Wh battery).
 
 > "A solar lander near the Moon's south pole needs sunlight for power and Earth in the sky to talk
 > home. Near the pole the Sun skims the horizon, so a hill a few hundred metres high decides
-> everything. LunaNav checks every candidate site against every landing date, using NASA's terrain
+> everything. Touchdown checks every candidate site against every landing date, using NASA's terrain
 > and JPL's ephemeris, hour by hour until 2028."
 
 Point at the heatmap: bright = go. Point at the map: the green boxes are NASA's nine Artemis III regions.
@@ -29,7 +29,7 @@ Point at the heatmap: bright = go. Point at the map: the green boxes are NASA's 
 [`?site=malapert_massif_derived&start=2027-09-09T00:00`](https://limitlessapps.streamlit.app/?site=malapert_massif_derived&start=2027-09-09T00:00)
 
 > "447 metres away: sunlight 90 %, Earth 100 %. Still NO-GO, but only because the battery dies in a
-> 35-hour shadow. LunaNav tells us exactly what would fix it: **6,598 Wh**."
+> 35-hour shadow. Touchdown tells us exactly what would fix it: **6,598 Wh**."
 
 [`?site=malapert_massif_derived&start=2027-09-09T00:00&batt=6600`](https://limitlessapps.streamlit.app/?site=malapert_massif_derived&start=2027-09-09T00:00&batt=6600)
 
@@ -54,7 +54,7 @@ Point at the heatmap: bright = go. Point at the map: the green boxes are NASA's 
 
 **3. Can we trust it? (20 s)** — on any site, read the 🧊 line under the metrics.
 
-> "We checked LunaNav against NASA's own 18.6-year illumination maps: where nobody optimised the spot
+> "We checked Touchdown against NASA's own 18.6-year illumination maps: where nobody optimised the spot
 > they agree to about two points. On narrow crests the answer depends on where each terrain map puts
 > the crest; we say so in the app. And we found that the IM-2 landing point sits in the Mons Mouton
 > *Plateau* region, not the Mons Mouton one."

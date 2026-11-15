@@ -1,10 +1,10 @@
-# LunaNav handoff
+# Touchdown handoff
 
 NASA Space Apps 2026 (14–15 Nov 2026), challenge **Lunar Landing Site Navigator**: "where and when should we land on the Moon?"
 
 ## What it is
 
-LunaNav is a web app that finds where and when a lander can land on the Moon and survive. For every candidate point it computes the Sun and Earth over the real terrain horizon, hour by hour, for every landing date in a window. The points are 21,856 south-polar points on a 2 km grid and 41,276 points across the whole Moon about 30 km apart. It uses NASA LOLA terrain, JPL ephemerides and Deep Space Network (DSN) visibility, then checks sunlight, Earth contact, longest darkness, battery, slope, landing-zone roughness and distance to ice. The output is ranked GO/NO-GO sites with dates, 3D terrain renders and a Monte Carlo mission success probability. A decision model re-ranks the sites by weighted criteria. There is also a lander/rover drive and walking mode, a cinematic "Tell me the mission" film, a workshop to design your own vehicle, and an AI assistant ("Luna", Gemini). Everything runs in the browser except the Gemini call (`api/ask`) and read-aloud (`api/tts`, ElevenLabs).
+Touchdown is a web app that finds where and when a lander can land on the Moon and survive. For every candidate point it computes the Sun and Earth over the real terrain horizon, hour by hour, for every landing date in a window. The points are 21,856 south-polar points on a 2 km grid and 41,276 points across the whole Moon about 30 km apart. It uses NASA LOLA terrain, JPL ephemerides and Deep Space Network (DSN) visibility, then checks sunlight, Earth contact, longest darkness, battery, slope, landing-zone roughness and distance to ice. The output is ranked GO/NO-GO sites with dates, 3D terrain renders and a Monte Carlo mission success probability. A decision model re-ranks the sites by weighted criteria. There is also a lander/rover drive and walking mode, a cinematic "Tell me the mission" film, a workshop to design your own vehicle, and an AI assistant ("Luna", Gemini). Everything runs in the browser except the Gemini call (`api/ask`) and read-aloud (`api/tts`, ElevenLabs).
 
 ## Architecture
 
@@ -36,7 +36,11 @@ web/          THE PRODUCT: Vite + React 19 + TypeScript + three.js (@react-three
   src/space.css     The whole theme (F1-drivers-page style)
 ```
 
-**Data sources:** NASA LRO **LOLA** (polar 5/20/40 m DEMs, LDEM global grids, 40 m slopes), **SPICE** kernels: DE440 + pck00011 + moon_pa_de440 in Python (`scripts/fetch_kernels.py`). `scripts/build_ephem_web.py` uses DE440 when present, otherwise DE421 (valid to 2050). Also **DSN** station geometry (Goldstone, Madrid, Canberra), LRO **Diviner** (ice stability depth, temperatures), PSR maps, the IAU gazetteer, and the USGS Astrogeology mosaics (below).
+**Data sources:** NASA LRO **LOLA** (polar 5/20/40 m DEMs, LDEM global grids, 40 m slopes). **DSN** station geometry (Goldstone, Madrid, Canberra). LRO **Diviner** (ice stability depth, temperatures), PSR maps, the IAU gazetteer, and the USGS Astrogeology mosaics (below).
+
+**Ephemeris:** the shipped web catalogue is **JPL DE421**. `web/public/data/manifest.json` has `ephemeris.spk` = `de421.bsp`, hourly from 2026-11-01 to 2045-12-31. The Sources page says the same.
+
+`scripts/fetch_kernels.py` still downloads DE440 for the Python planner. `scripts/build_ephem_web.py` uses DE440 when those kernels are present, otherwise DE421 (valid to 2050). The `sources` array in `manifest.json` still says "JPL DE440". Trust `ephemeris.spk`, not that sentence.
 
 ## How to run
 
@@ -77,7 +81,9 @@ Screenshots: `scripts/web_screenshots.py` (Playwright; on Windows it uses `chann
 
 ## Deploy
 
-Vercel project **"lunanav"**, Root Directory **`web`**, auto-deploys from **`main`**, protected with **Vercel Authentication**. The `api/ask.ts` function needs `GEMINI_API_KEY` in the project env, and `api/tts.ts` needs `ELEVENLABS_API_KEY` (optional `ELEVENLABS_VOICE_ID` and `ELEVENLABS_VOICE_ID_TR`). Work since `e616415` is on branch **`hackathon`**: merge it into `main` to deploy. Tag `pre-hackathon` = `e616415` marks what existed before the event.
+Vercel project **"lunanav"**, Root Directory **`web`**, auto-deploys from **`main`**, protected with **Vercel Authentication**. Live app: https://lunanav-theta.vercel.app. The `api/ask.ts` function needs `GEMINI_API_KEY` in the project env, and `api/tts.ts` needs `ELEVENLABS_API_KEY` (optional `ELEVENLABS_VOICE_ID` and `ELEVENLABS_VOICE_ID_TR`).
+
+Published to `main` on 15 Nov as **`4c42e33`**. Ask the owner before the next push, and compare against the live site first. Tag `pre-hackathon` = `e616415` marks what existed before the event. Do not weaken that disclosure.
 
 ## Done features
 
@@ -89,23 +95,37 @@ Vercel project **"lunanav"**, Root Directory **`web`**, auto-deploys from **`mai
 - Decision lab: TOPSIS weights + 500-shake robustness ("robust choice" vs "close call")
 - Workshop: design a lander/rover/satellite; budgets drive a real search; orbit coverage
 - 3D globe, landing camera (chase/pilot/site), lander + rover driving with route planning, Moonwalk with a torch
-- "Tell me the mission" cinematic film (launch, coast, descent, landing, rover, verdict); Luna AI chat (EN/TR, voice)
+- "Tell me the mission" film (launch, coast, descent, landing, rover, verdict); Luna AI chat (EN/TR, voice)
 - Simple and Advanced interfaces, EN/TR, F1-style theme
+- Items that used to sit in the open list (chatbot, orbits, uncertainty, ellipse, relay, tour, judges QR) are checked off in `TODO.md`
 
-## Open TODOs (priority order)
+## 15 November 2026
 
-a) **Fix the Vercel build:** `web/api/ask.test.ts` line 3 imports `'./ask'`. Vercel's TS (node16/nodenext resolution) fails with TS2835, so change it to `'./ask.js'`, or move the test out of `api/` (for example to `web/src/ask.test.ts` importing `../api/ask`).
-b) **Step-by-step mission chatbot:** first ask for a mission brief, then ask follow-up parameters depending on the context (duration, payload, rover, science goal, dates), then run the search. `MissionStory.tsx` and `Luna.tsx` are the starting points.
-c) **Launch angle / orbit inclination input:** compute the reachable latitude band, compare several orbit scenarios, rank the best sites for each, and produce a PDF report. `workshop.ts` has orbit maths; `report.ts` has the printable report.
-d) **Uncertainty bounds on every number** (sunlight, Earth, dark hours), the longest night, and a solar + battery "does it survive?" verdict on every site.
-e) **Landing ellipse:** worst slope, sunlight and Earth view inside the ellipse, not only at its centre.
-f) Relay comms (a relay satellite for the far side and PSRs), a libration explainer, a guided tour, a mast-height setting, a new demo video.
+- Mission film reworked (`web/src/components/MissionFilm.tsx`).
+- Phone layout fixes and Turkish copy fixes.
+- Site page: Sun and Earth set and rise countdowns, and a 0–10 day launch-slip strip (`SiteTimeline.tsx`).
+- Advanced interface: type coordinates and open that point (`CoordinateSearch.tsx`).
+- Flat style: F1 cards, flat colours, no gradients and no side-line accents (`web/src/space.css`).
+- Pitch deck: `presentation-kit/NoLimitsLunar-Touchdown-pitch.pptx` and `presentation-kit/PITCH_DECK.md`.
+- Published to `main` as `4c42e33`. Live: https://lunanav-theta.vercel.app.
 
-Also pending from the last session: a landing page with a QR code for judges (needs the deployed URL), and realistic 3D models for the commercial landers/rovers (see pitfalls).
+### Still open
+
+- Team member names, on the deck and on the submission.
+- Demo video, in progress. Folder: `presentation-kit/video/`.
+- Phone pairing view: a red bar. Those files belong to another agent.
+- A pinned point shows rank "01" on its site page.
+- The "Drive Pragyan" button on the Simple page. Decide whether to keep it.
+
+### Working rules from today
+
+- The owner wants the F1 card look: flat colours, no gradients, no side-line accents.
+- Compare the change against the live site before publishing.
+- Make visual changes one small step at a time.
 
 ## Known issues and pitfalls
 
-- **Vercel TS2835** in `api/ask.test.ts` (TODO a).
+- **Vercel TS2835:** fixed. `web/api/ask.test.ts` imports `./ask.js`.
 - **3D vehicle models:** only Apollo LM, LRO and Perseverance (standing in for VIPER) are real NASA models. Nova-C, Blue Ghost, Vikram, Blue Moon, Starship, LRV, Yutu-2 and Pragyan are procedural box models in `VehicleModels.tsx`, and the user finds them childish. NASA publishes no models for those; Sketchfab/CGTrader ones carry creator licences, so check the licence and credit in `public/models/CREDITS.md`.
 - drei `<Html>` labels cause React 19 "removeChild" warnings when overlays unmount; the film passes `labels={false}` to Globe.
 - An off-screen R3F root (`VehiclePhoto.tsx`) needs `extend(THREE)` and `await root.configure()`. Real GLB models suspend inside their own Suspense, so the capture waits until meshes exist.

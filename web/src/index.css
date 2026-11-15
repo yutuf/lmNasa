@@ -1,4 +1,4 @@
-/* LunaNav UI. Neutral zinc surfaces, one type family (Inter), 8 px radius, 1 px borders, no gradients or glows.
+/* Touchdown UI. Neutral zinc surfaces, one type family (Inter), 8 px radius, 1 px borders, no gradients or glows.
    Colour carries meaning only: GO / NO-GO, Sun (amber), Earth (blue). */
 :root {
   --bg: #000000;

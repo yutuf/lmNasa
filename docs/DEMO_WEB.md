@@ -10,7 +10,7 @@ or the defaults, check them again before presenting.
 **0. The question (15 s).** Open the app.
 
 > "Near the Moon's south pole the Sun skims the horizon, so a few hundred metres decide whether a lander has
-> power, can talk to Earth, lands safely, and is near water ice. LunaNav answers *where and when* in one screen."
+> power, can talk to Earth, lands safely, and is near water ice. Touchdown answers *where and when* in one screen."
 
 Point at the 3-step guide, then at the line under *Run search*: **21,856 points, about 12 million hour-by-hour
 checks, a second or two.**
@@ -37,7 +37,7 @@ Our slopes agree with LOLA's own 40 m slope map: median 1.15°, r = 0.94 over 6,
 **3. NASA's regions, head to head (25 s).** Scroll to *Artemis III regions, head to head*.
 
 > "For this mission, **every region centre inside our search area fails a terrain check**: too steep at the site or
-> in the landing zone. Yet inside five of those regions LunaNav finds points that pass, 4 to 13 km away. Mons
+> in the landing zone. Yet inside five of those regions Touchdown finds points that pass, 4 to 13 km away. Mons
 > Mouton Plateau: 4 of 30 dates, 1.3 km from ice."
 
 Click that row: it opens the point.

@@ -1,4 +1,4 @@
-# LunaNav: 7-slide pitch deck (content draft v2)
+# Touchdown: 7-slide pitch deck (content draft v2)
 
 Team: **No Limits Lunar**.
 
@@ -17,7 +17,7 @@ The look follows the app: a black page, the F1-card style, real screenshots, and
 
 ## Investment thesis (the one idea behind all 7 slides)
 
-The Moon's south pole is where every agency and company wants to land next, and also where sunlight and radio contact are hardest to get. Every other tool checks a site you have already picked. **LunaNav finds the sites and the dates for you, for your mission's goal, and its predictions match what real landers experienced.**
+The Moon's south pole is where every agency and company wants to land next, and also where sunlight and radio contact are hardest to get. Every other tool checks a site you have already picked. **Touchdown finds the sites and the dates for you, for your mission's goal, and its predictions match what real landers experienced.**
 
 ---
 
@@ -27,7 +27,7 @@ The Moon's south pole is where every agency and company wants to land next, and 
 - **Headline:** **The next decade of Moon landings is aimed at its darkest, hardest place.**
 - **Key message:** The south pole has ice and Artemis, but its Sun skims the horizon and its terrain hides Earth.
 - **Slide copy:**
-  - LunaNav: *where and when to land on the Moon.*
+  - Touchdown: *where and when to land on the Moon.*
   - Artemis III candidate regions: 9, all at the south pole.
   - Upcoming NASA CLPS landers: IM-3 (2026), Griffin 1 (2026), CP-12 (2026), Blue Ghost 3 (2028). [VERIFY DATES against NASA CLPS page]
   - At the pole the Sun stays within a few degrees of the horizon, so a ridge 1 km away can decide whether a lander lives.
@@ -48,21 +48,21 @@ The Moon's south pole is where every agency and company wants to land next, and 
     - **SLIM** (Jan 2024) settled nose-down with its solar cells facing west, so it could only charge near the end of the lunar day. ([Physics World](https://physicsworld.com/a/japans-lunar-lander-falls-head-over-heels-for-the-moon/))
     - **IM-1 Odysseus** (Feb 2024) tipped onto its side, which changed how its panels faced the Sun, and its mission was cut short. ([TechCrunch](https://techcrunch.com/2024/02/27/intuitive-machines-faces-early-end-to-moon-mission-after-lander-tips-over))
   - Today: pick a candidate site, then run sunlight and comms analysis for that one point and that one date.
-- **Visual:** One timeline: the hours a lander has Sun and Earth at a polar site over 30 days, shown as gaps of darkness and lost contact. Use a real LunaNav strip from the site page.
+- **Visual:** One timeline: the hours a lander has Sun and Earth at a polar site over 30 days, shown as gaps of darkness and lost contact. Use a real Touchdown strip from the site page.
 - **Layout:** Headline on top. One wide strip graphic in the middle. The three facts sit underneath, small.
 - **Speaker notes:** Be honest: Athena also tipped over. The point is that at the pole, a few hundred metres and the wrong shadow are the difference between 10 days and 13 hours. The pain is the gap between "it's sunny at the pole" and "it's sunny at this exact spot on this exact day".
-- **Transition:** "We built LunaNav to flip that question around."
+- **Transition:** "We built Touchdown to flip that question around."
 
 ## Slide 3: the solution
 
 - **Judge's question:** What is it, in 20 seconds?
-- **Headline:** **Tell LunaNav what the mission is for. It returns the best places and dates to land.**
+- **Headline:** **Tell Touchdown what the mission is for. It returns the best places and dates to land.**
 - **Key message:** It searches; you don't have to guess.
 - **Slide copy:**
   - **01 — Choose the goal:** safe landing, water ice, volcanoes, Artemis… plus the lander, the stay and the dates.
-  - **02 — LunaNav searches:** 21,856 points at 2 km across the south pole (41,276 across the whole Moon), every hour of every landing day. It uses NASA LOLA terrain horizons, JPL DE421 Sun and Earth positions, and the NASA Deep Space Network schedule.
+  - **02 — Touchdown searches:** 21,856 points at 2 km across the south pole (41,276 across the whole Moon), every hour of every landing day. It uses NASA LOLA terrain horizons, JPL DE421 Sun and Earth positions, and the NASA Deep Space Network schedule.
   - **03 — You get:** ranked sites and dates with GO/NO-GO, success odds, the biggest risk, a landing film and a PDF report.
-  - **Before:** you pick a site, then check it. **After:** you state the goal, and LunaNav finds the sites.
+  - **Before:** you pick a site, then check it. **After:** you state the goal, and Touchdown finds the sites.
 - **Visual:** The "Top landing sites" card grid (the F1 cards), real screenshot.
 - **Layout:** Headline on top. The three steps run down the left in a narrow column. The screenshot fills the right side.
 - **Speaker notes:** Say "7.6 million hourly checks in under a second, in the browser". Don't explain the algorithm.
@@ -71,7 +71,7 @@ The Moon's south pole is where every agency and company wants to land next, and 
 ## Slide 4: proof
 
 - **Judge's question:** Does it actually work?
-- **Headline:** **We replayed real landings. LunaNav's sunlight matched what the landers got.**
+- **Headline:** **We replayed real landings. Touchdown's sunlight matched what the landers got.**
 - **Key message:** Its predictions hold up against reality, not only against our own maths.
 - **Slide copy (big metric cards):**
   - **Chandrayaan-3** (69°S): the model gives 11.9 days of sunlight; the lander worked about 11.
@@ -107,18 +107,18 @@ The Moon's south pole is where every agency and company wants to land next, and 
 ## Slide 6: advantage and team
 
 - **Judge's question:** Why will this win, and why this team?
-- **Headline:** **Others check a site you picked. LunaNav searches all of them, and checks itself against real missions.**
+- **Headline:** **Others check a site you picked. Touchdown searches all of them, and checks itself against real missions.**
 - **Key message:** Search plus validation plus mission goals is the edge.
 - **Slide copy:**
   - **The usual approach** (about 150 projects on this challenge): one site or a fixed list → Sun and Earth visibility.
-  - **LunaNav adds:**
+  - **Touchdown adds:**
     - the whole-region search, ranked by mission goal;
     - success odds with the biggest risk named;
     - replays of real landings;
     - honest limits, stated on the Sources page.
-  - **Team:** [FOUNDER INPUT REQUIRED: Name → relevant experience → why it matters]
-  - **Founder–problem fit:** [FOUNDER INPUT REQUIRED]
-- **Visual:** A simple 2×2: *checks one site ↔ searches all sites* against *method-validated ↔ outcome-validated*. LunaNav sits alone in the top-right. No checkmark table.
+  - **Team No Limits Lunar:** Yusuf Kerim Kaymakçı (technical: engine, data, web app) and Yusuf Çırpan (presentation and judge experience).
+  - **Fit:** one person built the engine on real NASA data, and the other made sure a judge understands it in 30 seconds.
+- **Visual:** A simple 2×2: *checks one site ↔ searches all sites* against *method-validated ↔ outcome-validated*. Touchdown sits alone in the top-right. No checkmark table.
 - **Speaker notes:** Never say "no competitors". Say what others do well (precise horizons, nice 3D) and what only we do.
 - **Transition:** "Here's where we take it next."
 
@@ -136,7 +136,7 @@ The Moon's south pole is where every agency and company wants to land next, and 
     2. **Finer terrain at the Artemis sites**, plus a power and link budget per lander.
     3. **Replay every new landing:** IM-3, Griffin 1 and the 2026 CLPS landers, as they happen.
   - **Big QR → live app.** "Try it: pick a goal, and see where you would land."
-  - **Closing line:** *"Every lander that went dark had a better place, or a better day. LunaNav finds it."*
+  - **Closing line:** *"Every lander that went dark had a better place, or a better day. Touchdown finds it."*
   - No Limits Lunar · lunanav-theta.vercel.app
 - **Visual:** The QR code, large, on the right. The three steps as three numbered tiles on the left (flat, F1 style).
 - **Speaker notes:** End on the closing line, then stop talking, and leave the QR up for the Q&A.
@@ -145,7 +145,7 @@ The Moon's south pole is where every agency and company wants to land next, and 
 
 ## 30-second pitch
 
-The next wave of Moon landings is aimed at the south pole: ice, Artemis, and a Sun that barely clears the horizon. Landers there live or die by where and when they touch down. Today teams pick a site and then check it. LunaNav flips that. Tell it what the mission is for, and it searches 21,856 points, every hour of every landing day, on NASA terrain and JPL orbits, then returns the best sites and dates with success odds. We replayed Chandrayaan-3 and Blue Ghost 1, and its sunlight predictions match what those landers got.
+The next wave of Moon landings is aimed at the south pole: ice, Artemis, and a Sun that barely clears the horizon. Landers there live or die by where and when they touch down. Today teams pick a site and then check it. Touchdown flips that. Tell it what the mission is for, and it searches 21,856 points, every hour of every landing day, on NASA terrain and JPL orbits, then returns the best sites and dates with success odds. We replayed Chandrayaan-3 and Blue Ghost 1, and its sunlight predictions match what those landers got.
 
 ## Questions a skeptical judge will ask (prepare answers)
 
@@ -159,7 +159,7 @@ The next wave of Moon landings is aimed at the south pole: ice, Artemis, and a S
 
 ## Still needed from you
 
-- **Critical:** team member names and roles (slide 6). The team name is in.
+- **Done:** team names and roles (slides 1 and 6).
 - **Done:** the IM-2, SLIM and IM-1 facts, and the Blue Ghost and Chandrayaan-3 durations, are sourced. Slide 7 needs no "ask".
 - **Important:** check the CLPS dates on slide 1.
 - **Optional:** the final closing line.

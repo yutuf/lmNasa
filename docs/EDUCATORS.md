@@ -1,9 +1,9 @@
-# LunaNav in the classroom
+# Touchdown in the classroom
 
 Four short activities (15–25 min each) for ages ~14+. Open the app, then use the sidebar,
 the heatmap, the site list and the **Inspect one option** section (360° view + time slider).
 
-All numbers below come from LunaNav's committed data (JPL DE440 ephemeris, LOLA terrain,
+All numbers below come from Touchdown's committed data (JPL DE440 ephemeris, LOLA terrain,
 1 Nov 2026 – 31 Dec 2028, hourly) and the app's default illustrative lander (400 W solar array,
 150 W load). If you change the settings, the numbers change; that is part of the lesson.
 
@@ -71,7 +71,7 @@ metrics, read the 🧊 line: it shows NASA's own number for the same spot, from 
 
 **What students should find** (average share of the Sun's disk that is visible):
 
-| | LunaNav | NASA, 120 m map | NASA, 60 m map |
+| | Touchdown | NASA, 120 m map | NASA, 60 m map |
 |---|---|---|---|
 | Haworth region centre (flat ground) | 10.0 % | 10.7 % | 10.4 % |
 | Shackleton ridge point (narrow crest) | 91.1 % | 78.3 % | 44.3 % at the point, 75.5 % just 73 m away |
