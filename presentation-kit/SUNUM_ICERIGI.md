@@ -4,7 +4,7 @@
 
 ## 1. Jüri sunumu (yerel)
 
-Aşağıdaki sıra `PITCH_DECK.md` içindeki yedi başlığı izler. Bunlar sunum iskeletidir; resmî puanlama ağırlıkları kaynaklarda yoktur. Canlı gösteri **Oda → Uygulama → Oda → Kapanış** sırasını izler. Konuşma yaklaşık 4 dakikadır; soru süresi ayrıdır.
+Aşağıdaki sıra `PITCH_DECK.md` içindeki yedi başlığı izler. Bunlar sunum iskeletidir; resmî puanlama ağırlıkları kaynaklarda yoktur. Canlı gösteri sitedeki **Sunum** modunun 7 bölümünü izler (konuşma metni ve ekranlar: **SUNUM_AKISI.md**). Konuşma yaklaşık 4 dakikadır; soru süresi ayrıdır.
 
 ### 1. Fırsat
 

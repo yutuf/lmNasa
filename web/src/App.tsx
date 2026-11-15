@@ -24,7 +24,7 @@ const LiveSession = lazy(() => import('./components/LiveSession'))
 const TradeOff = lazy(() => import('./components/TradeOff'))
 const ArtemisCompare = lazy(() => import('./components/Artemis'))
 import Patch from './components/Patch'
-import Present, { type PresentView } from './components/Present'
+import Present, { SECTIONS, type SectionId } from './components/Present'
 import SimpleView from './components/SimpleView'
 import { MissionBar, Ticker, type NextWindow } from './components/MissionBar'
 import CoordinateSearch from './components/CoordinateSearch'
@@ -243,9 +243,12 @@ export default function App() {
   const [orbitPanel, setOrbitPanel] = useState(false)
   const [historyPanel, setHistoryPanel] = useState(false)
   const [tour, setTour] = useState(() => /(^|[#&])tour=1/.test(location.hash))
-  // presentation mode: the screen shown (judges' room, the app, the closing screen), or null; #present=1 starts it
-  const [present, setPresent] = useState<PresentView | null>(() => (/(^|[#&])present=1/.test(location.hash) ? 'room' : null))
+  // presentation mode: the section shown (0-6, components/Present.tsx), or null; #present=1 starts it. roomOn shows
+  // the judges' room (QR and duels) over everything; the room itself stays mounted while presenting.
+  const [present, setPresent] = useState<number | null>(() => (/(^|[#&])present=1/.test(location.hash) ? 0 : null))
+  const [roomOn, setRoomOn] = useState(() => /(^|[#&])present=1/.test(location.hash))
   const [room, setRoom] = useState({ joined: 0, planned: 0 })
+  const presentEnter = useRef<(id: SectionId) => void>(() => {})
   const [libration, setLibration] = useState(false)
   const [pinnedMission, setPinnedMission] = useState<MissionSnap | null>(null)
   const [satOrbit, setSatOrbit] = useState<Design['orbit'] | null>(null)
@@ -581,6 +584,9 @@ export default function App() {
   // a full-screen overlay pauses the canvases behind it (see overlayState.ts)
   const overlayOpen = film || workshop || lab || story || interview || sources || orbitPanel || historyPanel || libration || !!profile || !!drive
   useEffect(() => { setOverlayOpen(overlayOpen) }, [overlayOpen])
+  // presentation: open each section's screen once the data is loaded (hooks stay above the loading return)
+  const loaded = !!(m && atlas && atlasPole)
+  useEffect(() => { if (present !== null && loaded) presentEnter.current(SECTIONS[present].id) }, [present, loaded])
   if (!m || !atlas || !atlasPole) return <><div className="loading"><Patch size={72} />AdaptLab<small>{lang === 'tr' ? 'NASA verisi yükleniyor…' : 'loading NASA data…'}</small></div></>
   const startDate = (s: number) => new Date(Date.parse(ran!.q.start + 'T00:00:00Z') + s * 86400e3)
   const fmtDate = (d: Date) => d.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' })
@@ -803,6 +809,28 @@ export default function App() {
           </section>
   )
 
+  // presentation: each section closes what is open, then opens its own screen of the real app
+  presentEnter.current = (id: SectionId) => {
+    setProfile(null); setFilm(false); setHistoryPanel(false); setSources(false); setLab(false); setWorkshop(false)
+    setOrbitPanel(false); setStory(false); setTour(false); setLibration(false); setPhone(false); setInterview(false)
+    setRoomOn(id === 'opportunity')
+    const to = (sel: string | null, delay = 300) => setTimeout(() => {
+      if (!sel) scrollTo({ top: 0, behavior: 'smooth' }); else document.querySelector(sel)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, delay)
+    if (id === 'problem') {
+      setUi('advanced'); setMapMode('sun'); setMapPlay(true); to('.map-card', 500)
+    } else if (id === 'solution') {
+      setUi('simple'); setMapPlay(false)
+      // water ice on the 2 km south-pole grid (the script's 21,856 points)
+      if (p.target !== 'kind:ice' || p.scope !== 'pole') { const next: Params = { ...p, target: 'kind:ice', scope: 'pole' }; setP(next); run(next) }
+      to('#results', 700)
+    } else if (id === 'proof') {
+      setUi('simple'); setMapPlay(false); setHistoryPanel(true)
+    } else {
+      setMapPlay(false); to(null)
+    }
+  }
+
   return (
     <>
     <div className={`app ${drive ? 'driving' : ''}`}>
@@ -827,7 +855,7 @@ export default function App() {
         </nav>}
         {ui === 'advanced' && <button className="nav-ws" onClick={() => setLab(true)} aria-label={lang === 'tr' ? 'Karar' : 'Decide'}><Scale size={14} /> <span className="nav-label">{lang === 'tr' ? 'Karar' : 'Decide'}</span></button>}
         {ui === 'advanced' && <button className="nav-ws" onClick={() => setWorkshop(true)} aria-label={lang === 'tr' ? 'Atölye' : 'Workshop'}><Wrench size={14} /> <span className="nav-label">{lang === 'tr' ? 'Atölye' : 'Workshop'}</span></button>}
-        <button className="nav-ws nav-present" onClick={() => setPresent('room')} title={lang === 'tr' ? 'Sunum: önce hakemlerin QR’ı, sonra uygulama (PageDown / PageUp)' : 'Present: the judges’ QR first, then the app (PageDown / PageUp)'}><Presentation size={14} /> <span className="nav-label">{lang === 'tr' ? 'Sunum' : 'Present'}</span></button>
+        <button className="nav-ws nav-present" onClick={() => { setPresent(0); setRoomOn(true) }} title={lang === 'tr' ? 'Sunum: önce hakemlerin QR’ı, sonra uygulama (PageDown / PageUp)' : 'Present: the judges’ QR first, then the app (PageDown / PageUp)'}><Presentation size={14} /> <span className="nav-label">{lang === 'tr' ? 'Sunum' : 'Present'}</span></button>
         <button className="nav-ws nav-qr" onClick={() => { location.hash = `judges&lang=${lang}` }} title={lang === 'tr' ? 'Jüri sayfası ve QR kodu' : 'Judges page and QR code'} aria-label="QR"><QrCode size={15} /></button>
         <button className="nav-ws nav-phone" onClick={() => setPhone(true)}><Smartphone size={14} /> <span className="nav-label">{lang === 'tr' ? 'Telefon' : 'Phone'}</span></button>
         <button className="nav-story" onClick={() => setFilm(true)} aria-label={lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}><Sparkles size={14} /> <span className="nav-label">{lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}</span></button>
@@ -1336,10 +1364,11 @@ export default function App() {
       {interview && <MissionInterview lang={lang} onRun={runInterview} onClose={() => setInterview(false)} />}
       {present === null && <Luna lang={lang} context={lunaContext} onAction={onLuna} onPlan={() => setInterview(true)} />}
       {/* while presenting, the judges' room stays mounted (phones stay connected) and is only hidden on the other screens */}
-      {present !== null && <Suspense fallback={null}><LiveSession lang={lang} hidden={present !== 'room'} onClose={() => setPresent('app')}
+      {present !== null && <Suspense fallback={null}><LiveSession lang={lang} hidden={!roomOn} onClose={() => setRoomOn(false)}
         onCount={(joined, planned) => setRoom({ joined, planned })} /></Suspense>}
-      {present !== null && <Present lang={lang} view={present} onView={setPresent} joined={room.joined} planned={room.planned}
-        onExit={() => { setPresent(null); setRoom({ joined: 0, planned: 0 }) }} />}
+      {present !== null && <Present lang={lang} step={present} onStep={setPresent} roomOn={roomOn} onRoom={setRoomOn}
+        joined={room.joined} planned={room.planned}
+        onExit={() => { setPresent(null); setRoomOn(false); setRoom({ joined: 0, planned: 0 }); setHistoryPanel(false); setMapPlay(false) }} />}
     </div>
     </>
   )
