@@ -13,10 +13,11 @@ export default function ScopeTarget({ lang, scope, target, onScope, onTarget }: 
         <span className="st-label">{tr ? 'Kapsam' : 'Scope'}</span>
         <div className="ui-switch st-scope" role="radiogroup" aria-label={tr ? 'Kapsam' : 'Scope'}>
           <button role="radio" aria-checked={scope === 'pole'} className={scope === 'pole' ? 'on' : ''} onClick={() => onScope('pole')}>
-            {tr ? 'Güney kutbu · 2 km' : 'South pole · 2 km'}</button>
+            {tr ? 'Güney kutbu' : 'South pole'}</button>
           <button role="radio" aria-checked={scope === 'moon'} className={scope === 'moon' ? 'on' : ''} onClick={() => onScope('moon')}>
-            {tr ? 'Tüm Ay · 30 km' : 'Whole Moon · 30 km'}</button>
+            {tr ? 'Tüm Ay' : 'Whole Moon'}</button>
         </div>
+        <p className="st-res">{tr ? 'Güney kutbu 2 km ızgara · Tüm Ay 30 km ızgara' : 'South pole: 2 km grid · Whole Moon: 30 km grid'}</p>
       </div>
       <div className="st-row">
         <span className="st-label">{tr ? 'Bilim hedefi' : 'Science target'}</span>
@@ -25,7 +26,7 @@ export default function ScopeTarget({ lang, scope, target, onScope, onTarget }: 
           {SCIENCE_SITES.map((s) => (
             <button key={s.id} className={sel?.id === s.id ? 'on' : ''} style={{ ['--k' as string]: SCIENCE_KIND[s.kind].colour }}
                     onClick={() => onTarget(s)} title={s.why[lang]}>
-              <i />{siteLabel(s, lang)}{!inPoleGrid(s) && scope === 'pole' ? ' ↗' : ''}
+              <i />{(() => { const l = siteLabel(s, lang); const k = l.indexOf(': '); return k > 0 ? <><span className="st-pre">{l.slice(0, k)}</span>{l.slice(k + 2)}</> : l })()}{!inPoleGrid(s) && scope === 'pole' ? ' ↗' : ''}
             </button>
           ))}
         </div>

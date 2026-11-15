@@ -1001,3 +1001,20 @@ html.mission-film-open, html.mission-film-open body { overflow: hidden; height: 
   html body .app .nav-r .seg button { padding: 3px 5px; font-size: 10px; }
 }
 
+
+/* Advanced polish (15 Nov): the sidebar target list reads as a tidy list, the scope switch fits on one line,
+   and the Advanced nav keeps to one line on laptop widths. Simple is not touched (its nav has no .nav-advanced). */
+.side .st-scope button { white-space: nowrap; }
+.st-res { margin: 2px 0 0; width: 100%; font-size: 12px; color: var(--text-3); }
+.side .st-targets { flex-direction: column; flex-wrap: nowrap; gap: 4px; width: 100%; }
+.side .st-targets button { width: 100%; justify-content: flex-start; text-align: left; border-radius: 8px; white-space: nowrap; overflow: hidden; }
+.st-pre { color: var(--text-3); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-right: 2px; }
+.st-targets button.on .st-pre { color: #555; }
+.nav-advanced .nav-links a, .nav-advanced .nav-story { white-space: nowrap; }
+@media (max-width: 1700px) {
+  .nav-advanced .nav-ws .nav-label { display: none; }
+  .nav-advanced .nav-ws { padding: 0 10px; }
+  .nav-advanced { gap: 14px; }
+}
+@media (max-width: 1500px) { .nav-advanced .scope-pill { display: none; } }
+.side .st-row { flex-direction: column; gap: 6px; }

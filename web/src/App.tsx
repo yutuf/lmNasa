@@ -808,7 +808,7 @@ export default function App() {
           <Drive start={drive.start} eph={eph} dsn={dsn} lang={lang} initialMode={drive.mode} onExit={() => setDrive(null)} />
         </Suspense>
       )}
-      <header className="nav">
+      <header className={`nav nav-${ui}`}>
         <a className="logo" href="#top"><Patch size={34} /><span className="logo-word">Touch<b>down</b></span></a>
         <span className={`scope-pill ${scope}`}>{scope === 'moon'
           ? (lang === 'tr' ? `TÜM AY · ${(atlasMoon?.n ?? 41276).toLocaleString(loc)} NOKTA · ~30 KM` : `WHOLE MOON · ${(atlasMoon?.n ?? 41276).toLocaleString(loc)} PTS · ~30 KM`)

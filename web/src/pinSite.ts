@@ -1,6 +1,6 @@
 // Drop a pin by typing coordinates. Pure helpers: the component only parses, the app evaluates
 // the point with searchPoint on the atlas pickAtlas chooses and opens that site.
-import { gcKm, type Atlas } from './engine'
+import { gcKm, type Atlas } from './engine.js'
 import type { Lang } from './i18n'
 
 export interface PinCoords { lat: number; lon: number }
