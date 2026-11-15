@@ -22,6 +22,9 @@ export type Length = (typeof LENGTHS)[number]
 /** The landing window every phone plans in: the API's longest search window. */
 export const WINDOW = { start: '2027-09-01', days: 12 }
 
+/** Judges in one room. More phones get a "room is full" message. */
+export const MAX_JUDGES = 8
+
 export const goalById = (id: string): Goal | null => GOALS.find((g) => g.id === id) ?? null
 
 /** One room per session: a short code, the host's PeerJS id derives from it. */
@@ -37,7 +40,7 @@ export function parseJoinHash(hash: string): { code: string | null; lang: 'en' |
   const q = new URLSearchParams(hash.replace(/^#/, ''))
   const raw = q.get('join')
   const code = raw && /^[A-Z0-9]{4}$/i.test(raw) ? raw.toUpperCase() : null
-  return { code, lang: q.get('lang') === 'tr' ? 'tr' : 'en' }
+  return { code, lang: q.get('lang') === 'en' ? 'en' : 'tr' }   // the judges' page opens in Turkish
 }
 
 // ---- the phone map: south polar stereographic, 0 E up, 90 E right (scripts/export_live_map.py) ----

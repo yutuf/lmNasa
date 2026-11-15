@@ -6,7 +6,7 @@ import qrcode from 'qrcode-generator'
 import type { DataConnection, Peer } from 'peerjs'
 import { MapPin, Plus, X } from 'lucide-react'
 import {
-  GOALS, LENGTHS, WINDOW, compareSpots, goalById, liveCode, livePeerId, mapToLatLon, parsePlan, pickForGoal, polarXYKm,
+  GOALS, LENGTHS, MAX_JUDGES, WINDOW, compareSpots, goalById, liveCode, livePeerId, mapToLatLon, parsePlan, pickForGoal, polarXYKm,
   spotScore, suggestNear, targetKm, type ApiSite, type PlanMsg, type Spot, type Verdict,
 } from '../live'
 import { describePlace, type Feature } from '../places'
@@ -67,7 +67,8 @@ export default function LiveSession() {
   const [duels, setDuels] = useState<Record<number, Duel>>({})
   const [feats, setFeats] = useState<Feature[] | null>(null)
   const count = useRef(0)
-  const joinUrl = `${shareOrigin(location.origin)}/#join=${code}${tr ? '&lang=tr' : ''}`
+  const joinUrl = `${shareOrigin(location.origin)}/#join=${code}`   // phones open in Turkish, with an EN switch
+  const open = useRef(0)
   const qr = useMemo(() => { const q = qrcode(0, 'M'); q.addData(joinUrl); q.make(); return q.createDataURL(8, 2) }, [joinUrl])
 
   useEffect(() => { fetch(dataUrl('features.json')).then((r) => r.json()).then((j) => setFeats(j.features)).catch(() => setFeats([])) }, [])
@@ -84,6 +85,13 @@ export default function LiveSession() {
       peer.on('open', () => setStatus('ready'))
       peer.on('error', () => setStatus('error'))
       peer.on('connection', (conn: DataConnection) => {
+        // a full room: tell the phone and hang up; a phone that leaves frees its seat
+        if (open.current >= MAX_JUDGES) {
+          conn.on('open', () => { conn.send({ type: 'full', max: MAX_JUDGES }); setTimeout(() => conn.close(), 500) })
+          return
+        }
+        open.current++
+        conn.on('close', () => { open.current = Math.max(0, open.current - 1) })
         const n = ++count.current
         setPlayers((p) => [...p, { n, label: (tr ? 'Telefon ' : 'Phone ') + n, plan: null, ver: 0 }])
         conn.on('data', (raw) => { const m = parsePlan(raw); if (m) setPlan(n, m) })
@@ -126,7 +134,7 @@ export default function LiveSession() {
     .sort((a, b) => b.score - a.score)
   const rankOf = (n: number) => ranked.findIndex((r) => r.p.n === n) + 1
   const planned = players.filter((p) => p.plan)
-  const shown = planned.slice(-4)
+  const shown = planned.slice(-MAX_JUDGES)
   const waiting = players.length - planned.length
 
   const say = (p: PlanMsg, d: Duel) => {
@@ -180,7 +188,7 @@ export default function LiveSession() {
         <button className="live-x" onClick={() => { location.hash = '' }} aria-label={tr ? 'Kapat' : 'Close'}><X size={20} /></button>
       </header>
       <div className="live-body">
-        <aside className="live-join">
+        <aside className={`live-join ${ranked.length > 4 ? 'tight' : ''}`}>
           <img src={qr} alt={tr ? 'Katılmak için QR kodu' : 'QR code to join'} />
           <p className="live-url">{shareOrigin(location.origin).replace(/^https?:\/\//, '')} · <b>{code}</b></p>
           <ol className="live-steps">
@@ -189,18 +197,18 @@ export default function LiveSession() {
             <li>{tr ? 'Haritada iniş yerine dokun' : 'Tap your landing spot'}</li>
           </ol>
           <p className={`live-status ${status}`}>{status === 'ready'
-            ? (tr ? `Hazır · ${players.length} katılımcı${waiting ? ` · ${waiting} planlıyor` : ''}` : `Ready · ${players.length} joined${waiting ? ` · ${waiting} planning` : ''}`)
+            ? (tr ? `Hazır · ${players.length}/${MAX_JUDGES} katılımcı${waiting ? ` · ${waiting} planlıyor` : ''}` : `Ready · ${players.length}/${MAX_JUDGES} joined${waiting ? ` · ${waiting} planning` : ''}`)
             : status === 'connecting' ? (tr ? 'Bağlanıyor…' : 'Connecting…') : (tr ? 'Telefon bağlantısı yok: test telefonu ekle' : 'No phone link: add a test phone')}</p>
           {ranked.length > 1 && (
             <ol className="live-board">
-              {ranked.slice(0, 5).map((r, i) => { const g = goalById(r.p.plan!.goal)!; return (
+              {ranked.slice(0, MAX_JUDGES).map((r, i) => { const g = goalById(r.p.plan!.goal)!; return (
                 <li key={r.p.n} style={{ ['--team' as string]: g.colour }}><span className="lb-n">{String(i + 1).padStart(2, '0')}</span><b>{r.p.label}</b><span>{tr ? g.tr : g.en}</span></li>
               ) })}
             </ol>
           )}
           <button className="live-test" onClick={addTest}><Plus size={16} /> {tr ? 'Test telefonu' : 'Test phone'}</button>
         </aside>
-        <main className={`live-grid n${Math.max(1, shown.length)}`}>
+        <main className={`live-grid ${shown.length > 4 ? 'many' : 'few'}`}>
           {shown.length === 0 && <p className="live-empty">{waiting ? (tr ? 'Hakemler planlıyor…' : 'Judges are planning…') : (tr ? 'Telefonlar bekleniyor…' : 'Waiting for phones…')}</p>}
           {shown.map((p) => {
             const plan = p.plan!, g = goalById(plan.goal)!, d = duels[p.n]

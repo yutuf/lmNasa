@@ -21,8 +21,27 @@
 .live-test { margin-top: auto; align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #3a3a46; border-radius: 8px; background: none; color: #b9b8c6; padding: 8px 12px; font: 600 13px Inter, sans-serif; cursor: pointer; }
 .live-test:hover { color: #fff; border-color: #6a6a78; }
 
-.live-grid { display: grid; grid-template-columns: 1fr; grid-auto-rows: minmax(0, 1fr); gap: 18px; min-height: 0; }
-.live-grid.n2, .live-grid.n3, .live-grid.n4 { grid-template-columns: 1fr 1fr; }
+/* up to 4 judges: a fixed 2 x 2; 5 to 8: a compact 4 x 2 */
+.live-grid { display: grid; gap: 18px; min-height: 0; }
+.live-grid.few { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.live-grid.many { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.many .duel { padding: 12px; gap: 7px; }
+.many .duel-head { flex-wrap: wrap; gap: 4px 10px; }
+.many .duel-rank { font-size: 34px; min-width: 44px; }
+.many .duel-goal { font-size: 19px; } .many .duel-goal span { font-size: 15px; }
+.many .duel-result { margin-left: 0; padding: 3px 8px; font-size: 11.5px; order: 3; flex-basis: 100%; text-align: center; }
+.many .duel-sides { grid-template-columns: 1fr; gap: 6px; }
+.many .duel-vs { display: none; }
+.many .ds { padding: 8px 10px; gap: 2px; }
+.many .ds-place { font-size: 14px; max-width: 58%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.many .ds-img { top: 4px; bottom: 4px; width: 42%; }
+.many .ds-line { font-size: 11.5px; }
+.many .ds-line > span:not(.sc-go) { display: none; }
+.many .ds-stats { gap: 10px; } .many .ds-stats b { font-size: 15px; } .many .ds-stats span { font-size: 10.5px; }
+.many .duel-say { font-size: 12.5px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.many .duel-tip { font-size: 11.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.many .duel-tip svg { display: none; }
+.live-board li { padding: 4px 12px; } .lb-n { font-size: 20px; }
 .live-empty { grid-column: 1 / -1; align-self: center; text-align: center; font: 800 36px var(--display, 'Saira', sans-serif); color: #4a4a56; }
 
 .duel { position: relative; isolation: isolate; border-radius: 14px; background: var(--team); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: hidden; animation: liveIn .4s ease-out both; }
@@ -56,7 +75,12 @@
 
 /* phone */
 .lj { min-height: 100dvh; background: #000; color: #fff; padding: 16px 16px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; font-family: Inter, system-ui, sans-serif; }
-.lj-top { display: flex; align-items: center; justify-content: space-between; }
+.lj-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.lj-right { display: flex; align-items: center; gap: 10px; }
+.lj-lang { display: inline-flex; padding: 3px; border-radius: 999px; border: 1px solid #3a3a46; }
+.lj-lang button { border: 0; border-radius: 999px; padding: 4px 10px; background: none; color: #8e8d9b; font: 800 12px Inter, sans-serif; cursor: pointer; }
+.lj-lang button.on { background: #fff; color: #000; }
+.lj-full { margin: 0; padding: 12px 14px; border-radius: 10px; background: #2a1a12; color: #ffb27a; font-size: 15px; }
 .lj-brand { margin: 0; display: inline-flex; align-items: center; gap: 10px; }
 .lj-status { margin: 0; font-size: 13px; color: #8e8d9b; }
 .lj-status.ok { color: #2fd27a; }
@@ -98,3 +122,14 @@
 .lj-done > p { margin: 0; font-size: 16px; color: #c9c8d4; }
 .lj-again { border: 1px solid #3a3a46; border-radius: 12px; padding: 14px; background: none; color: #fff; font: 700 15px Inter, sans-serif; cursor: pointer; }
 @media (max-width: 1100px) { .live-body { grid-template-columns: 1fr; } .live-window { display: none; } }
+/* compact mode: nothing in a tile shrinks away; the WINNER tag on the tiles carries the result */
+.ds > * { flex-shrink: 0; }
+.many .duel-result { display: none; }
+.many .ds-place { margin-bottom: 2px; }
+/* a full leaderboard: a smaller QR keeps the whole column on screen */
+.live-join.tight > img { width: 232px; align-self: center; }
+.live-join.tight .live-steps { font-size: 16px; }
+.live-join.tight .live-url { font-size: 17px; }
+.many .ds { padding: 6px 10px; }
+.many .ds-who { font-size: 10.5px; }
+.many .ds-stats b { line-height: 1.1; } .many .ds-stats span { line-height: 1.15; }

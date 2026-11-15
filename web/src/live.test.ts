@@ -14,7 +14,8 @@ describe('live session', () => {
   it('names the host peer from the code', () => { expect(livePeerId('ab3k')).toBe('adaptlab-live-AB3K') })
   it('reads the join hash', () => {
     expect(parseJoinHash('#join=ab3k&lang=tr')).toEqual({ code: 'AB3K', lang: 'tr' })
-    expect(parseJoinHash('#join=nope!')).toEqual({ code: null, lang: 'en' })
+    expect(parseJoinHash('#join=nope!')).toEqual({ code: null, lang: 'tr' })
+    expect(parseJoinHash('#join=ab3k&lang=en')).toEqual({ code: 'AB3K', lang: 'en' })
   })
   it('accepts only well-formed plans', () => {
     expect(parsePlan({ type: 'plan', goal: 'ice', days: 14, lat: -89, lon: 10 })).toEqual({ type: 'plan', goal: 'ice', days: 14, lat: -89, lon: 10 })

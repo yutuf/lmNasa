@@ -15,9 +15,10 @@ type Step = 0 | 1 | 2 | 3
 const EDGE = (MAP_EDGE_KM / MAP_R_KM) * 50   // the searchable disc on the 0..100 map
 
 export default function LiveJoin() {
-  const { code, lang } = parseJoinHash(location.hash)
+  const { code, lang: lang0 } = parseJoinHash(location.hash)
+  const [lang, setLang] = useState<'en' | 'tr'>(lang0)
   const tr = lang === 'tr'
-  const [status, setStatus] = useState<'connecting' | 'live' | 'error'>(code ? 'connecting' : 'error')
+  const [status, setStatus] = useState<'connecting' | 'live' | 'error' | 'full'>(code ? 'connecting' : 'error')
   const [step, setStep] = useState<Step>(0)
   const [goal, setGoal] = useState<GoalId | null>(null)
   const [days, setDays] = useState<Length | null>(null)
@@ -36,8 +37,9 @@ export default function LiveJoin() {
         const c = peer!.connect(livePeerId(code), { reliable: true })
         conn.current = c
         c.on('open', () => setStatus('live'))
-        c.on('error', () => setStatus('error'))
-        c.on('close', () => setStatus('error'))
+        c.on('data', (m) => { if ((m as { type?: string })?.type === 'full') setStatus('full') })
+        c.on('error', () => setStatus((s) => (s === 'full' ? s : 'error')))
+        c.on('close', () => setStatus((s) => (s === 'full' ? s : 'error')))
       })
       peer.on('error', () => setStatus('error'))
     }).catch(() => setStatus('error'))
@@ -71,10 +73,17 @@ export default function LiveJoin() {
     <div className="lj">
       <header className="lj-top">
         <p className="lj-brand"><Patch size={24} /> <b className="wordmark">AdaptLab</b></p>
-        <p className={`lj-status ${status === 'live' ? 'ok' : status}`}>
-          {status === 'live' ? (tr ? 'Bağlandı' : 'Connected') : status === 'connecting' ? (tr ? 'Bağlanıyor…' : 'Connecting…') : (tr ? 'Bağlanamadı' : 'Not connected')}
-        </p>
+        <div className="lj-right">
+          <p className={`lj-status ${status === 'live' ? 'ok' : status === 'full' ? 'error' : status}`}>
+            {status === 'live' ? (tr ? 'Bağlandı' : 'Connected') : status === 'connecting' ? (tr ? 'Bağlanıyor…' : 'Connecting…') : status === 'full' ? (tr ? 'Oda dolu' : 'Room full') : (tr ? 'Bağlanamadı' : 'Not connected')}
+          </p>
+          <div className="lj-lang" role="radiogroup" aria-label={tr ? 'Dil' : 'Language'}>
+            <button role="radio" aria-checked={tr} className={tr ? 'on' : ''} onClick={() => setLang('tr')}>TR</button>
+            <button role="radio" aria-checked={!tr} className={!tr ? 'on' : ''} onClick={() => setLang('en')}>EN</button>
+          </div>
+        </div>
       </header>
+      {status === 'full' && <p className="lj-full">{tr ? 'Bu oturumda 8 hakem yeri doldu. Büyük ekrandan izleyebilirsin.' : 'All 8 judge seats in this session are taken. Follow along on the big screen.'}</p>}
 
       <div className="lj-step">
         {step > 0 && step < 3 && <button className="lj-back" onClick={() => setStep((step - 1) as Step)} aria-label={tr ? 'Geri' : 'Back'}><ChevronLeft size={22} /></button>}
