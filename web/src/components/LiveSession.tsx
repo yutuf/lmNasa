@@ -58,8 +58,9 @@ function SpotArt({ spot }: { spot: Spot }) {
   return img ? <img className="ds-img" src={img} alt="" /> : <span className="ds-img ds-img-wait" />
 }
 
-export default function LiveSession() {
-  const lang: 'en' | 'tr' = /lang=tr/.test(location.hash) ? 'tr' : 'en'
+/** onClose: inside the app's presentation mode; on its own (#live) the close button clears the hash. */
+export default function LiveSession({ onClose, lang: appLang }: { onClose?: () => void; lang?: 'en' | 'tr' } = {}) {
+  const lang: 'en' | 'tr' = appLang ?? (/lang=tr/.test(location.hash) ? 'tr' : 'en')
   const tr = lang === 'tr'
   const [code] = useState(liveCode)
   const [status, setStatus] = useState<'connecting' | 'ready' | 'error'>('connecting')
@@ -185,7 +186,7 @@ export default function LiveSession() {
       <header className="live-head">
         <span className="live-brand"><Patch size={30} /> <b className="wordmark">AdaptLab</b> <span>· {tr ? 'Canlı oturum' : 'Live session'}</span></span>
         <span className="live-window">{tr ? 'İniş penceresi' : 'Landing window'} · {fmtDate(WINDOW.start)}–{fmtDate('2027-09-12')} 2027 · {tr ? 'Güney kutbu, 21.856 nokta' : 'South pole, 21,856 points'}</span>
-        <button className="live-x" onClick={() => { location.hash = '' }} aria-label={tr ? 'Kapat' : 'Close'}><X size={20} /></button>
+        <button className="live-x" onClick={() => { if (onClose) onClose(); else location.hash = '' }} aria-label={tr ? 'Kapat' : 'Close'}><X size={20} /></button>
       </header>
       <div className="live-body">
         <aside className={`live-join ${ranked.length > 4 ? 'tight' : ''}`}>
