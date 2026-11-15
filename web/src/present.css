@@ -42,3 +42,18 @@
 .pr-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; max-width: 1100px; }
 .pr-rows li { display: flex; align-items: baseline; gap: 16px; font: 700 clamp(18px, 1.6vw, 26px)/1.25 var(--display, 'Saira', sans-serif); font-stretch: 105%; }
 .pr-rows span { font: italic 900 28px/1 var(--display, 'Saira', sans-serif); font-stretch: 125%; color: transparent; -webkit-text-stroke: 1.2px #E10600; min-width: 48px; }
+/* talk screens: the team's deck content in the app's look */
+.pr-kicker { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: #E10600; }
+.pr-close h2 em, .pr-cover h1 em { font-style: normal; color: #E10600; }
+.pr-close-main { position: relative; z-index: 1; }
+.pr-cover { align-content: end; padding-bottom: 9vh; }
+.pr-cover .hero-sky { z-index: 0; }
+.pr-cover-brand { margin: 0; display: inline-flex; align-items: center; gap: 22px; }
+.pr-cover-brand .wordmark { font-size: clamp(34px, 4.4vw, 64px); letter-spacing: .16em; }
+.pr-cover h1 { margin: 0; max-width: 1150px; font: 900 clamp(40px, 5.4vw, 96px)/1 var(--display, 'Saira', sans-serif); font-stretch: 112%; text-transform: uppercase; }
+.pr-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; max-width: 1150px; }
+.pr-stats div { display: grid; gap: 8px; padding: 22px 24px; border-radius: 14px; background: #14141b; border: 1px solid #2a2a34; }
+.pr-stats b { font: italic 900 clamp(44px, 5vw, 84px)/1 var(--display, 'Saira', sans-serif); font-stretch: 120%; color: transparent; -webkit-text-stroke: 2px #fff; }
+.pr-stats span { font-size: clamp(15px, 1.2vw, 19px); color: #c9c8d4; }
+.pr-lead { margin: 0; max-width: 1150px; font-size: clamp(16px, 1.35vw, 22px); line-height: 1.45; color: #e6e5ee; }
+@media (max-width: 900px) { .pr-stats { grid-template-columns: 1fr; } }

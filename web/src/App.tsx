@@ -813,21 +813,18 @@ export default function App() {
   presentEnter.current = (id: SectionId) => {
     setProfile(null); setFilm(false); setHistoryPanel(false); setSources(false); setLab(false); setWorkshop(false)
     setOrbitPanel(false); setStory(false); setTour(false); setLibration(false); setPhone(false); setInterview(false)
-    setRoomOn(id === 'opportunity')
+    setRoomOn(id === 'room')
     const to = (sel: string | null, delay = 300) => setTimeout(() => {
       if (!sel) scrollTo({ top: 0, behavior: 'smooth' }); else document.querySelector(sel)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, delay)
-    if (id === 'problem') {
-      setUi('advanced'); setMapMode('sun'); setMapPlay(true); to('.map-card', 500)
-    } else if (id === 'solution') {
-      setUi('simple'); setMapPlay(false)
+    setMapPlay(false)
+    if (id === 'demo') {
+      setUi('simple')
       // water ice on the 2 km south-pole grid (the script's 21,856 points)
       if (p.target !== 'kind:ice' || p.scope !== 'pole') { const next: Params = { ...p, target: 'kind:ice', scope: 'pole' }; setP(next); run(next) }
       to('#results', 700)
     } else if (id === 'proof') {
-      setUi('simple'); setMapPlay(false); setHistoryPanel(true)
-    } else {
-      setMapPlay(false); to(null)
+      setUi('simple'); setHistoryPanel(true)
     }
   }
 

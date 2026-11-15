@@ -1,199 +1,118 @@
-# AdaptLab: jüri sunumu akışı ve konuşma metni
+# AdaptLab: jüri sunumu, slayt slayt ne söylenecek
 
-**Takım:** No Limits Lunar. **Yusuf Kerim Kaymakçı:** motor, veri, web uygulaması. **Yusuf Çırpan:** sunum ve jüri deneyimi.
-**Challenge:** Lunar Landing Site Navigator: Ay'a nereye ve ne zaman inmeli? **Site:** adaptlab.us
-**Süre:** 4 dakika konuşma, ardından sorular.
+**Takım:** No Limits Lunar. **Yusuf Çırpan (YÇ):** sunum. **Yusuf Kerim Kaymakçı (YK):** teknik kısım ve canlı demo.
+**Ana sunum:** Çırpan'ın Canva sunumu (7 slayt). **Site sadece yardımcı:** üç yerde canlı gösterim için araya girer.
+**Süre:** yaklaşık 4–5 dakika, sonra sorular.
 
-Bu belge iki taslağın birleşimidir: 7 slaytlık anlatı yapısı (Fırsat, Problem, Çözüm, Kanıt, Ölçek, Avantaj ve Ekip, Vizyon) ve
-bizim canlı uygulama akışımız (önce hakem QR'ı, sonra gerçek uygulama, sonra düellolar). Ayrı bir slayt dosyası yok:
-her bölüm, sitedeki **Sunum** modunun bir ekranıdır. Alt+Tab yok.
+## Hazırlık (sunumdan önce)
 
-## Başlamadan
+1. **Canva sunumu:** düzeltilmiş hâlini kullanın (aşağıda "Canva düzeltmeleri"). Tam ekran açın.
+2. **Tarayıcı:** ayrı bir pencerede **adaptlab.us/#present=1&lang=tr** açık olsun, F11 tam ekran. Açılınca hakem odası (QR) görünür.
+   Veri ilk açılışta iner; sunumdan önce bir kez açıp yüklenmesini bekleyin.
+3. İki pencere arasında **Alt+Tab** ile geçin. Birkaç kez deneyin.
+4. **Dikkat:** kumandanın PageDown tuşu hangi pencere öndeyse onu ilerletir. Sitede PageDown sitenin bir sonraki ekranına geçer.
 
-- Bilgisayarda **adaptlab.us/#present=1&lang=tr** adresini açın (ya da üstteki **Sunum** düğmesi). Tam ekran: F11.
-- Sağ alttaki çubuk 7 bölümü gösterir. **PageDown** ileri, **PageUp** geri (sunum kumandası da çalışır).
-  **Hakemler** düğmesi düello ekranını her an açıp kapatır.
-- Hakem odası sunumun başından sonuna kadar açık kalır; telefonlar bağlı kalır.
-- Önceden bir kez açıp yükleyin (veri ilk açılışta iner, sonra hızlıdır).
+## Akış bir bakışta
 
-## 7 bölüm bir bakışta
-
-| # | Bölüm | Süre | Ekranda | Konuşan |
+| Sıra | Nerede | Ne | Kim | Süre |
 |---|---|---|---|---|
-| 1 | Fırsat | 0:00–0:30 | Hakem odası: büyük QR ve oda kodu | Yusuf Çırpan |
-| 2 | Problem | 0:30–1:00 | Gelişmiş görünüm, saat saat oynayan Güneş ışığı haritası | Yusuf Çırpan |
-| 3 | Çözüm | 1:00–1:50 | Basit görünüm: su buzu sonuçları, bir yer sayfası | Yusuf Kerim |
-| 4 | Kanıt | 1:50–2:40 | Gerçek inişler paneli, sonra hakem düelloları | Yusuf Kerim, sonra Yusuf Çırpan |
-| 5 | Ölçek | 2:40–3:05 | Kimler kullanır ve canlı API çağrısı | Yusuf Kerim |
-| 6 | Avantaj ve ekip | 3:05–3:30 | Neyi farklı yapıyoruz ve ekip | Yusuf Çırpan |
-| 7 | Vizyon | 3:30–4:00 | Kapanış: slogan, Bugün / Sonra / Ardından, QR | Yusuf Çırpan |
+| 1 | Slayt 1 | Kapak | YÇ | 15 sn |
+| 2 | Slayt 2 | Challenge ve Artemis | YÇ | 25 sn |
+| 3 | **Site** | Hakemler QR'ı okutur | YÇ | 30 sn |
+| 4 | Slayt 3 | Nereye ve nasıl inecek? (problem) | YÇ | 30 sn |
+| 5 | Slayt 4 | Nasıl çalışır | YK | 30 sn |
+| 6 | **Site** | Canlı demo, sonra kanıt ve düellolar | YK, sonra YÇ | 90 sn |
+| 7 | Slayt 5 | Kullandığımız veriler | YK | 15 sn |
+| 8 | Slayt 6 | Avantajlar | YÇ | 20 sn |
+| 9 | Slayt 7 | Kapanış | YÇ | 20 sn |
+
+**Ezber yok.** Cümleleri kendi kelimelerinle söyle. Her bölümde **kalın** yazan tek fikri söylesen yeter.
 
 ---
 
-## Bölüm 1: Fırsat (0:00–0:30)
+## 1. Slayt 1: Kapak (YÇ)
+> "Merhaba, biz No Limits Lunar. Ben Yusuf Çırpan, bu Yusuf Kerim Kaymakçı. Projemiz AdaptLab.
+> **Tek bir soruyu cevaplıyor: Ay'a nereye ve ne zaman inmeli?**"
 
-**Ekranda:** Hakem odası. Büyük QR, dört harfli oda kodu ve "Kodu tara. Bir iniş planla. AdaptLab'ı yen."
-Hakemler telefonla tarar; telefonda üç seçim yaparlar: görev (Güvenli iniş, Su buzu, Artemis III, En çok güneş),
-kalış (7, 14, 28 gün) ve krater haritasında bir iniş noktası. En fazla 8 hakem.
+## 2. Slayt 2: Challenge ve Artemis (YÇ)
+> "Seçtiğimiz challenge Lunar Landing Site Navigator. **Önümüzdeki on yılda Ay'a gidenlerin çoğu güney kutbuna gidiyor.**
+> Orada su buzu var: içme suyu, oksijen, roket yakıtı. NASA'nın Artemis görevlerinin insanlı iniş için seçtiği 9 aday bölgenin hepsi orada."
 
-**Konuşma (Yusuf Çırpan):**
-> "Merhaba, biz No Limits Lunar: ben Yusuf Çırpan, bu Yusuf Kerim Kaymakçı.
-> Artemis ve NASA'nın ticari CLPS iniş araçları Ay'ın güney kutbuna gidiyor: su buzu ve Artemis III'ün bütün aday bölgeleri orada.
-> Ama orada inişte yer kadar gün de önemli. Bunu size göstermek için önce sizi oyuna alalım:
-> ekrandaki kodu telefonunuzla okutun, bir görev ve bir iniş noktası seçin. Biz anlatırken siz planlayın;
-> birazdan sizin yerinizi AdaptLab'ın seçimiyle yarıştıracağız."
+## 3. Site: hakemler katılır (YÇ)
+**Alt+Tab** ile siteye geç. Ekranda büyük QR ve oda kodu var.
+> "Bunu sadece anlatmak istemiyoruz, sizin de denemenizi istiyoruz. **Telefonunuzla bu kodu okutun.**
+> Bir görev seçin, ne kadar kalacağınızı seçin, haritada bir iniş noktasına dokunup gönderin.
+> Biz anlatırken siz planlayın; birazdan sizin yerinizi AdaptLab'ın seçimiyle yarıştıracağız."
 
-**Tıklama:** Hakemler okuturken bekleyin (çubukta "Hakemler 3/8" sayısı artar). Sonra **PageDown**.
+Hakemler okutana kadar bekle (sağ altta "Hakemler 3/8" sayısı artar). Sonra **Alt+Tab** ile slaytlara dön.
+Sitede **PageDown'a basma**; site bir sonraki ekrana geçer ve oda arka planda açık kalır.
 
-## Bölüm 2: Problem (0:30–1:00)
+## 4. Slayt 3: Nereye ve nasıl inecek? (YÇ)
+> "Asıl zorluk şu: kutupta Güneş hiç yükselmez, **en fazla 1,5 derece**. Bu yüzden 1 kilometrelik bir tepe yaklaşık **40 kilometre** gölge atar.
+> Aracın paneli gölgede kalırsa batarya biter; Dünya bir krater duvarının arkasında kalırsa bağlantı kopar.
+> Son 13 robotik iniş denemesinin sadece 8'i yüzeye ulaştı. IM-1 devrildi ve 7 günde karardı; Chandrayaan-3 ilk Ay gecesinden uyanmadı.
+> **Yani soru sadece 'nereye' değil: 'nereye ve ne zaman'.**"
 
-**Ekranda:** Gelişmiş görünüm, küre haritası **Güneş ışığı** modunda saat saat oynar: aydınlık ve gölge kutup bölgesinde sürekli yer değiştirir.
+## 5. Slayt 4: Nasıl çalışır (YK)
+Slayttaki dört adımı sırayla göster:
+> "Bir: **NASA uydularının verisini alıyoruz**: Ay yüzeyinin gerçek yüksekliği, Güneş'in ve Dünya'nın her saatteki yeri, NASA'nın anten istasyonları.
+> İki: **görevin şartlarını koyuyoruz**: yeterli Güneş, Dünya ile bağlantı, karanlık çok uzun sürmesin, batarya yetsin, zemin düz olsun.
+> Üç: **güney kutbundaki 21.856 noktayı, her iniş günü için saat saat kontrol ediyoruz**: 7,6 milyon kontrol, yaklaşık 1 saniye.
+> Dört: en iyi yerleri nedenleriyle sıralıyor, inişten sonra gezginin rotasını çiziyoruz.
+> Bu yapay zekâ değil; NASA verisiyle fizik hesabı. Şimdi canlı göstereyim."
 
-**Konuşma (Yusuf Çırpan):**
-> "Kutupta Güneş hiç yükselmez; en fazla bir buçuk derece kadar çıkar ve ufku dolaşır.
-> Bu açıyla bir kilometrelik bir sırt yaklaşık 40 kilometre gölge atar. Haritada Güneş ışığını saat saat oynatıyoruz: kutupta aydınlık ve gölge sürekli yer değiştiriyor.
-> Güneş paneli gölgede kalan araç bataryadan yer; Dünya bir krater duvarının arkasında kalırsa telsiz bağlantısı kesilir.
-> Gerçekte de böyle oldu: IM-1 inişte devrildi ve yedi günde karardı; Chandrayaan-3 ilk Ay gecesinden uyanmadı.
-> Yani soru sadece 'nereye' değil: 'nereye ve ne zaman'."
+## 6. Site: canlı demo, kanıt ve düellolar (YK, sonra YÇ)
+**Alt+Tab** ile siteye geç, **PageDown**: uygulamanın kendisi açılır, su buzu için en iyi iniş yerleri.
 
-**Tıklama:** **PageDown**.
+**Demo (YK):**
+> "Görevimiz su buzu. **Her kart bir iniş yeri.** 'UYGUN 4/30': 30 iniş gününün 4'ünde görev işe yarıyor. 'En iyi': o yer için en iyi gün."
 
-## Bölüm 3: Çözüm (1:00–1:50)
+İlk karta tıkla:
+> "Bu, o yerin gerçek arazisi, iniş gününün Güneşiyle. **UYGUN mu değil mi, ve nedeni** burada."
 
-**Ekranda:** Basit görünüm, hedef **Su buzu**, güney kutbu. En iyi iniş yerleri kartları.
+İstersen **Görevi anlat** ile filmi 10–15 saniye göster (fırlatma, iniş, gezgin), **Esc** ile çık.
 
-**Konuşma (Yusuf Kerim):**
-> "AdaptLab'a görevin amacını söylüyorsunuz; burada su buzu, 14 gün kalış.
-> Motor güney kutbunda 2 kilometre aralıklı 21.856 noktanın her birini, her iniş gününün her saati için kontrol ediyor:
-> Güneş gerçek arazi ufkunun üstünde mi, Dünya görünüyor mu ve NASA'nın Derin Uzay Ağı anteni Ay'ı görüyor mu,
-> en uzun karanlık kaç saat, batarya yetiyor mu, zemin yeterince düz mü.
-> Bu, tarayıcıda yaklaşık bir saniyede 7,6 milyon saatlik kontrol.
-> Veriler NASA'nın: LRO LOLA arazisi, JPL DE421 Güneş ve Dünya konumları, DSN istasyonları.
-> Her kart bir iniş yeri: 'UYGUN 4/30', 30 iniş gününün 4'ünde görevin işe yaradığı demek; 'en iyi' o yer için en iyi iniş günü."
+**Kanıt (YK):** **PageDown**: "Modelimiz ve gerçek inişler" paneli açılır.
+> "Doğru çalıştığını göstermek için **Ay'a gerçekten inmiş 5 aracı** aynı motora verdik.
+> Blue Ghost 1: biz 15 gün dedik, 14,6 gün çalıştı. SLIM: 11,9'a karşı 12. Chandrayaan-3: 12,3'e karşı 11,6.
+> İkisi tutmuyor ve bunu saklamıyoruz: IM-1 devrildiği için, Chang'e 6 da zaten 2 günde dönecek şekilde planlandığı için."
 
-**Tıklama:** İlk kartı açın. Yer sayfasında:
-> "Bu, o yerin gerçek arazisi, iniş gününün Güneşiyle. UYGUN ya da DEĞİL kararı ve nedeni burada; en büyük risk de."
+**Düellolar (YÇ):** sağ altta **Hakemler** düğmesine bas.
+> "Şimdi sizin planlarınız. **Her kartta sizin yeriniz, aynı görev için AdaptLab'ın seçimine karşı.**
+> Kart kazananı, nedenini ve size yakın daha iyi bir yeri söylüyor."
 
-İsterseniz **Görevi anlat** ile filmi 10–15 saniye gösterin (fırlatma, iniş, gezgin), **Esc** ile çıkın. Sonra **PageDown**.
+Bir kartı oku. Hakem kazandıysa bunu söyle; kaybettiyse kibarca nedenini oku. Sonra **Alt+Tab** ile slaytlara dön.
 
-## Bölüm 4: Kanıt (1:50–2:40)
+## 7. Slayt 5: Kullandığımız veriler (YK)
+> "**Kullandığımız her şey açık veri:** NASA'nın LRO uydusunun LOLA lazer haritaları, JPL'in Güneş ve Dünya konumları,
+> NASA'nın Derin Uzay Ağı istasyonları, kalıcı gölge ve buz haritaları, Artemis III bölgeleri."
 
-**Ekranda:** "Modelimiz ve gerçek inişler" paneli: 5 iniş; kırmızı çizgi modelin tahmini, beyaz çizgi gerçek son.
+## 8. Slayt 6: Avantajlar (YÇ)
+> "AdaptLab sadece yer seçmiyor, **görevi baştan sona planlıyor**: gerçek arazide 3D gezinme, Güneş ve Dünya tahmini,
+> görevi kendine göre kurma, en iyi 10 yeri karşılaştırma, fırlatmadan gezgine kadar görev simülasyonu.
+> Bir de açık API'si var: başka yazılımlar aynı motora soru sorabiliyor."
 
-**Konuşma (Yusuf Kerim, 25 sn):**
-> "Bir planlama aracı ancak doğruysa işe yarar. Aynı motoru Ay'a inmiş beş gerçek göreve uyguladık.
-> Blue Ghost 1: model 15,0 gün, gerçek 14,6. SLIM: 11,9'a karşı 12,0. Chandrayaan-3: 12,3'e karşı 11,6.
-> Her örnek tutmuyor ve bunu saklamıyoruz: IM-1 devrildiği için model 4,4 gün derken araç 7 gün çalıştı;
-> Chang'e 6 ise örnek toplayıp iki günde planlı olarak ayrıldı.
-> Ayrıca Güneş hesabımızı NASA'nın bağımsız aydınlanma haritalarıyla 32 noktada karşılaştırdık: korelasyon 0,96."
-
-**Tıklama:** Çubukta **Hakemler** düğmesi: düello kartları açılır.
-
-**Konuşma (Yusuf Çırpan, 25 sn):**
-> "Şimdi sizin planlarınız. Her kartta sizin yeriniz, aynı görev ve aynı kalış için AdaptLab'ın seçimiyle karşı karşıya.
-> Önce inebilen yer kazanır; buz ya da Artemis hedefinde hedefe yakınlık, sonra uygun gün sayısı, sonra Güneş ve Dünya bağlantısı.
-> Kart nedenini ve size yakın daha iyi bir yeri de söylüyor."
-
-Ekrandaki bir kartı okuyun. Hakem kazandıysa bunu söyleyin. 28 günlük plan varsa:
-> "28 günde hiçbir yer 48 saatten uzun bir Ay gecesinden kaçamıyor; bu batarya ile o süre UYGUN değil."
-
-**Tıklama:** **PageDown** (düello ekranı kapanır, Ölçek açılır).
-
-## Bölüm 5: Ölçek (2:40–3:05)
-
-**Ekranda yazanlar:**
-- Manşet: **Aynı motor, açık API: görev ekipleri kendi yazılımından sorar.**
-- Üç kart: **Görev planlama ekipleri** (CLPS iniş aracı yapan şirketler, erken aşama yer ve tarih elemesi) ·
-  **Gezgin ve bilim ekipleri** (buz hedefine yakın, güneş alan yerler) · **Eğitim** (TR/EN arayüz, 3D film, sınıfta canlı oyun).
-- Canlı API kutusu: `GET adaptlab.us/api/v1/search?...` ve gelen yanıt: "200 · 5 yer · 1,0 sn".
-
-**Konuşma (Yusuf Kerim):**
-> "AdaptLab sadece bir web sayfası değil. Aynı motor açık bir API olarak çalışıyor: bir görev ekibi kendi planlama yazılımından
-> 'bu tarihlerde, bu görev için en iyi yerler nerede' diye sorabiliyor. Ekrandaki çağrı şu an canlı yapıldı.
-> Kullanıcılarımız: iniş aracı yapan ekipler, buz arayan gezgin ekipleri ve sınıflar. Bunlar hedef kitle; henüz müşteri iddiamız yok."
-
-**Tıklama:** **PageDown**.
-
-## Bölüm 6: Avantaj ve ekip (3:05–3:30)
-
-**Ekranda yazanlar:**
-- Manşet: **Harita nereyi gösterir; AdaptLab nereye ve ne zaman inileceğini sıralar.**
-- Dört satır: görev hedefinden başlar · her yeri her iniş günü için saat saat tarar · kararın nedenini gösterir ·
-  gerçek inişlerle sınanmış ve sınırını söyler.
-- Ekip: Yusuf Kerim Kaymakçı (motor, veri, web) · Yusuf Çırpan (sunum ve jüri deneyimi).
-
-**Konuşma (Yusuf Çırpan):**
-> "NASA'nın QuickMap ve Moon Trek gibi harika harita araçları var; bir yeri ayrıntılı incelemek için onları kullanıyoruz.
-> AdaptLab'ın farkı yönde: görev hedefinden başlıyor, binlerce yeri ve iniş gününü birlikte sıralıyor ve kararın nedenini söylüyor.
-> Yusuf Kerim motoru, veriyi ve web uygulamasını geliştirdi; ben sunumu ve bu hakem deneyimini kurdum.
-> Projenin bir kısmı etkinlikten önce de vardı; ne zaman ne yaptığımız README'de açıkça yazıyor."
-
-**Tıklama:** **PageDown**.
-
-## Bölüm 7: Vizyon ve kapanış (3:30–4:00)
-
-**Ekranda yazanlar:** "Kararan her aracın daha iyi bir yeri ya da daha iyi bir günü vardı. **AdaptLab onu bulur.**"
-Bugün: canlı uygulama ve açık API, tüm Ay, 5 gerçek iniş · Sonra: daha ince Artemis arazisi, her araç için güç ve radyo bütçesi ·
-Ardından: her yeni inişi canlı karşılaştırmak (IM-3, Griffin 1, 2026 CLPS araçları). Ekip adları ve adaptlab.us QR'ı.
-
-**Konuşma (Yusuf Çırpan):**
-> "Bugün AdaptLab çalışıyor: uygulama, açık API ve gerçek inişlerle karşılaştırma.
-> Sırada daha ince Artemis arazisi ve her araca özel güç ve radyo hesabı var; ardından her yeni inişi canlı karşılaştırmak.
-> AdaptLab bir planlama aracı; iniş sertifikası vermiyor. Ama şunu biliyoruz:
-> kararan her aracın daha iyi bir yeri ya da daha iyi bir günü vardı. AdaptLab onu bulur. Teşekkürler, sorularınızı alalım."
-
-**Tıklama:** Ekran açık kalsın (QR görünür). Sorulara geçin.
+## 9. Slayt 7: Kapanış (YÇ)
+Slaytta yazı yok; sen söyle:
+> "Bugün AdaptLab çalışıyor: adaptlab.us'ta deneyebilirsiniz. Bu bir planlama aracı, iniş sertifikası değil.
+> Ama şunu biliyoruz: **kararan her aracın daha iyi bir yeri ya da daha iyi bir günü vardı. AdaptLab onu bulur.**
+> Teşekkürler, sorularınızı alalım."
 
 ---
 
 ## Bir şey bozulursa
-
-- **Telefonlar bağlanmıyor:** düello ekranında **Test telefonu** bir plan ekler. "Bu bir test planı" deyin.
-- **Site yavaş:** bulunduğunuz ekranda kalın ve anlatmaya devam edin; sonuç gelmeden kazanan ilan etmeyin.
+- **Telefonlar bağlanmıyor:** sitedeki hakem odasında **Test telefonu** bir plan ekler; "bu bir test planı" de.
+- **Site açılmıyor / internet yok:** sitesiz devam et. Slayt 4'ten sonra doğrudan Slayt 5'e geç; demo yerine kanıt sayılarını söyle.
 - **Film uzadı:** **Esc**.
-- **Bir şey takıldı:** çubuktaki ✕ ile sunumdan çıkın, **Sunum** ile yeniden girin. Hakem odası yeniden kurulur (yeni kod).
+- **Sitede bir şey takıldı:** sağ alttaki ✕ ile çık, **Sunum** düğmesiyle yeniden gir (oda yeni kodla kurulur).
 
-## 30 saniyelik anlatım
+## Soru gelince
+Üç parça: **kısa cevap + kanıt + sınır.** Bilmiyorsan: "Bu, modelimizin şu anki sınırı; şu an yaptığımız şu…"
+Hazır cevaplar ve kartlardaki sayıların anlamı: **AdaptLab_Sunum_Icerigi.pdf**.
 
-Ay'ın güney kutbunda Güneş ufku sıyırır; bir sırt hem Güneş'i hem Dünya bağlantısını kesebilir, bu yüzden nereye kadar ne zaman da önemli.
-AdaptLab'a görevin amacını söylüyorsunuz; NASA LOLA arazisi, JPL DE421 ve DSN verisiyle 21.856 noktayı her iniş günü için saat saat
-tarıyor ve en iyi yerleri ve günleri nedenleriyle sıralıyor. Beş gerçek inişle sınadık; aynı motor açık API olarak da çalışıyor.
-Biz No Limits Lunar; adaptlab.us.
-
----
-
-## NASA (global) teslimi için 7 slayt
-
-Global teslim İngilizcedir. Aşağıda her slaytın İngilizce manşeti ve içeriği var. Resmî biçim kuralı (7 slayt ya da 30 saniyelik video)
-son kez NASA formundan kontrol edilmeli.
-
-1. **Fırsat** — *"Every lander heading to the lunar south pole needs the right place and the right day."*
-   Su buzu ve 9 Artemis III aday bölgesi güney kutbunda; CLPS iniş araçları oraya gidiyor. Görsel: kutup arazisi, Güneş ufukta.
-2. **Problem** — *"At the pole the Sun skims the horizon: a 1 km ridge casts a ~40 km shadow."*
-   Panel gölgede kalırsa batarya biter; Dünya krater arkasında kalırsa bağlantı kesilir. IM-1 7 günde karardı, Chandrayaan-3 uyanmadı.
-3. **Çözüm** — *"Name the goal. AdaptLab finds where and when to land."*
-   21.856 nokta × her iniş günü × her saat; Güneş, Dünya + DSN, en uzun karanlık, batarya, eğim. Görsel: hedef → arama → sonuç kartları.
-4. **Kanıt** — *"Replayed 5 real landings with the same engine."*
-   Model / gerçek (gün): Blue Ghost 1 15,0 / 14,6 · SLIM 11,9 / 12,0 · Chandrayaan-3 12,3 / 11,6 · IM-1 4,4 / 7,0 (devrildi) ·
-   Chang'e 6 10,6 / 2,0 (planlı ayrılış). NASA aydınlanma haritalarıyla r = 0,96 (32 nokta).
-5. **Ölçek** — *"Same engine, open API: adaptlab.us/api/v1."* `/search`, `/site`, `/sky`. Görev ekipleri, gezgin ekipleri, eğitim.
-6. **Avantaj ve ekip** — *"Maps show where. AdaptLab ranks where and when, and says why."* Ekip ve görev dağılımı.
-7. **Vizyon** — *"Every lander that went dark had a better place, or a better day. AdaptLab finds it."*
-   Bugün / Sonra / Ardından, adaptlab.us QR, ekip adları.
-
----
-
-## Önceki 7 slayt taslağından çıkarılanlar (neden)
-
-- **"IM-1 tam öngördüğümüz gibi 7. günde sustu"**: yanlış. Model 4,4 gün dedi, araç 7 gün çalıştı; bu en zayıf örneğimiz. Dürüstçe söylüyoruz.
-- **"8 km batıda 11 gün güneş alan sırt" (IM-1 cevabı)**: hiçbir yerde hesaplanmadı, uydurma.
-- **"Tek bir sırt 50 km gölge yaratır"**: kaynak yok. 1,5° Güneş ile 1 km'lik sırt yaklaşık 38 km gölge atar; "yaklaşık 40 km" diyoruz.
-- **"Düello motorumuzun daima daha iyi olduğunu kanıtlıyor"**: yanlış; hakem kazanabilir.
-- **"İniş aracı 100 milyon doların üzerinde", "bir saatte entegre edilir", "planlama aylar sürüyor"**: kaynağımız yok.
-- **"QuickMap / Moon Trek statik fotoğraf albümü"**: haksız ve yanlış (QuickMap'te aydınlanma katmanları var). Bir NASA jürisi bunu yakalar.
-- **"300 adımlı Monte Carlo"**: 300 simüle görev; "adım" değil.
-- **"İlk ekranda QR olmayacak"**: siz QR'ı başa istediniz; hakemler böylece bütün sunum boyunca planlayabiliyor.
-- Ekip satırındaki kişisel bilgiler (okul, takım, IAC) bu belgeye alınmadı; doğruysa sözlü ekleyebilirsiniz.
-- Eski 7 slayt taslağı yedek olarak: `presentation-kit/arsiv/SUNUM_AKISI_7slayt_taslak.md`.
-
-Ayrıntılı soru-cevap ve kartlardaki sayıların anlamı: **SUNUM_ICERIGI.md**.
+## Canva düzeltmeleri (şart)
+Çırpan'ın sunumunda üç yer yanlış. Düzeltilmiş kopyası: **AdaptLab_Canva_duzeltilmis.pptx**. Canva'da da aynısını yapın, NASA'ya o gidecek.
+- **Slayt 3:** "using an AI-powered algorithm…" **yanlış**: motor yapay zekâ değil. Jüri "hangi yapay zekâ?" diye sorarsa cevabımız yok.
+  Doğrusu: "using real NASA terrain and the hour-by-hour positions of the Sun and Earth to find where and when a lander survives, then plotting the rover's route".
+- **Slayt 6:** eski isim "LunaNav" → **AdaptLab**. Başlık "Our Avantages" → **"Our Advantages"**.
+- Önerim (zorunlu değil): ekip isimlerini Slayt 1'e ya da 7'ye ekleyin; Slayt 7'ye "AdaptLab onu bulur" sloganı ve adaptlab.us yazılabilir.
