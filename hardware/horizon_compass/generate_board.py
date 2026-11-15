@@ -1,4 +1,4 @@
-"""Generate the LunaNav "horizon compass" PCB with KiCad's Python API (pcbnew).
+"""Generate the AdaptLab "horizon compass" PCB with KiCad's Python API (pcbnew).
 
 A ring of 24 addressable LEDs (15 degrees of azimuth each) around an ESP32-C3-DevKitM-1 that
 plugs into the back. Firmware lights the LED in the Sun's direction (yellow) and the Earth's
@@ -237,7 +237,7 @@ def main():
     # Silkscreen: compass points and title.
     for label, az in (("N", 0), ("E", 90), ("S", 180), ("W", 270)):
         text(label, *polar(R_LED - 4.2, az + 7.5), size=1.6)
-    for line, dy, size in (("LunaNav", -5.0, 1.8), ("horizon compass", -2.0, 1.2), ("Sun: yellow", 1.0, 1.0),
+    for line, dy, size in (("AdaptLab", -5.0, 1.8), ("horizon compass", -2.0, 1.2), ("Sun: yellow", 1.0, 1.0),
                            ("Earth: blue", 3.0, 1.0), ("15 deg per LED", 5.5, 1.0)):
         text(line, CX, CY + dy, size=size)
 

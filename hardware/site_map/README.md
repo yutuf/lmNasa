@@ -2,7 +2,7 @@
 
 A 100 x 100 mm two-layer board. The silkscreen is a south polar stereographic map with the nine
 Artemis III candidate regions, and one WS2812B LED sits at each region's best landing point as computed
-by Touchdown (`data/derived_sites.yaml`), plus two published points from `data/sites.yaml`. Firmware, which
+by AdaptLab (`data/derived_sites.yaml`), plus two published points from `data/sites.yaml`. Firmware, which
 does not exist yet, is meant to colour each LED by the GO / NO-GO verdict for a chosen landing date.
 
 Nothing here has been manufactured or powered.

@@ -16,7 +16,7 @@ from pathlib import Path
 
 import numpy as np
 
-from lunanav.series import load_series
+from adaptlab.series import load_series
 
 N_LEDS = 24
 DEFAULT_OUT = Path(__file__).resolve().parents[1] / "hardware" / "horizon_compass" / "firmware" / "track.h"

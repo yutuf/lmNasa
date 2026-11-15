@@ -3,7 +3,7 @@ let ready: Promise<void> | undefined
 export function afterResultsPaint(): Promise<void> {
   return ready ??= new Promise<void>((resolve) => {
     const painted = () => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-    const hasResults = () => document.querySelector('.site-card, #results .table tbody tr') !== null
+    const hasResults = () => document.querySelector('.site-card, .duel .ds, #results .table tbody tr') !== null
     if (hasResults()) { painted(); return }
     const observer = new MutationObserver(() => {
       if (hasResults()) { observer.disconnect(); painted() }

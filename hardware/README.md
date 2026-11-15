@@ -1,4 +1,4 @@
-# Touchdown physical twin
+# AdaptLab physical twin
 
 Physical companions to the app, generated from scripts so they can be rebuilt for any site.
 **None of them has been manufactured yet.**
@@ -23,7 +23,7 @@ The 24 × 24 km tile from the demo ("terrain beats latitude"), at **1:200,000 wi
 | pin | point | elevation |
 |---|---|---|
 | A (red) | published point, 86°S 0°E | 4,795 m |
-| B (yellow) | Touchdown derived point, 447 m NE | 4,851 m |
+| B (yellow) | AdaptLab derived point, 447 m NE | 4,851 m |
 | C (green) | best point in the Artemis III region, 5 km W | 4,990 m |
 
 Pins A and B are 2.2 mm apart on the model: that is how small the move is that takes Earth
@@ -55,7 +55,7 @@ horizons use, so elevations can differ by a few metres.
 ![Relief with the two published points](relief/shackleton_ridge_fusion.png)
 
 The two classic near-pole candidates, 37.8 km apart, on one 48 × 48 km tile at **1:400,000 with true
-vertical scale**: 120 mm square, 10.8 mm of relief (−2,353.5 m to 1,956 m), 3 mm base. In Touchdown's
+vertical scale**: 120 mm square, 10.8 mm of relief (−2,353.5 m to 1,956 m), 3 mm base. In AdaptLab's
 data the ridge point has at least half the solar disk in view 91 % of the time and the rim point 77 %
 (2026-11 → 2028-12).
 

@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 
-from lunanav.terrain3d import TERRAIN_DIR, load_patch, shadow_mask, sun_vector
+from adaptlab.terrain3d import TERRAIN_DIR, load_patch, shadow_mask, sun_vector
 
 
 def test_wall_casts_a_shadow_away_from_the_sun():

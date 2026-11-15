@@ -1,4 +1,4 @@
-// The TypeScript models must give the same answers as the Python ones (lunanav/metrics.py, lunanav/power.py)
+// The TypeScript models must give the same answers as the Python ones (adaptlab/metrics.py, adaptlab/power.py)
 // on the exported data. public/data/expected.json is written by scripts/export_web_data.py.
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'

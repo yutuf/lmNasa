@@ -20,7 +20,7 @@ class Site:
     source: str = ""
     verified: bool = False
     reference: bool = False   # shown for comparison, never ranked
-    # derived points (computed by LunaNav near a cited site, NOT published coordinates)
+    # derived points (computed by AdaptLab near a cited site, NOT published coordinates)
     derived_from: str = ""
     search: str = ""                  # "1 km" (around the point) or "region" (whole USGS region grid)
     distance_m: float | None = None

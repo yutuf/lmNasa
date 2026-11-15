@@ -1,12 +1,12 @@
-// Artemis III head-to-head table: each NASA candidate region's centre vs the best point Touchdown finds inside it.
+// Artemis III head-to-head table: each NASA candidate region's centre vs the best point AdaptLab finds inside it.
 import type { ArtemisRow } from '../artemis'
 import type { PointResult } from '../engine'
 import type { Lang } from '../i18n'
 
 const T = {
   title: { en: 'Artemis III regions, head to head', tr: 'Artemis III bölgeleri, karşı karşıya' },
-  sub: { en: 'For this mission: the centre of each of NASA’s nine candidate regions (from the official USGS outline) against the best point Touchdown finds inside the same region. Seven are on the 2 km polar grid; two sit north of 84.5°S and are marked outside. Click a row to open the best point.',
-    tr: 'Bu görev için: NASA’nın dokuz aday bölgesinin her birinin merkezi (resmi USGS sınırından) ve Touchdown’ın aynı bölge içinde bulduğu en iyi nokta. Yedisi 2 km’lik kutup ızgarasında; ikisi 84,5°G’nin kuzeyinde ve dışında işaretli. En iyi noktayı açmak için satıra tıklayın.' },
+  sub: { en: 'For this mission: the centre of each of NASA’s nine candidate regions (from the official USGS outline) against the best point AdaptLab finds inside the same region. Seven are on the 2 km polar grid; two sit north of 84.5°S and are marked outside. Click a row to open the best point.',
+    tr: 'Bu görev için: NASA’nın dokuz aday bölgesinin her birinin merkezi (resmi USGS sınırından) ve AdaptLab’ın aynı bölge içinde bulduğu en iyi nokta. Yedisi 2 km’lik kutup ızgarasında; ikisi 84,5°G’nin kuzeyinde ve dışında işaretli. En iyi noktayı açmak için satıra tıklayın.' },
   region: { en: 'Region', tr: 'Bölge' },
   centre: { en: 'Region centre', tr: 'Bölge merkezi' },
   best: { en: 'Best point inside', tr: 'İçerideki en iyi nokta' },

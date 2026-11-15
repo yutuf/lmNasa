@@ -3,15 +3,15 @@ import numpy as np
 import pytest
 import yaml
 
-from lunanav.derive import (candidate_grid, rank_candidates, reproject_altaz, score_point, slope_deg,
+from adaptlab.derive import (candidate_grid, rank_candidates, reproject_altaz, score_point, slope_deg,
                             sun_radius_deg)
-from lunanav.geometry import MOON_RADIUS_M, destination
-from lunanav.horizon import HorizonProfile
-from lunanav.metrics import hours_until_change
-from lunanav.panorama import break_at_wraps, circular_mean_deg, compass_ticks, unwrap_about
-from lunanav.power import PowerConfig, simulate_battery, simulate_battery_batch
-from lunanav.sites import load_sites
-from lunanav.visibility import Visibility
+from adaptlab.geometry import MOON_RADIUS_M, destination
+from adaptlab.horizon import HorizonProfile
+from adaptlab.metrics import hours_until_change
+from adaptlab.panorama import break_at_wraps, circular_mean_deg, compass_ticks, unwrap_about
+from adaptlab.power import PowerConfig, simulate_battery, simulate_battery_batch
+from adaptlab.sites import load_sites
+from adaptlab.visibility import Visibility
 
 
 # ---------------- panorama helpers ----------------
@@ -142,7 +142,7 @@ def test_load_sites_places_derived_after_parent(tmp_path):
 def test_required_battery_is_exact_threshold():
     from dataclasses import replace
 
-    from lunanav.power import required_battery_wh
+    from adaptlab.power import required_battery_wh
     rng = np.random.default_rng(3)
     sf = np.repeat(rng.uniform(0, 1, 40) > 0.5, 12).astype(float)    # 12 h sun / shadow blocks
     cfg = PowerConfig(array_peak_w=400, load_w=150, min_soc=0.2)

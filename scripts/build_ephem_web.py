@@ -26,7 +26,7 @@ from skyfield.planetarylib import PlanetaryConstants
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from lunanav.derive import sun_radius_deg  # noqa: E402
+from adaptlab.derive import sun_radius_deg  # noqa: E402
 
 KERNELS = ROOT / "data" / "kernels"
 WEB = ROOT / "web" / "public" / "data"
@@ -46,7 +46,7 @@ def kernels():
 
 
 def frame_for(pc, name):
-    """The ME frame, built from the binary-PCK segment covering the present (see lunanav/ephemeris.py)."""
+    """The ME frame, built from the binary-PCK segment covering the present (see adaptlab/ephemeris.py)."""
     integer = pc.variables[f"FRAME_{name}"]
     relative = pc.variables.get(f"TKFRAME_{integer}_RELATIVE")
     base = pc.variables[f"FRAME_{relative}"] if relative else integer

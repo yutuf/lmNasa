@@ -64,7 +64,7 @@ def test_compare_reads_units_finds_psr_and_measures_distance(tmp_path, data):
     assert r["mazarico_earth"] == pytest.approx(0.50, abs=1e-3)     # fraction map read as fraction
     assert r["psr_nearest_km"] == pytest.approx(2.0, abs=0.15)      # 3 km to the centre - 1 km radius
     assert r["psr_area_within_5km_km2"] == pytest.approx(np.pi, rel=0.08)
-    assert 0 < r["lunanav_sun_mean"] <= 1
+    assert 0 < r["adaptlab_sun_mean"] <= 1
     assert json.loads((data / "mazarico.json").read_text())["sites"]["shackleton_ridge"] == r
 
 

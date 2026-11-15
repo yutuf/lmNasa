@@ -18,9 +18,9 @@ with sync_playwright() as p:
                 return pg.evaluate('''async () => {
                   const T=await import('/node_modules/three/build/three.module.js');
                   const {scene,motion}=window.__modelQA; const root=scene.children.find(o=>o.userData.model);
-                  const box=new T.Box3().setFromObject(root); const wheels=[];
+                  const box=new T.Box3().setFromObject(root,true); const wheels=[];
                   root.traverse(o=>{if(o.name==='wheel-spin')wheels.push({r:o.userData.radius,angle:o.rotation.z,parts:o.children.length,
-                    box:new T.Box3().setFromObject(o).getSize(new T.Vector3()).toArray(), centre:o.parent.position.toArray()})});
+                    box:new T.Box3().setFromObject(o,true).getSize(new T.Vector3()).toArray(), centre:o.parent.position.toArray()})});
                   return {model:root.userData.model,min:box.min.toArray(),max:box.max.toArray(),wheels,travel:motion.travel,heading:motion.heading};
                 }''')
             a=measure()
@@ -31,7 +31,8 @@ with sync_playwright() as p:
             for w0,w1 in zip(a['wheels'],c['wheels']):
                 expected=-(c['travel']-a['travel'])/w0['r']
                 assert abs((w1['angle']-w0['angle'])-expected)<1e-6,(id,w0,w1,expected)
-                # The gallery records empty pivots so template fitting can be checked visually.
+                assert w0['parts']>0,(id,w0)
+                assert w0['box'][0] < w0['r']*2.2 and w0['box'][1] < w0['r']*2.2,(id,w0)
             results.append(dict(kind=kind,id=id,first=a,second=c))
             print(id, 'parts', [w['parts'] for w in a['wheels']],flush=True)
     b.close()

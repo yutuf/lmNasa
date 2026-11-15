@@ -66,7 +66,7 @@ function v1Module(url: string | undefined): string | null {
 
 function devApi(env: Record<string, string>): Plugin {
   return {
-    name: 'lunanav-dev-api',
+    name: 'adaptlab-dev-api',
     configureServer(server) {
       server.middlewares.use('/api/v1', async (req, res) => {
         const file = v1Module(req.url)

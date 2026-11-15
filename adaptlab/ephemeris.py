@@ -6,7 +6,7 @@ Kernels (put them in data/kernels/, they are downloaded by scripts/fetch_kernels
   pck00011.tpc                    planetary constants
   moon_pa_de440_200625.bpc        Moon orientation (libration) for de440
 
-The path can be overridden with the LUNANAV_KERNELS environment variable.
+The path can be overridden with the ADAPTLAB_KERNELS environment variable.
 
 Moon has no atmosphere: apparent positions (light-time, aberration), no refraction.
 Altitude is relative to the local *geometric* horizon (sphere tangent plane).
@@ -20,7 +20,7 @@ import numpy as np
 
 import os
 
-KERNEL_DIR = Path(os.environ.get("LUNANAV_KERNELS",
+KERNEL_DIR = Path(os.environ.get("ADAPTLAB_KERNELS",
                   Path(__file__).resolve().parent.parent / "data" / "kernels"))
 SPK = "de440.bsp"
 FRAMES_TF = "moon_de440_250416.tf"

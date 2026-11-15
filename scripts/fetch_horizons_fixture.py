@@ -4,7 +4,7 @@ Horizons (https://ssd.jpl.nasa.gov/horizons/) is the ephemeris service the chall
 foundation for Sun and Earth positions. This script asks its public API (no key) for the apparent
 azimuth and elevation of the Sun (10) and Earth (399) seen from points on the Moon (coord@301), and
 writes tests/fixtures/horizons.json. tests/test_horizons.py then compares the committed series in
-data/series/ against it, so CI checks LunaNav's ephemeris without network access.
+data/series/ against it, so CI checks AdaptLab's ephemeris without network access.
 
   python scripts/fetch_horizons_fixture.py
 

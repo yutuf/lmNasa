@@ -1,10 +1,10 @@
-// Touchdown mark: a lander standing on the horizon, the horizon in the brand red. Plain vector, any size.
-export default function Patch({ size = 34, title = 'Touchdown' }: { size?: number; title?: string }) {
+// AdaptLab mark: the Moon's limb on the horizon with a low red Sun skimming it, the south pole's defining light.
+export default function Patch({ size = 34, title = 'AdaptLab' }: { size?: number; title?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" role="img" aria-label={title} className="patch">
-      <path d="M10 9h12l2 8H8z" fill="#F3F2F5" />
-      <path d="M10 17l-4 9M22 17l4 9M16 17v9" stroke="#F3F2F5" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M3 27.5h26" stroke="#E10600" strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M3 22a13 13 0 0 1 26 0" fill="none" stroke="#F3F2F5" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M3 22h26" stroke="#F3F2F5" strokeWidth="2.4" strokeLinecap="round" />
+      <circle cx="9.5" cy="19" r="3" fill="#E10600" />
     </svg>
   )
 }

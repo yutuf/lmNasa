@@ -13,7 +13,7 @@ describe('phone link', () => {
     expect(phoneUrl('https://lunanav-theta.vercel.app', '/', 'K7MQ2P', 'en')).toBe('https://adaptlab.us/#phone?code=K7MQ2P&lang=en')
     expect(phoneUrl('http://localhost:5173', '/', 'K7MQ2P', 'en')).toBe('https://adaptlab.us/#phone?code=K7MQ2P&lang=en')
     expect(phoneUrl('http://127.0.0.1:5173', '/web/', 'K7MQ2P', 'tr')).toBe('https://adaptlab.us/#phone?code=K7MQ2P&lang=tr')
-    expect(peerIdFor('k7mq2p')).toBe('lunanav-K7MQ2P')
+    expect(peerIdFor('k7mq2p')).toBe('adaptlab-K7MQ2P')
   })
 
   it('accepts look and mission messages and drops junk', () => {

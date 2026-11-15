@@ -1,5 +1,5 @@
 [project]
-name = "lunanav"
+name = "adaptlab"
 version = "0.1.0"
 description = "Rapid lunar landing-site and date comparison: sunlight, Earth visibility and battery survival."
 requires-python = ">=3.10"
@@ -14,7 +14,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["lunanav"]
+packages = ["adaptlab"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -1,13 +1,13 @@
 Read HANDOFF.md first.
 
-# Agent notes for Touchdown
+# Agent notes for AdaptLab
 
 (There was no CLAUDE.md or project_space_apps_2026.md in this repo; these are the working rules the previous agent followed.)
 
 ## Project
 
 - NASA Space Apps 2026 (14–15 Nov 2026), challenge "Lunar Landing Site Navigator": where and when to land on the Moon.
-- The product is the web app in `web/` (Vite + React 19 + TypeScript + three.js / @react-three/fiber). The Python package `lunanav/` and `scripts/` build the data it loads.
+- The product is the web app in `web/` (Vite + React 19 + TypeScript + three.js / @react-three/fiber). The Python package `adaptlab/` and `scripts/` build the data it loads.
 - Tag `pre-hackathon` (e616415) marks what existed before the event. Keep the README's pre-hackathon disclosure honest.
 
 ## Working rules

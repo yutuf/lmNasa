@@ -16,7 +16,7 @@ Writes:
   expected.json            the Python models' results on the exported data (the web tests must match them)
 
 South-pole spots reuse the committed series and horizons. Landed missions get a horizon traced from LOLA
-LDEM_64 (474 m) and Sun/Earth tracks rotated from Apollo 11's series with Earth parallax (lunanav/anywhere.py).
+LDEM_64 (474 m) and Sun/Earth tracks rotated from Apollo 11's series with Earth parallax (adaptlab/anywhere.py).
 """
 import argparse
 import json
@@ -30,16 +30,16 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from lunanav.anywhere import GlobalGrid, load_earth_distance, rotate_earth, rotate_sun  # noqa: E402
-from lunanav.derive import sun_radius_deg  # noqa: E402
-from lunanav.dsn import DSN  # noqa: E402
-from lunanav.geometry import disk_visible_fraction  # noqa: E402
-from lunanav.horizon import compute_horizon, load_profiles  # noqa: E402
-from lunanav.metrics import MissionConstraints, evaluate_window  # noqa: E402
-from lunanav.power import required_battery_wh, simulate_battery  # noqa: E402
-from lunanav.series import load_series  # noqa: E402
-from lunanav.sites import load_sites  # noqa: E402
-from lunanav.terrain3d import load_patch  # noqa: E402
+from adaptlab.anywhere import GlobalGrid, load_earth_distance, rotate_earth, rotate_sun  # noqa: E402
+from adaptlab.derive import sun_radius_deg  # noqa: E402
+from adaptlab.dsn import DSN  # noqa: E402
+from adaptlab.geometry import disk_visible_fraction  # noqa: E402
+from adaptlab.horizon import compute_horizon, load_profiles  # noqa: E402
+from adaptlab.metrics import MissionConstraints, evaluate_window  # noqa: E402
+from adaptlab.power import required_battery_wh, simulate_battery  # noqa: E402
+from adaptlab.series import load_series  # noqa: E402
+from adaptlab.sites import load_sites  # noqa: E402
+from adaptlab.terrain3d import load_patch  # noqa: E402
 
 OUT = ROOT / "web" / "public" / "data"
 
@@ -51,8 +51,8 @@ POLE = [  # id, name EN, name TR, description EN, description TR
      "Less than half a kilometre from the published spot, on the same mountain.",
      "Yayınlanan noktadan yarım kilometreden az uzakta, aynı dağın üzerinde."),
     ("malapert_massif_region_best", "Malapert: 5 km away", "Malapert: 5 km ötede",
-     "The best spot LunaNav found inside the same Artemis III region, 5 km west.",
-     "LunaNav'ın aynı Artemis III bölgesinde bulduğu en iyi nokta, 5 km batıda."),
+     "The best spot AdaptLab found inside the same Artemis III region, 5 km west.",
+     "AdaptLab'ın aynı Artemis III bölgesinde bulduğu en iyi nokta, 5 km batıda."),
     ("shackleton_ridge", "Shackleton ridge", "Shackleton sırtı",
      "A ridge 60 km from the pole, one of the best-lit places on the Moon.",
      "Kutba 60 km uzaklıkta bir sırt; Ay'ın en çok ışık alan yerlerinden biri."),
@@ -128,7 +128,7 @@ def textures(grid: GlobalGrid, polar):
     Image.fromarray(nrgb.astype(np.uint8), "RGB").save(OUT / "moon_normal.jpg", quality=92)
 
     # south-polar cap: stereographic, +x toward 90 E, +y toward 0 E, radius out to 80 S
-    from lunanav.polar_grid import polar_xy
+    from adaptlab.polar_grid import polar_xy
     r_max = float(np.hypot(*polar_xy(-80.0, 0.0)))
     size = 2048
     c = (np.arange(size) + 0.5) / size * 2 * r_max - r_max
@@ -192,12 +192,12 @@ def main():
                 continue
             region = s.name.split(" — ")[0]
             add(s.id, f"{region}: best spot", f"{region}: en iyi nokta",
-                f"The best spot LunaNav found inside the {region} Artemis III region.",
-                f"LunaNav'ın {region} Artemis III bölgesinde bulduğu en iyi nokta.", "artemis", s.lat, s.lon, v,
+                f"The best spot AdaptLab found inside the {region} Artemis III region.",
+                f"AdaptLab'ın {region} Artemis III bölgesinde bulduğu en iyi nokta.", "artemis", s.lat, s.lon, v,
                 hz_ref[s.id], None, "polar")
 
     missions = yaml.safe_load((ROOT / "data" / "landed_missions.yaml").read_text(encoding="utf-8"))["missions"]
-    from lunanav.visibility import Visibility
+    from adaptlab.visibility import Visibility
     for m in missions:
         lat, lon = float(m["lat"]), float(m["lon"])
         sid = "mission_" + re.sub(r"[^a-z0-9]+", "_", m["name"].lower()).strip("_")
@@ -212,8 +212,8 @@ def main():
         print(f"{sid}: sun {np.mean(frac >= 0.5):.0%}, earth {np.mean(v.earth_visible):.0%}")
 
     # ephemeris for the in-browser search engine: Sun unit vector and Earth position (km) in the Moon-fixed
-    # frame, and the Sun's apparent radius, hourly; built from Apollo 11's DE440 series (lunanav/anywhere.py)
-    from lunanav.anywhere import R_MOON_KM, _direction, _enu
+    # frame, and the Sun's apparent radius, hourly; built from Apollo 11's DE440 series (adaptlab/anywhere.py)
+    from adaptlab.anywhere import R_MOON_KM, _direction, _enu
     d_sun = _direction(v_ref.sun_alt, v_ref.sun_az, a11.lat, a11.lon)
     d_earth = _direction(v_ref.earth_alt, v_ref.earth_az, a11.lat, a11.lon)
     p0 = R_MOON_KM * _enu(a11.lat, a11.lon)[2]
@@ -224,7 +224,7 @@ def main():
            sun_radius_deg(v_ref.times_utc)]
     (OUT / "ephem.bin").write_bytes(b"".join(np.asarray(a, "<f4").tobytes() for a in eph))
     # South-pole terrain for the rover and lander views: the 200 m polar grid (85 S product), int16 in 0.5 m units
-    from lunanav.polar_grid import GRID_FILE
+    from adaptlab.polar_grid import GRID_FILE
     zg = np.load(GRID_FILE)
     fine = zg["fine_dn"]
     (OUT / "pole_dem.bin").write_bytes(np.array([fine.shape[0], fine.shape[1]], "<u4").tobytes()
@@ -233,7 +233,7 @@ def main():
                                       + fine.astype("<i2").tobytes())
     dsn = DSN.load()
     (OUT / "dsn.bin").write_bytes((dsn.elevation_deg > 10).any(axis=0).astype("u1").tobytes())
-    from lunanav.polar_grid import PolarGrid
+    from adaptlab.polar_grid import PolarGrid
     pole_r = textures(GlobalGrid.load(), PolarGrid.load())
 
     # parity fixture: Python models on the exported (rounded) data
@@ -252,8 +252,8 @@ def main():
     (OUT / "expected.json").write_text(json.dumps(expected, indent=0), encoding="utf-8")
 
     # Artemis III region outlines (USGS), as closed rings in the atlas's stereographic plane (km)
-    from lunanav.outlines import chain
-    from lunanav.polar_grid import polar_xy as stereo
+    from adaptlab.outlines import chain
+    from adaptlab.polar_grid import polar_xy as stereo
     reg = json.loads((ROOT / "data" / "artemis_regions.json").read_text(encoding="utf-8"))["regions"]
     regions = []
     for name, r in reg.items():

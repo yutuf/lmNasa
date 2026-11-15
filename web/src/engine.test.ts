@@ -1,4 +1,4 @@
-// The TypeScript search engine must agree with the Python reference (lunanav/engine.py) on sample atlas points.
+// The TypeScript search engine must agree with the Python reference (adaptlab/engine.py) on sample atlas points.
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { Manifest } from './data'

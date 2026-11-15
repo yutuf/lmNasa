@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Lang } from './i18n'
 
 export type SpeechVoice = SpeechSynthesisVoice
-const voiceKey = (lang: Lang) => `lunanav-voice-${lang}`
+const voiceKey = (lang: Lang) => `adaptlab-voice-${lang}`
 const locale = (lang: Lang) => lang === 'tr' ? 'tr-TR' : 'en-US'
 
 function rankVoice(voice: SpeechVoice, lang: Lang) {

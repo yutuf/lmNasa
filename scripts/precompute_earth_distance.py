@@ -1,7 +1,7 @@
 """Hourly Earth-Moon centre distance for the data window (data/earth_distance.npz).
 
 Sun and Earth directions for a new point on the Moon are obtained by rotating a computed site's series
-(lunanav.anywhere). The Sun is so far away that its direction is the same from every point on the Moon, but
+(adaptlab.anywhere). The Sun is so far away that its direction is the same from every point on the Moon, but
 Earth is close enough for parallax to matter (up to about 0.26 deg across the Moon), so the rotation needs
 the Earth-Moon distance at every hour.
 

@@ -41950,7 +41950,7 @@
 			)
 		)
 	)
-	(gr_text "LunaNav timeline bar"
+	(gr_text "AdaptLab timeline bar"
 		(at 49 83.6 0)
 		(layer "F.SilkS")
 		(uuid "e9f3fa7c-a585-4698-9c8c-cd41cbe9f998")

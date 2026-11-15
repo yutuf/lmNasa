@@ -15,10 +15,10 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from lunanav.ephemeris import MoonSky  # noqa: E402
-from lunanav.horizon import HorizonProfile, load_profiles  # noqa: E402
-from lunanav.sites import load_sites  # noqa: E402
-from lunanav.visibility import compute_visibility  # noqa: E402
+from adaptlab.ephemeris import MoonSky  # noqa: E402
+from adaptlab.horizon import HorizonProfile, load_profiles  # noqa: E402
+from adaptlab.sites import load_sites  # noqa: E402
+from adaptlab.visibility import compute_visibility  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--start", default="2026-11-01")

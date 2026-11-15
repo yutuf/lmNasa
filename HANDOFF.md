@@ -1,15 +1,15 @@
-# Touchdown handoff
+# AdaptLab handoff
 
 NASA Space Apps 2026 (14–15 Nov 2026), challenge **Lunar Landing Site Navigator**: "where and when should we land on the Moon?"
 
 ## What it is
 
-Touchdown is a web app that finds where and when a lander can land on the Moon and survive. For every candidate point it computes the Sun and Earth over the real terrain horizon, hour by hour, for every landing date in a window. The points are 21,856 south-polar points on a 2 km grid and 41,276 points across the whole Moon about 30 km apart. It uses NASA LOLA terrain, JPL ephemerides and Deep Space Network (DSN) visibility, then checks sunlight, Earth contact, longest darkness, battery, slope, landing-zone roughness and distance to ice. The output is ranked GO/NO-GO sites with dates, 3D terrain renders and a Monte Carlo mission success probability. A decision model re-ranks the sites by weighted criteria. There is also a lander/rover drive and walking mode, a cinematic "Tell me the mission" film, a workshop to design your own vehicle, and an AI assistant ("Luna", Gemini). Everything runs in the browser except the Gemini call (`api/ask`) and read-aloud (`api/tts`, ElevenLabs).
+AdaptLab is a web app that finds where and when a lander can land on the Moon and survive. For every candidate point it computes the Sun and Earth over the real terrain horizon, hour by hour, for every landing date in a window. The points are 21,856 south-polar points on a 2 km grid and 41,276 points across the whole Moon about 30 km apart. It uses NASA LOLA terrain, JPL ephemerides and Deep Space Network (DSN) visibility, then checks sunlight, Earth contact, longest darkness, battery, slope, landing-zone roughness and distance to ice. The output is ranked GO/NO-GO sites with dates, 3D terrain renders and a Monte Carlo mission success probability. A decision model re-ranks the sites by weighted criteria. There is also a lander/rover drive and walking mode, a cinematic "Tell me the mission" film, a workshop to design your own vehicle, and an AI assistant ("Luna", Gemini). Everything runs in the browser except the Gemini call (`api/ask`) and read-aloud (`api/tts`, ElevenLabs).
 
 ## Architecture
 
 ```
-lunanav/      Python science package (horizons, illumination, Earth visibility, DSN, regions, CLI/app helpers)
+adaptlab/      Python science package (horizons, illumination, Earth visibility, DSN, regions, CLI/app helpers)
 scripts/      Data pipeline: fetch raw data, build the binaries the web app loads (see "Data")
 tests/        pytest suite for the Python side (17 files, incl. integrity checks on committed web data)
 app.py, simple_view.py   Older Streamlit-style Python front ends (the web app is the product now)
@@ -81,7 +81,7 @@ Screenshots: `scripts/web_screenshots.py` (Playwright; on Windows it uses `chann
 
 ## Deploy
 
-Vercel project **"lunanav"**, Root Directory **`web`**, auto-deploys from **`main`**, protected with **Vercel Authentication**. Live app: https://lunanav-theta.vercel.app. The `api/ask.ts` function needs `GEMINI_API_KEY` in the project env, and `api/tts.ts` needs `ELEVENLABS_API_KEY` (optional `ELEVENLABS_VOICE_ID` and `ELEVENLABS_VOICE_ID_TR`).
+Vercel project **"adaptlab"**, Root Directory **`web`**, auto-deploys from **`main`**, protected with **Vercel Authentication**. Live app: https://adaptlab.us. The `api/ask.ts` function needs `GEMINI_API_KEY` in the project env, and `api/tts.ts` needs `ELEVENLABS_API_KEY` (optional `ELEVENLABS_VOICE_ID` and `ELEVENLABS_VOICE_ID_TR`).
 
 Published to `main` on 15 Nov as **`4c42e33`**. Ask the owner before the next push, and compare against the live site first. Tag `pre-hackathon` = `e616415` marks what existed before the event. Do not weaken that disclosure.
 
@@ -106,8 +106,8 @@ Published to `main` on 15 Nov as **`4c42e33`**. Ask the owner before the next pu
 - Site page: Sun and Earth set and rise countdowns, and a 0–10 day launch-slip strip (`SiteTimeline.tsx`).
 - Advanced interface: type coordinates and open that point (`CoordinateSearch.tsx`).
 - Flat style: F1 cards, flat colours, no gradients and no side-line accents (`web/src/space.css`).
-- Pitch deck: `presentation-kit/NoLimitsLunar-Touchdown-pitch.pptx` and `presentation-kit/PITCH_DECK.md`.
-- Published to `main` as `4c42e33`. Live: https://lunanav-theta.vercel.app.
+- Pitch deck: `presentation-kit/NoLimitsLunar-AdaptLab-pitch.pptx` and `presentation-kit/PITCH_DECK.md`.
+- Published to `main` as `4c42e33`. Live: https://adaptlab.us.
 
 ### Still open
 

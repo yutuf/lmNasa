@@ -1,4 +1,4 @@
-// The landing page for judges and visitors (open the site with #judges): what Touchdown does in one screen, a QR code
+// The landing page for judges and visitors (open the site with #judges): what AdaptLab does in one screen, a QR code
 // of this very site so anyone in the room can open it on a phone, and one button into the app. The QR encodes the
 // public site, including when this page is opened from localhost.
 import { useMemo, useState } from 'react'
@@ -24,7 +24,7 @@ const T = {
   en: {
     kicker: 'NASA Space Apps Challenge 2026 · Lunar Landing Site Navigator',
     title: <>Where and when to <em>land</em> on the Moon</>,
-    sub: 'Touchdown checks every point around the lunar south pole and across the whole Moon, every landing day, hour by hour, on real NASA data, and tells you where a lander has sunlight, can talk to Earth, stands on safe ground and is near water ice.',
+    sub: 'AdaptLab checks every point around the lunar south pole and across the whole Moon, every landing day, hour by hour, on real NASA data, and tells you where a lander has sunlight, can talk to Earth, stands on safe ground and is near water ice.',
     open: 'Open the app', film: 'Watch the mission film', scan: 'Scan to try it on your phone',
     facts: [
       ['21,856 + 41,276', 'points checked, south pole and whole Moon'],
@@ -43,7 +43,7 @@ const T = {
   tr: {
     kicker: 'NASA Space Apps Challenge 2026 · Ay İniş Yeri Navigatörü',
     title: <>Ay’da <em>nereye</em> ve ne zaman inmeli?</>,
-    sub: 'Touchdown, Ay’ın güney kutbundaki ve tüm Ay’daki her noktayı, her iniş gününü saat saat gerçek NASA verisiyle kontrol eder; iniş aracının güneş aldığı, Dünya ile konuşabildiği, güvenli zemine indiği ve su buzuna yakın olduğu yerleri gösterir.',
+    sub: 'AdaptLab, Ay’ın güney kutbundaki ve tüm Ay’daki her noktayı, her iniş gününü saat saat gerçek NASA verisiyle kontrol eder; iniş aracının güneş aldığı, Dünya ile konuşabildiği, güvenli zemine indiği ve su buzuna yakın olduğu yerleri gösterir.',
     open: 'Uygulamayı aç', film: 'Görev filmini izle', scan: 'Telefonda denemek için tara',
     facts: [
       ['21.856 + 41.276', 'nokta, güney kutbu ve tüm Ay'],

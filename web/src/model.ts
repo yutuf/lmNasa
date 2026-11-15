@@ -1,4 +1,4 @@
-// Mission models, ported line by line from lunanav/metrics.py and lunanav/power.py.
+// Mission models, ported line by line from adaptlab/metrics.py and adaptlab/power.py.
 // src/model.test.ts checks them against the Python results in public/data/expected.json.
 
 export interface Constraints {

@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from make_relief import read_label, south_polar_xy  # noqa: E402
 
-from lunanav.sites import load_sites  # noqa: E402
+from adaptlab.sites import load_sites  # noqa: E402
 
 SITES = ["malapert_massif", "malapert_massif_derived", "malapert_massif_region_best", "shackleton_ridge"]
 

@@ -6,19 +6,19 @@ Fill in the [brackets]. Check the field names against the 2026 submission form; 
 ---
 
 ## Project name
-Touchdown: where and when to land on the Moon
+AdaptLab: where and when to land on the Moon
 
 ## High-level summary (≈150 words)
 The next wave of Moon landings is aimed at the lunar south pole, where the Sun barely clears the horizon and the terrain can hide Earth. There, a few hundred metres and a few days decide whether a lander has power and can call home. In March 2025, Athena came to rest in a shadowed crater near the pole and lasted under 13 hours.
 
-Most tools check a site you have already chosen. Touchdown does the opposite. You say what the mission is for (a safe landing, water ice, Artemis…), and it searches 21,856 points across the south pole, every hour of every landing day. It uses NASA LOLA terrain, JPL ephemerides and the Deep Space Network schedule. It returns the best sites and dates, with success odds and the biggest risk named.
+Most tools check a site you have already chosen. AdaptLab does the opposite. You say what the mission is for (a safe landing, water ice, Artemis…), and it searches 21,856 points across the south pole, every hour of every landing day. It uses NASA LOLA terrain, JPL ephemerides and the Deep Space Network schedule. It returns the best sites and dates, with success odds and the biggest risk named.
 
-We replayed real landings: Touchdown's sunlight matches Chandrayaan-3 (11.9 days modelled vs about 11 worked) and Blue Ghost 1 (14.5 vs about 14).
+We replayed real landings: AdaptLab's sunlight matches Chandrayaan-3 (11.9 days modelled vs about 11 worked) and Blue Ghost 1 (14.5 vs about 14).
 
 ## Links
-- **Demo (30 s video, English subtitles):** [YouTube / Drive link to presentation-kit/video/Touchdown-demo-30s.mp4]
+- **Demo (30 s video, English subtitles):** [YouTube / Drive link to presentation-kit/video/AdaptLab-demo-30s.mp4]
 - **Slides:** [link to the pitch deck]
-- **Live app:** https://lunanav-theta.vercel.app
+- **Live app:** https://adaptlab.us
 - **Code:** https://github.com/yutuf/lmNasa
 
 ## Detailed description

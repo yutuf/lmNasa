@@ -21,7 +21,7 @@ export function roomCode(): string {
 }
 
 export function peerIdFor(code: string): string {
-  return `lunanav-${code.toUpperCase()}`
+  return `adaptlab-${code.toUpperCase()}`
 }
 
 export function parsePhoneHash(hash: string): { code: string | null; lang: 'en' | 'tr' } {
@@ -33,7 +33,7 @@ export function parsePhoneHash(hash: string): { code: string | null; lang: 'en' 
 
 export { PUBLIC_ORIGIN }
 
-/** Where a phone in the room can open LunaNav. A desktop on localhost cannot be reached by scanning. */
+/** Where a phone in the room can open AdaptLab. A desktop on localhost cannot be reached by scanning. */
 export function phoneUrl(origin: string, path: string, code: string, lang: 'en' | 'tr'): string {
   const base = shareOrigin(origin)
   const route = `#phone?code=${code}&lang=${lang}`

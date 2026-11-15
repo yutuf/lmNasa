@@ -63,7 +63,7 @@ export default function VehicleShowroom({ lang, onClose }: { lang: Lang; onClose
           </button>)}
         </nav>
         <p className="vehicle-showroom-note">{tr
-          ? 'Gerçek NASA GLB modelleri. Perseverance Mars gezginidir; Touchdown’da VIPER yerine kullanıldığı izlenimini vermemek için ayrı etiketlenmiştir.'
+          ? 'Gerçek NASA GLB modelleri. Perseverance Mars gezginidir; AdaptLab’da VIPER yerine kullanıldığı izlenimini vermemek için ayrı etiketlenmiştir.'
           : 'Real NASA GLB assets. Perseverance is a Mars rover; it is labeled clearly so it is not mistaken for VIPER or a lunar rover.'}</p>
       </section>
     </div>

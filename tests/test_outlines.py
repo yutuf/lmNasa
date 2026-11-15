@@ -1,9 +1,9 @@
-"""lunanav.outlines: ring chaining and inside tests on synthetic outlines, plus the committed data."""
+"""adaptlab.outlines: ring chaining and inside tests on synthetic outlines, plus the committed data."""
 from pathlib import Path
 
 import pytest
 
-from lunanav.outlines import RegionOutlines, chain
+from adaptlab.outlines import RegionOutlines, chain
 
 ROOT = Path(__file__).resolve().parent.parent
 

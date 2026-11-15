@@ -96,7 +96,7 @@ export function reportHtml(rows: SiteRow[], q: Mission, c: Constraints, sources:
     L('Landing zone (95%)', 'İniş alanı (%95)'), L('Nearest ice', 'En yakın buz'), L('Approach', 'Yaklaşma')]
   const strip = (v: number[], rgb: string) => `<div class="strip">${v.map((x) => `<i style="background:rgba(${rgb},${0.1 + 0.9 * x})"></i>`).join('')}</div>`
   const cal = (p: boolean[]) => `<div class="strip">${p.map((g) => `<i class="${g ? 'g' : 'r'}"></i>`).join('')}</div>`
-  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><title>Touchdown report</title>
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><title>AdaptLab report</title>
 <style>
 body{font:14px/1.45 system-ui,sans-serif;color:#111;margin:32px;max-width:1000px}
 h1{font-size:22px;margin:0}h2{font-size:16px;margin:24px 0 8px}.muted{color:#555}
@@ -108,7 +108,7 @@ button{padding:8px 14px;border-radius:8px;border:1px solid #888;background:#fff;
 @media print{button{display:none}body{margin:12mm}}
 </style></head><body>
 <button onclick="print()">${L('Print / save as PDF', 'Yazdır / PDF olarak kaydet')}</button>
-<h1>Touchdown · ${L('Landing site report', 'İniş yeri raporu')}</h1>
+<h1>AdaptLab · ${L('Landing site report', 'İniş yeri raporu')}</h1>
 <p class="muted">${L('Generated', 'Oluşturulma')} ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC</p>
 <h2>${L('Mission', 'Görev')}</h2>
 <p>${L('Landing window', 'İniş penceresi')}: ${esc(q.start)} + ${q.windowDays} ${L('days', 'gün')} · ${L('stay', 'kalış')} ${q.days} ${L('days', 'gün')} ·

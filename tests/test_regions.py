@@ -60,7 +60,7 @@ def test_centroid_round_trip_and_append(tmp_path):
                                     sort_keys=False, allow_unicode=True))
     added = ar.main([str(src), "--sites", str(sites)])
     assert len(added) == 2
-    from lunanav.sites import load_sites
+    from adaptlab.sites import load_sites
     got = {s.id: s for s in load_sites(sites, include_derived=False)}
     h, m = got["artemis_haworth"], got["artemis_mons_mouton_plateau"]
     assert h.lat == pytest.approx(-87.45, abs=1e-3) and h.lon == pytest.approx(-4.0, abs=0.05)

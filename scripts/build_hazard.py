@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from make_relief import read_label  # noqa: E402
 
 sys.path.insert(0, str(ROOT))
-from lunanav.polar_grid import polar_xy  # noqa: E402
+from adaptlab.polar_grid import polar_xy  # noqa: E402
 
 RADII = (100, 250, 500, 1000)
 

@@ -1,6 +1,6 @@
 // South-pole terrain for the rover and lander views: the 200 m LOLA polar grid (pole_dem.bin) plus 10 m site maps
 // (LOLA 5 m/px, Barker et al. 2021) where we have them, the sky at any position and hour, and a horizon ray-march
-// (same method as lunanav/horizon.py: mast height, lunar curvature, out to 150 km).
+// (same method as adaptlab/horizon.py: mast height, lunar curvature, out to 150 km).
 import type { Ephem } from './engine'
 import { pointLatLon } from './engine'
 
@@ -173,7 +173,7 @@ export function localSky(eph: Ephem, xM: number, yM: number, hr: number) {
   return { lat, lon, sun: altAz(b.sun, lat, lon), earth: altAz([b.earth[0] - p[0], b.earth[1] - p[1], b.earth[2] - p[2]], lat, lon), sunR: b.sunR }
 }
 
-/** Fraction (0..1) of the solar disk above a straight horizon line (lunanav/geometry.py). */
+/** Fraction (0..1) of the solar disk above a straight horizon line (adaptlab/geometry.py). */
 export function diskAbove(alt: number, hz: number, r: number) {
   const d = Math.min(Math.max((alt - hz) / r, -1), 1)
   return (Math.acos(-d) + d * Math.sqrt(1 - d * d)) / Math.PI

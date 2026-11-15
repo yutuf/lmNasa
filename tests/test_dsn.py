@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from lunanav.dsn import DSN
+from adaptlab.dsn import DSN
 
 ROOT = Path(__file__).resolve().parent.parent
 dsn = DSN.load()

@@ -14,19 +14,19 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from lunanav.dsn import DEFAULT_MASK_DEG, DSN
-from lunanav.horizon import HorizonProfile
-from lunanav.metrics import MissionConstraints, evaluate_window
-from lunanav.power import required_battery_wh, simulate_battery
-from lunanav.series import load_series
-from lunanav.terrain3d import curvature_corrected, load_patch, shade, shadow_mask, sun_vector
-from lunanav.anywhere import GlobalGrid, _direction, load_earth_distance, rotate_earth, rotate_sun
-from lunanav.derive import sun_radius_deg
-from lunanav.geometry import disk_visible_fraction
-from lunanav.geometry import distance_bearing
-from lunanav.horizon import compute_horizon
-from lunanav.polar_grid import PolarGrid, polar_xy
-from lunanav.visibility import Visibility
+from adaptlab.dsn import DEFAULT_MASK_DEG, DSN
+from adaptlab.horizon import HorizonProfile
+from adaptlab.metrics import MissionConstraints, evaluate_window
+from adaptlab.power import required_battery_wh, simulate_battery
+from adaptlab.series import load_series
+from adaptlab.terrain3d import curvature_corrected, load_patch, shade, shadow_mask, sun_vector
+from adaptlab.anywhere import GlobalGrid, _direction, load_earth_distance, rotate_earth, rotate_sun
+from adaptlab.derive import sun_radius_deg
+from adaptlab.geometry import disk_visible_fraction
+from adaptlab.geometry import distance_bearing
+from adaptlab.horizon import compute_horizon
+from adaptlab.polar_grid import PolarGrid, polar_xy
+from adaptlab.visibility import Visibility
 
 # (site id, button label, one-line description shown under the buttons)
 SPOTS = [
@@ -35,7 +35,7 @@ SPOTS = [
     ("malapert_massif_derived", "Malapert: 447 m away",
      "Less than half a kilometre from the published spot, on the same mountain."),
     ("malapert_massif_region_best", "Malapert: 5 km away",
-     "The best spot LunaNav found inside the same Artemis III region, 5 km west."),
+     "The best spot AdaptLab found inside the same Artemis III region, 5 km west."),
     ("shackleton_ridge", "Shackleton ridge",
      "A ridge 60 km from the pole, one of the best-lit places on the Moon."),
     ("apollo_11", "Apollo 11 (equator)",
@@ -52,7 +52,7 @@ SPOTS_TR = {
     "malapert_massif_derived": ("Malapert: 447 m ötede",
                                 "Yayınlanan noktadan yarım kilometreden az uzakta, aynı dağın üzerinde."),
     "malapert_massif_region_best": ("Malapert: 5 km ötede",
-                                    "LunaNav'ın aynı Artemis III bölgesinde bulduğu en iyi nokta, 5 km batıda."),
+                                    "AdaptLab'ın aynı Artemis III bölgesinde bulduğu en iyi nokta, 5 km batıda."),
     "shackleton_ridge": ("Shackleton sırtı", "Kutba 60 km uzaklıkta bir sırt; Ay'ın en çok ışık alan yerlerinden biri."),
     "apollo_11": ("Apollo 11 (ekvator)",
                   "Karşılaştırma için Sükûnet Üssü: ekvatorda gündüz de gece de iki hafta sürer."),
@@ -95,7 +95,7 @@ def _series(site_id):
 
 @st.cache_resource
 def _sites():
-    from lunanav.sites import load_sites
+    from adaptlab.sites import load_sites
     return load_sites()
 
 
@@ -133,7 +133,7 @@ POLAR_EDGE = -84.5   # south of this the 200 m polar grid is used, elsewhere the
 @st.cache_data(max_entries=64, show_spinner="Tracing the horizon from NASA terrain…")
 def _custom(lat: float, lon: float):
     """Visibility at any point on the Moon: horizon traced from LOLA, Sun/Earth rotated from the nearest computed
-    site (lunanav.anywhere; checked against independent DE440 runs to 0.018 deg, Earth parallax included)."""
+    site (adaptlab.anywhere; checked against independent DE440 runs to 0.018 deg, Earth parallax included)."""
     polar_pt = lat <= POLAR_EDGE and _grid() is not None
     grid = _grid() if polar_pt else _global()
     hz = compute_horizon(grid.sample_height, "custom", lat, lon, step_m=200.0 if polar_pt else 800.0,

@@ -1,10 +1,10 @@
-"""Record the ~60 s demo video (docs/demo/lunanav-demo.mp4) from a local run of the app, with captions.
+"""Record the ~60 s demo video (docs/demo/adaptlab-demo.mp4) from a local run of the app, with captions.
 
 Needs `pip install playwright` and Microsoft Edge (or change `channel`). Start the app first:
   streamlit run app.py --server.port 8502
 then:
   python scripts/record_demo.py out/video
-  ffmpeg -ss <printed start> -i out/video/<file>.webm -c:v libx264 -crf 28 -pix_fmt yuv420p -an docs/demo/lunanav-demo.mp4
+  ffmpeg -ss <printed start> -i out/video/<file>.webm -c:v libx264 -crf 28 -pix_fmt yuv420p -an docs/demo/adaptlab-demo.mp4
 """
 import sys
 import time
@@ -80,7 +80,7 @@ with sync_playwright() as p:
     t_start = time.time()
 
     # 1. title card
-    card(page, "LunaNav", "Where and when should a lander touch down at the Moon's south pole?<br>"
+    card(page, "AdaptLab", "Where and when should a lander touch down at the Moon's south pole?<br>"
                           "Sunlight for power, Earth in the sky to call home.")
     time.sleep(4.0)
     card(page, "")
@@ -148,7 +148,7 @@ with sync_playwright() as p:
 
     # 9. closing card
     caption(page, "")
-    card(page, "LunaNav", "limitlessapps.streamlit.app<br>github.com/yutuf/lmNasa<br><br>"
+    card(page, "AdaptLab", "limitlessapps.streamlit.app<br>github.com/yutuf/lmNasa<br><br>"
                           "<span style='font-size:22px;opacity:.75'>NASA LOLA terrain · JPL DE440 ephemeris, checked "
                           "against JPL Horizons · NASA Deep Space Network geometry · open source</span>")
     time.sleep(4.5)

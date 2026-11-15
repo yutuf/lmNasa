@@ -1,9 +1,9 @@
-# Touchdown · what is left (live tracker)
+# AdaptLab · what is left (live tracker)
 
 Updated 15 Nov 2026. `[x]` done and verified · `[~]` in progress (who) · `[ ]` not started.
 Rules: test with `npm test` + `npx tsc -b` in `web/`; show the owner locally before committing; never push `main` without asking.
 The owner wants the F1 card look: flat colours, no gradients, no side-line accents.
-Compare against the live site (https://lunanav-theta.vercel.app) before publishing.
+Compare against the live site (https://adaptlab.us) before publishing.
 Make visual changes one small step at a time.
 
 ## Open (15 Nov, start here)
@@ -21,8 +21,8 @@ Make visual changes one small step at a time.
 - [x] Site-page countdowns (Sun and Earth set and rise) and the 0–10 day launch-slip strip (`SiteTimeline.tsx`)
 - [x] Advanced pin search: type coordinates (`CoordinateSearch.tsx`)
 - [x] Flat style: F1 cards, flat colours, no gradients, no side-line accents
-- [x] Pitch deck: `presentation-kit/NoLimitsLunar-Touchdown-pitch.pptx`, notes in `presentation-kit/PITCH_DECK.md`
-- [x] Published to `main` as `4c42e33`. Live: https://lunanav-theta.vercel.app
+- [x] Pitch deck: `presentation-kit/NoLimitsLunar-AdaptLab-pitch.pptx`, notes in `presentation-kit/PITCH_DECK.md`
+- [x] Published to `main` as `4c42e33`. Live: https://adaptlab.us
 
 ## Live-site problems found 14 Nov ~23:45
 - [ ] **Slow first load ("doesn't load")**: before anything shows, the app downloads ~9 MB (atlas 4.1, ephem 4.7 MB) while the
@@ -54,7 +54,7 @@ Make visual changes one small step at a time.
 - [x] Illustrations with Grok Imagine: 17 engineering-line drawings (goal diagrams, "What next?" cards, judges page), transparent WebP, 0.5 MB total (Grok #6 + review)
 - [x] Mission interview chatbot (Grok #5), wired in via Luna "Plan a mission with me"
 - [x] Phone mode (tilt-to-look viewer paired with the desktop; added by the other agent, compiles and tests pass)
-- [x] **Demo deck**: `presentation-kit/Touchdown-demo.pptx`, 7 English slides, from `presentation-kit/screenshots/`
+- [x] **Demo deck**: `presentation-kit/AdaptLab-demo.pptx`, 7 English slides, from `presentation-kit/screenshots/`
 - [x] **Go live**: the reviewed hackathon tree is published on `main` as one new commit on the previous live history. `main` was not force-pushed. The phone screen stays in the working tree and is not in this publish.
 - [x] Space UI: page background `#000000`; the 3D moon has no card frame and runs to the edges of the view
 - [x] Presentation kit: submitted-deck limit is 7 slides including the title; ellipse, relay, and real models are no longer "next"

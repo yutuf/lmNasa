@@ -1,8 +1,8 @@
-"""Generate the LunaNav "site map" PCB with KiCad's Python API (pcbnew).
+"""Generate the AdaptLab "site map" PCB with KiCad's Python API (pcbnew).
 
 A 100 x 100 mm map of the lunar south pole (south polar stereographic, longitude 0 = Earth side = up).
 The nine Artemis III candidate regions are drawn on the silkscreen at true scale and one WS2812B LED
-sits at each region's best landing point as computed by LunaNav, plus two published points. Firmware
+sits at each region's best landing point as computed by AdaptLab, plus two published points. Firmware
 (not written yet) is meant to colour each LED by the GO / NO-GO verdict for a chosen landing date.
 
 Run with the Python that ships with KiCad (tested with KiCad 10.0.4), from anywhere:
@@ -801,7 +801,7 @@ def main():
                  ((arrow_x, arrow_tip), (arrow_x - 1.1, arrow_tip + 2.0)), ((arrow_x, arrow_tip), (arrow_x + 1.1, arrow_tip + 2.0))]
     hard.append((arrow_x - 1.4, arrow_tip - 0.3, arrow_x + 1.4, arrow_tail + 0.3))
     fixed_text("EARTH", arrow_x + 5.3, arrow_tip + 1.4, 1.4)
-    fixed_text("LunaNav lunar south pole", 50.0, 77.2, 1.8)
+    fixed_text("AdaptLab lunar south pole", 50.0, 77.2, 1.8)
     fixed_text("Artemis III candidate regions", 50.0, 80.4, 1.1)
     bar_km = 50.0
     bar_mm, bar_y = bar_km / KM_PER_MM, 85.0

@@ -1,11 +1,11 @@
 import numpy as np
 import pytest
 
-from lunanav.geometry import MOON_RADIUS_M, destination, disk_visible_fraction, elevation_angle_deg
-from lunanav.horizon import HorizonProfile, compute_horizon
-from lunanav.metrics import MissionConstraints, delay_tolerance, evaluate_window, longest_run, scan_start_dates
-from lunanav.power import PowerConfig, simulate_battery
-from lunanav.visibility import Visibility
+from adaptlab.geometry import MOON_RADIUS_M, destination, disk_visible_fraction, elevation_angle_deg
+from adaptlab.horizon import HorizonProfile, compute_horizon
+from adaptlab.metrics import MissionConstraints, delay_tolerance, evaluate_window, longest_run, scan_start_dates
+from adaptlab.power import PowerConfig, simulate_battery
+from adaptlab.visibility import Visibility
 
 
 def test_destination_north_and_distance():

@@ -2,7 +2,7 @@
 
 data/polar_grid.npz (scripts/make_polar_grid.py) holds two LOLA grids in south polar stereographic
 projection: a fine one (200 m, from the 85 deg S product) and a coarse one (800 m, from the 80 deg S product)
-for far terrain. sample_height() is a bilinear sampler with the signature lunanav.horizon.compute_horizon
+for far terrain. sample_height() is a bilinear sampler with the signature adaptlab.horizon.compute_horizon
 expects, so a horizon can be traced for any point south of about 84 deg S while the app runs.
 """
 from __future__ import annotations

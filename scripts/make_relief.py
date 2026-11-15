@@ -21,7 +21,7 @@ from pathlib import Path
 
 import numpy as np
 
-from lunanav.sites import load_sites
+from adaptlab.sites import load_sites
 
 R_MOON_M = 1737400.0
 
@@ -122,7 +122,7 @@ def main():
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     stl = args.out.with_suffix(".stl")
-    write_binary_stl(stl, tris, f"LunaNav relief 1:{args.scale:.0f} LOLA {lab['m_per_px']:.0f} m")
+    write_binary_stl(stl, tris, f"AdaptLab relief 1:{args.scale:.0f} LOLA {lab['m_per_px']:.0f} m")
 
     edge_mm = (tile_m.shape[1] - 1) * dx_mm
     pins = []

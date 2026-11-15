@@ -57,8 +57,8 @@ def test_derive_moves_out_of_the_pit_and_is_idempotent(tmp_path, data_dir):
     assert (data_dir / "series" / "shackleton_ridge_derived.npz").exists()
 
     sys.path.insert(0, str(ROOT))
-    from lunanav.horizon import load_profiles
-    from lunanav.series import load_series
+    from adaptlab.horizon import load_profiles
+    from adaptlab.series import load_series
     hz = load_profiles(data_dir / "horizons.json")
     assert "shackleton_ridge_derived" in hz and max(hz["shackleton_ridge_derived"].elevations_deg) < 8
     v, _, terrain = load_series("shackleton_ridge_derived", data_dir / "series")

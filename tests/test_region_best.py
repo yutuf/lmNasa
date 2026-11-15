@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 import yaml
 
-from lunanav.geometry import destination, distance_bearing
+from adaptlab.geometry import destination, distance_bearing
 
 shapefile = pytest.importorskip("shapefile")
 pyproj = pytest.importorskip("pyproj")
@@ -44,7 +44,7 @@ def test_distance_bearing_inverts_destination():
 
 
 def test_region_grid_membership_and_points(tmp_path):
-    from lunanav.regions import RegionGrid
+    from adaptlab.regions import RegionGrid
     _grid_shp(tmp_path / "Haworth_1km.shp", -87.0, -20.0, half_cells=3)
     g = RegionGrid.from_shapefiles("Haworth", [tmp_path / "Haworth_1km.shp"])
     assert g.area_km2 == pytest.approx(36.0) and g.cell_m == pytest.approx(1000.0)
@@ -57,7 +57,7 @@ def test_region_grid_membership_and_points(tmp_path):
 
 
 def test_region_grid_rejects_non_square_cells(tmp_path):
-    from lunanav.regions import RegionGrid
+    from adaptlab.regions import RegionGrid
     p = tmp_path / "Haworth_1km.shp"
     with shapefile.Writer(str(p), shapeType=shapefile.POLYGON) as w:
         w.field("id", "N")
@@ -109,11 +109,11 @@ def test_region_search_leaves_the_bowl_and_keeps_1km_entry(tmp_path):
     rb = entries["artemis_haworth_region_best"]
     assert rb["search"] == "region" and rb["distance_m"] > 1500 and rb["slope_deg"] <= 10
 
-    from lunanav.regions import RegionGrid
+    from adaptlab.regions import RegionGrid
     g = RegionGrid.from_shapefiles("Haworth", [grids / "Haworth_PolarLGRS_ACC_1km_S_Grid.shp"])
     assert g.contains(*g.to_xy(rb["lat"], rb["lon"]))                       # inside the region
-    from lunanav.series import load_series
-    from lunanav.sites import load_sites
+    from adaptlab.series import load_series
+    from adaptlab.sites import load_sites
     v = load_series("artemis_haworth_region_best", data / "series")[0]
     site_v = load_series("artemis_haworth", data / "series")[0]
     both = lambda vv: ((vv.sun_fraction >= .5) & vv.earth_visible).mean()  # noqa: E731
@@ -132,7 +132,7 @@ def test_region_search_leaves_the_bowl_and_keeps_1km_entry(tmp_path):
 
 def test_boundary_of_an_l_shaped_region(tmp_path):
     """Three cells in an L: perimeter 8 cell edges, merged into 6 straight runs."""
-    from lunanav.regions import RegionGrid
+    from adaptlab.regions import RegionGrid
     p = tmp_path / "Haworth_1km.shp"
     with shapefile.Writer(str(p), shapeType=shapefile.POLYGON) as w:
         w.field("id", "N")
@@ -151,8 +151,8 @@ def test_seeds_rescue_a_narrow_peak_the_coarse_grid_misses(tmp_path):
     misses it; seeded with a known point there (e.g. the 1 km derived point) it cannot."""
     from argparse import Namespace
 
-    from lunanav.horizon import HorizonProfile
-    from lunanav.regions import RegionGrid
+    from adaptlab.horizon import HorizonProfile
+    from adaptlab.regions import RegionGrid
     from test_more import _toy_vis
 
     spec = importlib.util.spec_from_file_location("drb", ROOT / "scripts" / "derive_region_best.py")

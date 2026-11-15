@@ -10,8 +10,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from lunanav.geometry import disk_visible_fraction  # noqa: E402
-from lunanav.sites import load_sites  # noqa: E402
+from adaptlab.geometry import disk_visible_fraction  # noqa: E402
+from adaptlab.sites import load_sites  # noqa: E402
 
 out = ROOT / "data" / "series"
 out.mkdir(parents=True, exist_ok=True)

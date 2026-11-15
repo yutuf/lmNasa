@@ -39,7 +39,7 @@ def test_time_cursor_shows_sun_and_earth_altitude():
     """The readout under the time slider states both altitudes, taken from the same series the app plots."""
     import numpy as np
 
-    from lunanav.series import load_series
+    from adaptlab.series import load_series
 
     v, _, _ = load_series("malapert_massif")
     i = int(np.searchsorted(v.times_utc, np.datetime64("2027-09-09T00:00", "s")))

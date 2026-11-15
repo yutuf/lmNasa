@@ -1,4 +1,4 @@
-"""Write web/public/data/engine_expected.json: the Python engine (lunanav/engine.py) on sample atlas points.
+"""Write web/public/data/engine_expected.json: the Python engine (adaptlab/engine.py) on sample atlas points.
 
 web/src/engine.test.ts runs the TypeScript engine on the same points and must get the same answers.
 
@@ -12,10 +12,10 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from lunanav.engine import WEB_DATA, load_atlas, load_ephem, search_point  # noqa: E402
-from lunanav.metrics import MissionConstraints  # noqa: E402
-from lunanav.polar_grid import polar_xy  # noqa: E402
-from lunanav.sites import load_sites  # noqa: E402
+from adaptlab.engine import WEB_DATA, load_atlas, load_ephem, search_point  # noqa: E402
+from adaptlab.metrics import MissionConstraints  # noqa: E402
+from adaptlab.polar_grid import polar_xy  # noqa: E402
+from adaptlab.sites import load_sites  # noqa: E402
 
 
 def main():

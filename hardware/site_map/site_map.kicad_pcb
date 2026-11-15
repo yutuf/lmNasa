@@ -10920,7 +10920,7 @@
 			)
 		)
 	)
-	(gr_text "LunaNav lunar south pole"
+	(gr_text "AdaptLab lunar south pole"
 		(at 100 127.2 0)
 		(layer "F.SilkS")
 		(uuid "633e9f52-9ff0-40c2-9667-edea3eb43f5c")

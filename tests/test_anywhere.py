@@ -9,9 +9,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from lunanav.anywhere import GlobalGrid, load_earth_distance, rotate_earth, rotate_sun
-from lunanav.series import load_series
-from lunanav.sites import load_sites
+from adaptlab.anywhere import GlobalGrid, load_earth_distance, rotate_earth, rotate_sun
+from adaptlab.series import load_series
+from adaptlab.sites import load_sites
 
 ROOT = Path(__file__).resolve().parent.parent
 pytestmark = pytest.mark.skipif(load_earth_distance() is None, reason="no data/earth_distance.npz")

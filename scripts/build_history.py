@@ -1,4 +1,4 @@
-"""Real landings replayed through LunaNav's model: hourly Sun and Earth around five recent landings.
+"""Real landings replayed through AdaptLab's model: hourly Sun and Earth around five recent landings.
 
   python scripts/build_history.py
 

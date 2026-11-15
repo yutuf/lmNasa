@@ -35,7 +35,7 @@ export function surfacePoint(lat: number, lon: number, r = 1): THREE.Vector3 {
 }
 
 /** Direction toward a body in a terrain patch's frame (x east-ish, y north / toward 0°E, z up). Polar patches
- *  lie in the south-polar stereographic plane, others on a local east-north grid (lunanav/terrain3d.py). */
+ *  lie in the south-polar stereographic plane, others on a local east-north grid (adaptlab/terrain3d.py). */
 export function patchDirection(frame: 'polar' | 'enu', lon: number, azDeg: number, altDeg: number): number[] {
   const a = azDeg * rad
   const e = altDeg * rad

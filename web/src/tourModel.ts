@@ -12,10 +12,10 @@ export type TourStep = {
 export const DEFAULT_TOUR: TourStep[] = [
   {
     selector: '.s-hero h1',
-    title: { en: 'What Touchdown is', tr: 'Touchdown nedir' },
+    title: { en: 'What AdaptLab is', tr: 'AdaptLab nedir' },
     body: {
-      en: 'Touchdown searches the Moon for a place and a date where a lander has sunlight and a radio link home. It plans. It does not certify a landing.',
-      tr: 'Touchdown, iniş aracının güneş ışığı ve Dünya’ya telsiz bağı bulacağı yeri ve tarihi arar. Planlar. Bir inişi onaylamaz.',
+      en: 'AdaptLab searches the Moon for a place and a date where a lander has sunlight and a radio link home. It plans. It does not certify a landing.',
+      tr: 'AdaptLab, iniş aracının güneş ışığı ve Dünya’ya telsiz bağı bulacağı yeri ve tarihi arar. Planlar. Bir inişi onaylamaz.',
     },
   },
   {

@@ -1,5 +1,5 @@
 // Artemis III head-to-head: for each of NASA's nine candidate regions, the region's centre (the reference point
-// derived from the official USGS outline) against the best point Touchdown finds inside the region, for the current
+// derived from the official USGS outline) against the best point AdaptLab finds inside the region, for the current
 // mission. The centre is evaluated even when it fails the terrain checks, so the table can say why.
 import { insideRing, type Atlas, type PointResult } from './engine'
 import { rankTop } from './scenarios'

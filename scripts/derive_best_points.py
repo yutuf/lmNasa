@@ -25,10 +25,10 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from lunanav.derive import candidate_grid, rank_candidates, score_point, slope_deg  # noqa: E402
-from lunanav.horizon import compute_horizon, dem_sampler, load_profiles, save_profiles  # noqa: E402
-from lunanav.series import load_series  # noqa: E402
-from lunanav.sites import load_sites  # noqa: E402
+from adaptlab.derive import candidate_grid, rank_candidates, score_point, slope_deg  # noqa: E402
+from adaptlab.horizon import compute_horizon, dem_sampler, load_profiles, save_profiles  # noqa: E402
+from adaptlab.series import load_series  # noqa: E402
+from adaptlab.sites import load_sites  # noqa: E402
 
 COMPASS8 = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 
@@ -115,7 +115,7 @@ for s in cited_sites:
         lat=round(best.lat, 5), lon=round(best.lon, 5), category="derived", derived_from=s.id, search="1 km",
         distance_m=round(best.distance_m), bearing_deg=round(best.bearing_deg, 1),
         slope_deg=round(best.slope_deg, 1), cited_slope_deg=round(c_slope, 1),
-        note=(f"Computed by LunaNav, not from a publication: best of {len(ranked)} grid points "
+        note=(f"Computed by AdaptLab, not from a publication: best of {len(ranked)} grid points "
               f"({args.spacing:.0f} m spacing, slope <= {args.max_slope:.0f} deg) within {args.radius:.0f} m "
               f"of the cited point; {best.distance_m:.0f} m {direction} of it. Objective: hours with Sun "
               f"and Earth both in view, {best.both_frac:.1%} vs {c_both:.1%} at the cited point "

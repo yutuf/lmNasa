@@ -11903,7 +11903,7 @@
 			)
 		)
 	)
-	(gr_text "LunaNav"
+	(gr_text "AdaptLab"
 		(at 100 95 0)
 		(layer "F.SilkS")
 		(uuid "ff52e75f-3a0d-4b37-8ae1-ec8e780b6e40")

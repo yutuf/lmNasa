@@ -1,7 +1,7 @@
 # Sky link: a physical sky for the rover
 
 An LED ring on your desk that shows, live, where the Sun and Earth are for the rover you are driving in the
-Touchdown web app (Rover or Lander view). LED 0 is the rover's nose; the yellow LED is the Sun (brighter = more of the
+AdaptLab web app (Rover or Lander view). LED 0 is the rover's nose; the yellow LED is the Sun (brighter = more of the
 solar disk above the real terrain horizon), the blue LED is Earth (bright = radio link possible, dim = behind
 terrain). Inside a permanently shadowed region the whole ring glows faint blue; below 20 % battery the nose LED
 blinks red.

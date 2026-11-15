@@ -23,7 +23,7 @@ from pathlib import Path
 
 import numpy as np
 
-from lunanav.series import load_series
+from adaptlab.series import load_series
 
 N_ROWS = 3
 N_DAYS = 28

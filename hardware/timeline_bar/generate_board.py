@@ -1,4 +1,4 @@
-"""Generate the LunaNav "timeline bar" PCB with KiCad's Python API (pcbnew).
+"""Generate the AdaptLab "timeline bar" PCB with KiCad's Python API (pcbnew).
 
 Three rows of 28 addressable LEDs. A row is one landing spot, an LED is one Earth day of a
 28-day window, and its colour mixes yellow (share of the day with the Sun up) and blue (share
@@ -339,7 +339,7 @@ def main():
 
     # Silkscreen.
     left, right = pcbnew.GR_TEXT_H_ALIGN_LEFT, pcbnew.GR_TEXT_H_ALIGN_RIGHT
-    text("LunaNav timeline bar", 9.0, 3.6, size=2.2, align=left)
+    text("AdaptLab timeline bar", 9.0, 3.6, size=2.2, align=left)
     text("yellow = Sun    blue = Earth    1 LED = 1 Earth day", BOARD_W - 9.0, 3.6, size=1.3, align=right)
     y_days = BOARD_H - 4.4
     text("day", 9.6, y_days, size=1.1, align=right)

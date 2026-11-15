@@ -7,7 +7,7 @@ distance (data/earth_distance.npz): Earth's position is rebuilt in Moon-fixed co
 and seen again from the new point.
 
 Terrain: data/global_grid.npz holds the LOLA global grid (LDEM_16, 16 pixels per degree, about 1.9 km at the
-equator); GlobalGrid.sample_height feeds lunanav.horizon.compute_horizon.
+equator); GlobalGrid.sample_height feeds adaptlab.horizon.compute_horizon.
 """
 from __future__ import annotations
 

@@ -4,7 +4,7 @@ usage: python scripts/check_map_alignment.py COARSE.TIF FINE.TIF [--lat-min -89.
                                              [--max-shift 240] [--step 30] [--n 20000]
 e.g.   python scripts/check_map_alignment.py AVGVISIB_75S_120M_201608.TIF AVGVISIB_85S_060M_201608.TIF
 
-Why: comparing LunaNav with NASA at single points agreed well on smooth ground but not on
+Why: comparing AdaptLab with NASA at single points agreed well on smooth ground but not on
 narrow ridges, where NASA's own 120 m and 60 m maps also disagree (Shackleton ridge 78 % vs 44 %).
 That smells like a registration offset: one pixel off a crest changes the value a lot.
 

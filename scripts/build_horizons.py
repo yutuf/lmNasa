@@ -11,8 +11,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from lunanav.horizon import HorizonProfile, compute_horizon, dem_sampler, load_profiles, save_profiles  # noqa: E402
-from lunanav.sites import load_sites  # noqa: E402
+from adaptlab.horizon import HorizonProfile, compute_horizon, dem_sampler, load_profiles, save_profiles  # noqa: E402
+from adaptlab.sites import load_sites  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("dem")

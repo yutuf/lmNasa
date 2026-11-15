@@ -25,7 +25,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from lunanav.regions import (HAS_PUBLISHED_POINT, REGIONS, SOURCE, RegionGrid, find_regions,  # noqa: E402,F401
+from adaptlab.regions import (HAS_PUBLISHED_POINT, REGIONS, SOURCE, RegionGrid, find_regions,  # noqa: E402,F401
                              is_1km, parent_site_id, region_of)
 
 

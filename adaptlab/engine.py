@@ -2,7 +2,7 @@
 
 Reads the same files the browser reads (web/public/data/atlas.bin, ephem.bin, dsn.bin) and computes, for one atlas
 point, the hourly sun fraction and Earth visibility with the same formulas, then the mission windows with
-lunanav.metrics. scripts/export_engine_expected.py writes its results for web/src/engine.test.ts.
+adaptlab.metrics. scripts/export_engine_expected.py writes its results for web/src/engine.test.ts.
 """
 from __future__ import annotations
 

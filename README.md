@@ -1,10 +1,9 @@
-# Touchdown — where and when should we land on the Moon?
+# AdaptLab — where and when should we land on the Moon?
 
 By team **No Limits Lunar** for NASA Space Apps 2026: Lunar Landing Site Navigator.
-Formerly called LunaNav (renamed 15 Nov 2026); the repository and the `lunanav/` Python package keep the old name.
-Live app: [https://lunanav-theta.vercel.app](https://lunanav-theta.vercel.app)
+Live app: [https://adaptlab.us](https://adaptlab.us)
 
-Open-source planning tool for landing sites and dates at the lunar south pole: describe a mission, and Touchdown
+Open-source planning tool for landing sites and dates at the lunar south pole: describe a mission, and AdaptLab
 searches the real terrain hour by hour and tells you where and when a solar lander survives. Then stand on the
 lander, or drive a rover there.
 
@@ -24,7 +23,7 @@ coordinates). Switch at the top. The web app is in English and Turkish.
 has power, can talk to Earth, can touch down safely, and is near water ice. Today, answering *"where and on which
 date do we land?"* takes several expert tools.
 
-**What Touchdown does.** Pick a mission (or describe it to the guide). In a few seconds it checks **21,856 points × every
+**What AdaptLab does.** Pick a mission (or describe it to the guide). In a few seconds it checks **21,856 points × every
 landing date × every hour** against NASA LOLA terrain and JPL DE421, and ranks where the mission survives:
 
 - **Survives:** sunlight, Earth contact (with a free NASA DSN dish), the longest darkness, and a battery model.
@@ -33,7 +32,7 @@ landing date × every hour** against NASA LOLA terrain and JPL DE421, and ranks 
 - **Gets there:** a spacecraft route from Earth to a polar orbit to the descent, approaching with the Sun behind it.
 
 **One number.** Under a 14-day robotic-lander mission in September 2027, **every centre of NASA's Artemis III
-regions inside the search area fails a terrain check, and Touchdown finds landable points 4–13 km away in five of
+regions inside the search area fails a terrain check, and AdaptLab finds landable points 4–13 km away in five of
 them.**
 
 **Checked, not assumed.** Sunlight against NASA's own maps (median +1.9 points, r = 0.96); touchdown slopes against
@@ -65,11 +64,11 @@ The plan and progress log: [docs/HACKATHON_PLAN.md](docs/HACKATHON_PLAN.md). A 2
 
 ## Presentation
 
-- Pitch deck: [presentation-kit/NoLimitsLunar-Touchdown-pitch.pptx](presentation-kit/NoLimitsLunar-Touchdown-pitch.pptx)
+- Pitch deck: [presentation-kit/NoLimitsLunar-AdaptLab-pitch.pptx](presentation-kit/NoLimitsLunar-AdaptLab-pitch.pptx)
 - Slide notes: [presentation-kit/PITCH_DECK.md](presentation-kit/PITCH_DECK.md)
 - Demo videos, being recorded now: [presentation-kit/video/](presentation-kit/video/)
 
-![Artemis III regions head to head: each region's centre against the best point Touchdown finds inside it](docs/web-artemis.png)
+![Artemis III regions head to head: each region's centre against the best point AdaptLab finds inside it](docs/web-artemis.png)
 
 ![Survival vs science: every passing site by how often it passes and how far the nearest water ice is](docs/web-tradeoff.png)
 
@@ -162,29 +161,29 @@ A search that would run longer than about 8 seconds is shortened, and the JSON s
 These examples call the live site. The same paths answer on `http://localhost:5173` while `npx vite` is running in `web/`.
 
 ```bash
-curl "https://lunanav-theta.vercel.app/api/v1/site?lat=-89.45&lon=222.7&start=2027-09-01&days=14"
+curl "https://adaptlab.us/api/v1/site?lat=-89.45&lon=222.7&start=2027-09-01&days=14"
 ```
 
 ```bash
-curl "https://lunanav-theta.vercel.app/api/v1/search?start=2027-09-01&window=30&days=14&top=10"
+curl "https://adaptlab.us/api/v1/search?start=2027-09-01&window=30&days=14&top=10"
 ```
 
 ```bash
-curl "https://lunanav-theta.vercel.app/api/v1/sky?lat=-89.45&lon=222.7&from=2027-09-01T00:00Z&hours=72"
+curl "https://adaptlab.us/api/v1/sky?lat=-89.45&lon=222.7&from=2027-09-01T00:00Z&hours=72"
 ```
 
-## The Python package and planner (`lunanav/`, `app.py`)
+## The Python package and planner (`adaptlab/`, `app.py`)
 
 The science lives in a tested Python package; the original Streamlit planner (live at
 https://limitlessapps.streamlit.app/) remains for detailed analysis. Demo video of the planner:
-[docs/demo/lunanav-demo.mp4](docs/demo/lunanav-demo.mp4).
+[docs/demo/adaptlab-demo.mp4](docs/demo/adaptlab-demo.mp4).
 
 Existing tools (QuickMap, Moon Trek, JPL Horizons) are built for detailed analysis.
 Answering a simple planning question — *"at this south-pole site, on which dates do we
 have Sun and Earth in view, and does the lander survive the night?"* — takes many steps
-and expert knowledge. Touchdown answers it in one screen:
+and expert knowledge. AdaptLab answers it in one screen:
 
-![Touchdown overview: score for every site and landing date](docs/overview.png)
+![AdaptLab overview: score for every site and landing date](docs/overview.png)
 
 ![Inspecting one option: verdict, battery sizing and the 360° view from the lander](docs/inspect.png)
 
@@ -204,7 +203,7 @@ and expert knowledge. Touchdown answers it in one screen:
 - **Anywhere on the Moon:** a whole-Moon relief map and 16 landed missions (Luna 9 to Blue Ghost 1,
   `data/landed_missions.yaml`); outside the south pole the horizon is traced from LOLA's global grid
   (`data/global_grid.npz`, 1.9 km). Sun and Earth tracks are rotated from a computed site with Earth's parallax
-  corrected from the hourly Earth-Moon distance (`lunanav/anywhere.py`): checked against independent DE440 runs
+  corrected from the hourly Earth-Moon distance (`adaptlab/anywhere.py`): checked against independent DE440 runs
   2,700 km away, within 0.018° (without the parallax correction Earth would be off by 0.33°); `tests/test_anywhere.py`.
 - **Any point near the pole:** pick a spot south of 84.5°S on a LOLA relief map (or type its coordinates); the
   app traces its horizon on the spot from a compact 200 m / 800 m LOLA grid (`data/polar_grid.npz`, 5 MB) and
@@ -218,10 +217,10 @@ and expert knowledge. Touchdown answers it in one screen:
   one sentence, a day-by-day strip, what happens if the launch slips (1 day to 1 month), the same date at the
   other spots, and an animation of the Sun and Earth moving along the real horizon, and a 3D view of the 40 × 40 km of terrain
   around the lander with the shadows the Sun casts at any hour of the mission (`data/terrain/`, cut from LOLA
-  by `scripts/make_terrain_patches.py`; shadows from terrain inside the patch only, see `lunanav/terrain3d.py`).
+  by `scripts/make_terrain_patches.py`; shadows from terrain inside the patch only, see `adaptlab/terrain3d.py`).
 - **Cited vs derived points:** every site comes from a publication: a published point, or the centre of an official
   Artemis III region computed from the USGS grid (source shown).
-  Next to it Touchdown can show a **derived** point (the best spot within 1 km on a gentle slope) and, for
+  Next to it AdaptLab can show a **derived** point (the best spot within 1 km on a gentle slope) and, for
   Artemis III regions, the **best point in the whole region**. Always labelled, never a replacement for
   the cited one.
 - **South-pole map** of the sites and NASA's nine Artemis III candidate regions (exact USGS grid
@@ -234,7 +233,7 @@ and expert knowledge. Touchdown answers it in one screen:
 - **2-minute demo script** with a link per scene, every verdict checked in CI: [docs/DEMO.md](docs/DEMO.md).
 - **Physical twin** (design stage, not yet manufactured): a true-scale 3D-printable relief of Malapert
   Massif with the three demo points, and a 24-LED "horizon compass" PCB that replays a site's Sun and
-  Earth directions from Touchdown's data: [hardware/README.md](hardware/README.md).
+  Earth directions from AdaptLab's data: [hardware/README.md](hardware/README.md).
 
 ## Results at a glance
 
@@ -250,7 +249,7 @@ The shipped web app uses JPL DE421 through 31 Dec 2045; see the table above.
 - **Terrain beats latitude:** at Malapert, moving 447 m from the published point takes Earth visibility
   from 44 % to 100 %.
 - **Checked against NASA's independent maps** (Mazarico et al. 2011): for points nobody optimised the
-  median difference is +1.9 points (r = 0.957 over 32 points). Touchdown's best-in-region values are
+  median difference is +1.9 points (r = 0.957 over 32 points). AdaptLab's best-in-region values are
   matched by NASA's own values within ~100 m (median +0.5 points), since the two terrain models place
   narrow crests slightly differently; read them as the upper end of what NASA's maps support. One Earth
   value (Mons Mouton best point, 60 m map) is still unexplained.
@@ -266,7 +265,7 @@ offline (needs kernels + DEM)                           runtime (Streamlit, ligh
 ──────────────────────────────                          ──────────────────────────
 LOLA south-pole DEM ──► build_horizons.py ──► data/horizons.json ─┐
                                                                   ├─► precompute.py ──► data/series/<site>.npz ──► app.py
-NAIF kernels (DE440 + Moon frames) ──► lunanav.ephemeris ─────────┘                         (scoring, battery, plots)
+NAIF kernels (DE440 + Moon frames) ──► adaptlab.ephemeris ─────────┘                         (scoring, battery, plots)
                                                                                      │
 LOLA DEM + data/series/<cited>.npz ──► derive_best_points.py ──► data/derived_sites.yaml + <site>_derived.npz
 USGS Artemis III grids ──► artemis_regions.py ──► region centres (sites.yaml) + outlines (artemis_regions.json)
@@ -284,17 +283,17 @@ runs from a plain `pip install -r requirements.txt` with no secrets or API keys 
 
 | module | job |
 |---|---|
-| `lunanav/geometry.py` | great-circle steps, elevation angle with lunar curvature, visible disk fraction |
-| `lunanav/horizon.py` | ray-march DEM → 360° horizon profile per site |
-| `lunanav/ephemeris.py` | Skyfield: Sun/Earth alt-az from a point in the Moon's ME frame (with libration) |
-| `lunanav/visibility.py` | Sun disk fraction above terrain, Earth above terrain |
-| `lunanav/power.py` | battery state-of-charge simulation |
-| `lunanav/metrics.py` | window metrics, constraints, score, vectorised start-date scan, delay tolerance, set/rise timers |
-| `lunanav/panorama.py` | azimuth helpers for the 360° view (circular mean, unwrap, compass ticks) |
-| `lunanav/derive.py` | candidate grid, slope, alt-az reprojection, ranking for derived points |
-| `lunanav/outlines.py` | region outlines at runtime (pure numpy): which Artemis III region(s) contain a point |
-| `lunanav/regions.py` | USGS region grids: exact inside/outside test, grid points, projection |
-| `lunanav/sites.py` | cited sites (`data/sites.yaml`) + generated derived points (`data/derived_sites.yaml`) |
+| `adaptlab/geometry.py` | great-circle steps, elevation angle with lunar curvature, visible disk fraction |
+| `adaptlab/horizon.py` | ray-march DEM → 360° horizon profile per site |
+| `adaptlab/ephemeris.py` | Skyfield: Sun/Earth alt-az from a point in the Moon's ME frame (with libration) |
+| `adaptlab/visibility.py` | Sun disk fraction above terrain, Earth above terrain |
+| `adaptlab/power.py` | battery state-of-charge simulation |
+| `adaptlab/metrics.py` | window metrics, constraints, score, vectorised start-date scan, delay tolerance, set/rise timers |
+| `adaptlab/panorama.py` | azimuth helpers for the 360° view (circular mean, unwrap, compass ticks) |
+| `adaptlab/derive.py` | candidate grid, slope, alt-az reprojection, ranking for derived points |
+| `adaptlab/outlines.py` | region outlines at runtime (pure numpy): which Artemis III region(s) contain a point |
+| `adaptlab/regions.py` | USGS region grids: exact inside/outside test, grid points, projection |
+| `adaptlab/sites.py` | cited sites (`data/sites.yaml`) + generated derived points (`data/derived_sites.yaml`) |
 | `app.py` | Streamlit UI |
 
 | script (offline) | needs | writes |
@@ -337,7 +336,7 @@ streamlit run app.py
 
 ## Deploy
 
-**Live:** [https://lunanav-theta.vercel.app](https://lunanav-theta.vercel.app) (Vercel, root `web`, branch `main`).
+**Live:** [https://adaptlab.us](https://adaptlab.us) (Vercel, root `web`, branch `main`).
 
 **Web app (Vercel, free):** import `yutuf/lmNasa` at https://vercel.com/new, set *Root Directory* to `web`
 (Vite is detected; build `npm run build`, output `dist`), and add the environment variable `GEMINI_API_KEY`
@@ -352,7 +351,7 @@ To deploy a copy (free; needs a GitHub account, and the sign-in can only be done
 1. Sign in at https://share.streamlit.io with GitHub and allow access to `yutuf/lmNasa`.
 2. Create app → repository `yutuf/lmNasa`, branch `main`, main file `app.py`.
 3. Under Advanced settings pick Python 3.13 (what CI tests); no secrets are needed.
-4. Deploy. Dependencies come from `requirements.txt`; the app imports `lunanav/` from the repo root.
+4. Deploy. Dependencies come from `requirements.txt`; the app imports `adaptlab/` from the repo root.
 
 ## Adding sites
 
@@ -433,7 +432,7 @@ published point above, which lies inside its region. The IM-2 point above lies i
 How to read it:
 - A region is ~20 × 20 km; its centre is just a reference point, so low numbers there say little about
   the region. The derived point shows what 1 km of freedom buys; the best spots in a region may be
-  further away than Touchdown searches.
+  further away than AdaptLab searches.
 - Four derived points sit on the 1 km search edge (Plateau, Nobile Rim 2, Haworth, Slater Plain), a
   sign that better ground lies beyond 1 km.
 - The objective is Sun + Earth hours with slope only as a ≤ 10° filter, so a derived point can be
@@ -485,13 +484,13 @@ Result (LOLA 40 m, 2026-11-01 → 2028-12-31; Sun+Earth = share of hours with bo
 `scripts/mazarico_compare.py` reads NASA's polar illumination products (Mazarico et al. 2011, Icarus 211,
 [NASA GSFC PGDA product 69](https://pgda.gsfc.nasa.gov/products/69)), 75°S–90°S at 120 m/px: the 18.6-year
 average solar illumination, average Earth visibility and the permanent-shadow (PSR) map. For every site
-it stores NASA's averages next to Touchdown's own and the distance to the nearest permanently shadowed
+it stores NASA's averages next to AdaptLab's own and the distance to the nearest permanently shadowed
 region, where water ice can survive (`data/mazarico.json`, shown in the app). Nothing about the encoding
 is assumed: GeoTIFF scale tags are applied (the PSR map stores ±20000 with scale 2.5e-5 and offset 0.5,
 i.e. 0 and 1), and the PSR code is the value whose pixels average ~0 % sunlight (0.000 % vs 30.6 % for
 the other code); the script stops rather than guess.
 
-**Agreement** (mean fraction of the solar disk visible; Touchdown minus NASA):
+**Agreement** (mean fraction of the solar disk visible; AdaptLab minus NASA):
 
 | points | n | median difference | within ±3 points |
 |---|---|---|---|
@@ -499,17 +498,17 @@ the other code); the script stops rather than guess.
 | 1 km derived points | 11 | +1.1 points | 55 % |
 | best-in-region points | 9 | **+11.3 points** | 33 % |
 
-Correlation over all 32 points: 0.957. Earth visibility is typically 3.5 points *lower* in Touchdown, as
-expected: NASA counts Earth as visible when any part of its disc shows, Touchdown uses its centre.
+Correlation over all 32 points: 0.957. Earth visibility is typically 3.5 points *lower* in AdaptLab, as
+expected: NASA counts Earth as visible when any part of its disc shows, AdaptLab uses its centre.
 
 What this means:
 - For points nobody optimised, two independent models agree closely: the core geometry holds.
-- Points Touchdown **picked as the best of ~2,000 candidates read clearly higher** than NASA's value at
+- Points AdaptLab **picked as the best of ~2,000 candidates read clearly higher** than NASA's value at
   the same coordinate, but **not higher than NASA's own values right next to them** (see "Crest check"
   below): the gap is mostly about where each map puts a narrow lit crest. Treat best-in-region numbers
   as the upper end of what NASA's maps support there. The same holds for Earth visibility (see "Crest
   check"), with one open exception.
-- Largest gaps among published points: Shackleton ridge (NASA 78.3 %, Touchdown 91.1 %; Gläser et al.
+- Largest gaps among published points: Shackleton ridge (NASA 78.3 %, AdaptLab 91.1 %; Gläser et al.
   report 88 % at 2 m) and de Gerlache rim (53.1 % vs 77.3 %), both near-grazing-Sun sites at 88–89.5°S
   where observer height is known to matter most.
 - **60 m follow-up** (NASA's 85°S–90°S maps, `data/mazarico_60m.json`): the resolution explanation is
@@ -529,21 +528,21 @@ What this means:
   Against that local maximum the best-in-region gap shrinks from +11.3 to **+0.5 points** (median; 78 %
   within ±3) on the 120 m map, and from +9.2 to +5.1 on the 60 m map. At the Shackleton ridge the 60 m
   pixel at the coordinate reads 44.3 % while one 73 m away reads 75.5 %. So NASA's maps do contain values
-  like Touchdown's within ~60–110 m: a crest is a pixel or two wide, and the two DEMs (Touchdown: LOLA 40 m
+  like AdaptLab's within ~60–110 m: a crest is a pixel or two wide, and the two DEMs (AdaptLab: LOLA 40 m
   adjusted; NASA: 2016 LOLA grids) place it slightly differently. A local maximum is itself optimistic
-  (for unoptimised points Touchdown sits 0.8 points *below* it), so the honest range on a crest is between
-  NASA's point value and its local maximum; Touchdown's best-in-region values sit near the top of it.
+  (for unoptimised points AdaptLab sits 0.8 points *below* it), so the honest range on a crest is between
+  NASA's point value and its local maximum; AdaptLab's best-in-region values sit near the top of it.
 - **Earth, same check:** the large Earth gaps were the same effect. At the Malapert best point NASA's
-  value at the coordinate is 53.6 %, but its maps reach **100 %** within 120 m (Touchdown: 100 %); Nobile
-  Rim 1 best point: NASA up to 91 % within 120 m vs Touchdown 99.6 %. On the 120 m map no point is more
+  value at the coordinate is 53.6 %, but its maps reach **100 %** within 120 m (AdaptLab: 100 %); Nobile
+  Rim 1 best point: NASA up to 91 % within 120 m vs AdaptLab 99.6 %. On the 120 m map no point is more
   than 10 points above NASA's local maximum (best-in-region median +0.3). **Open:** the Mons Mouton best
-  point (= its 1 km derived point) on the 60 m map: Touchdown 98.7 % vs NASA at most 82.3 % within 120 m
+  point (= its 1 km derived point) on the 60 m map: AdaptLab 98.7 % vs NASA at most 82.3 % within 120 m
   (89.5 % on the 120 m map). Since NASA counts Earth as visible when *any* part of its disc shows, NASA
   should read higher, not lower, so this one is unexplained.
 
 **Best-in-region points with NASA's numbers and the nearest permanent shadow:**
 
-| best in region | Sun+Earth (Touchdown) | mean Sun: NASA / Touchdown | Earth: NASA / Touchdown | nearest PSR | PSR within 5 km |
+| best in region | Sun+Earth (AdaptLab) | mean Sun: NASA / AdaptLab | Earth: NASA / AdaptLab | nearest PSR | PSR within 5 km |
 |---|---|---|---|---|---|
 | Malapert Massif | 83.6 % | 64.1 % / 83.4 % | 53.6 % / 100 % | 0.18 km | 0.06 km² |
 | Mons Mouton | 72.5 % | 67.4 % / 73.5 % | 89.5 % / 98.7 % | 1.06 km | 0.92 km² |

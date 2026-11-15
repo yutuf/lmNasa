@@ -30,7 +30,7 @@ const GOAL_WHY: Record<ScienceKind | 'safe', T> = {
   magnetic: { en: 'Swirls of bright soil sit where the Moon still has patches of magnetism. Nobody knows why.', tr: 'Parlak toprak girdapları Ay’ın hâlâ manyetik olduğu yerlerde. Nedeni bilinmiyor.' },
   pit: { en: 'Lava-tube pits are natural shelters from radiation and temperature swings.', tr: 'Lav tüpü çukurları radyasyona ve sıcaklık farkına karşı doğal sığınaklar.' },
   history: { en: 'Land near Apollo and other historic landing sites.', tr: 'Apollo ve diğer tarihi iniş yerlerinin yakınına in.' },
-  artemis: { en: 'NASA’s nine candidate regions for Artemis III, the first crewed landing since 1972. Touchdown finds the best spot and date near each.', tr: 'NASA’nın Artemis III için dokuz aday bölgesi; 1972’den beri ilk insanlı iniş. Touchdown her birinin yakınındaki en iyi yeri ve tarihi bulur.' },
+  artemis: { en: 'NASA’s nine candidate regions for Artemis III, the first crewed landing since 1972. AdaptLab finds the best spot and date near each.', tr: 'NASA’nın Artemis III için dokuz aday bölgesi; 1972’den beri ilk insanlı iniş. AdaptLab her birinin yakınındaki en iyi yeri ve tarihi bulur.' },
 }
 
 // an example place for each goal, rendered from the real terrain next to the goal's explanation
@@ -91,8 +91,8 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
         <div className="s-hero-text">
         <h1>{tr ? <>Ay’da <em>nereye</em> ve <em>ne zaman</em> inmeli?</> : <>Where and when to <em>land</em> on the Moon</>}</h1>
         <p>{tr
-          ? `Üç soruyu cevapla. Touchdown ${points.toLocaleString('tr-TR')} noktayı her gün ve her saat için NASA verisiyle kontrol eder ve en iyi iniş yerlerini gösterir.`
-          : `Answer three questions. Touchdown checks ${points.toLocaleString('en-US')} points for every day and hour on NASA data and shows you the best places to land.`}</p>
+          ? `Üç soruyu cevapla. AdaptLab ${points.toLocaleString('tr-TR')} noktayı her gün ve her saat için NASA verisiyle kontrol eder ve en iyi iniş yerlerini gösterir.`
+          : `Answer three questions. AdaptLab checks ${points.toLocaleString('en-US')} points for every day and hour on NASA data and shows you the best places to land.`}</p>
         <div className="s-hero-links">
           <button onClick={onTour}><PlayCircle size={16} /> {tr ? '1 dakikalık tura katıl' : 'Take the 1-minute tour'}</button>
           <button onClick={onLibration}><Globe2 size={16} /> {tr ? 'Dünya gökyüzünde neden sallanır?' : 'Why does Earth wobble in the sky?'}</button>
@@ -257,7 +257,7 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
             </div>
           </div>
         )}
-        <button className="s-adv s-src" onClick={onSources}>{tr ? 'Kaynaklar ve sınırlar: veriler, yöntem, Touchdown’ın yapmadıkları →' : 'Sources & limits: the data, the method, and what Touchdown does not do →'}</button>
+        <button className="s-adv s-src" onClick={onSources}>{tr ? 'Kaynaklar ve sınırlar: veriler, yöntem, AdaptLab’ın yapmadıkları →' : 'Sources & limits: the data, the method, and what AdaptLab does not do →'}</button>
         <button className="s-adv" onClick={onAdvanced}>{tr ? 'Gelişmiş arayüz: tüm gereksinimler, grafikler, Artemis karşılaştırması, dışa aktarma →' : 'Advanced interface: every requirement, charts, the Artemis comparison, exports →'}</button>
       </section>
     </div>

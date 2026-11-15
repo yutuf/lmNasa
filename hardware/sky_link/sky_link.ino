@@ -1,4 +1,4 @@
-// LunaNav sky link: an LED ring that shows, live, where the Sun and Earth are for the rover (or lander) in the web app.
+// AdaptLab sky link: an LED ring that shows, live, where the Sun and Earth are for the rover (or lander) in the web app.
 //
 // The web app (Rover / Lander view -> "Sky compass" button, Chrome or Edge) sends one line ~10 times a second over USB:
 //   L <sunAz> <sunLevel> <earthAz> <earthOn> <battery> <psr>\n

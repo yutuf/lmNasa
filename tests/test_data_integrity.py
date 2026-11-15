@@ -8,12 +8,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from lunanav.derive import score_point
-from lunanav.geometry import distance_bearing
-from lunanav.horizon import load_profiles
-from lunanav.outlines import RegionOutlines
-from lunanav.series import load_series
-from lunanav.sites import load_sites
+from adaptlab.derive import score_point
+from adaptlab.geometry import distance_bearing
+from adaptlab.horizon import load_profiles
+from adaptlab.outlines import RegionOutlines
+from adaptlab.series import load_series
+from adaptlab.sites import load_sites
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
@@ -95,7 +95,7 @@ def test_region_centres_have_a_source_and_slope_once_computed():
 
 
 def test_mazarico_json_is_not_stale():
-    """data/mazarico.json stores LunaNav's own numbers next to NASA's; if a series changes later,
+    """data/mazarico.json stores AdaptLab's own numbers next to NASA's; if a series changes later,
     the file must be regenerated (scripts/mazarico_compare.py), otherwise the app shows old numbers."""
     import json
     path = DATA / "mazarico.json"
@@ -105,8 +105,8 @@ def test_mazarico_json_is_not_stale():
     for sid, r in m["sites"].items():
         assert sid in BY_ID, f"{sid} in mazarico.json but not a site any more"
         v = SERIES[sid][0]
-        if v is None or "lunanav_sun_mean" not in r:
+        if v is None or "adaptlab_sun_mean" not in r:
             continue
-        assert abs(float(np.mean(v.sun_fraction)) - r["lunanav_sun_mean"]) < 1e-3, f"{sid}: stale sun"
-        assert abs(float(np.mean(v.earth_visible)) - r["lunanav_earth"]) < 1e-3, f"{sid}: stale Earth"
+        assert abs(float(np.mean(v.sun_fraction)) - r["adaptlab_sun_mean"]) < 1e-3, f"{sid}: stale sun"
+        assert abs(float(np.mean(v.earth_visible)) - r["adaptlab_earth"]) < 1e-3, f"{sid}: stale Earth"
         assert 0 <= r["mazarico_sun"] <= 1 and 0 <= r["mazarico_earth"] <= 1, sid

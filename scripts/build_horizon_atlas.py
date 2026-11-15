@@ -23,8 +23,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from lunanav.horizon import compute_horizon  # noqa: E402
-from lunanav.polar_grid import PolarGrid, polar_xy  # noqa: E402
+from adaptlab.horizon import compute_horizon  # noqa: E402
+from adaptlab.polar_grid import PolarGrid, polar_xy  # noqa: E402
 
 R = 1737400.0
 _grid = None

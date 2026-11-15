@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pull the extra lunar datasets used (or likely to be used) by LunaNav into data/usgs/, in priority order.
+# Pull the extra lunar datasets used (or likely to be used) by AdaptLab into data/usgs/, in priority order.
 # All public NASA/USGS data from the USGS Astrogeology mosaic bucket. Resumable: rerun to continue.
 set -u
 S3=https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic

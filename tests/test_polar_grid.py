@@ -8,10 +8,10 @@ honest with looser bounds than those measured.
 import numpy as np
 import pytest
 
-from lunanav.derive import score_point
-from lunanav.horizon import compute_horizon, load_profiles
-from lunanav.polar_grid import GRID_FILE, PolarGrid
-from lunanav.series import load_series
+from adaptlab.derive import score_point
+from adaptlab.horizon import compute_horizon, load_profiles
+from adaptlab.polar_grid import GRID_FILE, PolarGrid
+from adaptlab.series import load_series
 
 pytestmark = pytest.mark.skipif(not GRID_FILE.exists(), reason="no data/polar_grid.npz")
 SITES = ["shackleton_ridge", "malapert_massif", "malapert_massif_region_best", "mons_mouton", "artemis_haworth"]

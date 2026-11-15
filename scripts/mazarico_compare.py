@@ -1,4 +1,4 @@
-"""Offline: compare LunaNav with NASA's independent polar illumination maps, and measure
+"""Offline: compare AdaptLab with NASA's independent polar illumination maps, and measure
 the distance from every site to the nearest permanently shadowed region (PSR).
 
 usage: python scripts/mazarico_compare.py --sun AVGVISIB_75S_120M_201608.TIF \\
@@ -8,7 +8,7 @@ Source of the maps (NASA GSFC PGDA product 69, https://pgda.gsfc.nasa.gov/produc
 Mazarico, E., et al. (2011), Illumination conditions of the lunar polar regions using LOLA
 topography, Icarus 211, 1066-1081, doi:10.1016/j.icarus.2010.10.030.
 Averages over hourly steps spanning 18.6 years; Earth counts as visible if any part of its
-disc shows (LunaNav: Earth's centre); no observer height stated (LunaNav: 2 m mast).
+disc shows (AdaptLab: Earth's centre); no observer height stated (AdaptLab: 2 m mast).
 
 Nothing about the encoding is assumed blindly:
   * GeoTIFF scale/offset tags are applied; the unit (fraction or percent) is decided once per map from
@@ -27,8 +27,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from lunanav.series import load_series  # noqa: E402
-from lunanav.sites import load_sites  # noqa: E402
+from adaptlab.series import load_series  # noqa: E402
+from adaptlab.sites import load_sites  # noqa: E402
 
 SOURCE = ("Mazarico et al. 2011, Icarus 211, 1066-1081, doi:10.1016/j.icarus.2010.10.030; "
           "NASA GSFC PGDA product 69 (https://pgda.gsfc.nasa.gov/products/69)")
@@ -174,7 +174,7 @@ def main(argv=None):
     out = {"source": SOURCE, "products": [sun.name, earth.name, psr.name], "psr_code": int(code),
            "near_m": a.near_m,
            "note": ("18.6-year averages; Earth visible if any part of its disc shows; observer height not "
-                    "stated. LunaNav: Nov 2026 - Dec 2028, 2 m mast, Earth's centre."), "sites": {}}
+                    "stated. AdaptLab: Nov 2026 - Dec 2028, 2 m mast, Earth's centre."), "sites": {}}
     print(f"\n{'site':40s} {'sun: Maz / ours(mean disk)':>28s} {'Earth: Maz / ours':>20s} {'PSR km':>7s} {'PSR km2<=5km':>12s}")
     for s in sites:
         v = load_series(s.id, data / "series")[0]
@@ -187,12 +187,12 @@ def main(argv=None):
                "psr_nearest_km": None if dist is None else round(dist, 2), "psr_area_within_5km_km2": round(area, 2)}
         ours = ""
         if v is not None:
-            rec["lunanav_sun_mean"] = round(float(np.mean(v.sun_fraction)), 4)
-            rec["lunanav_earth"] = round(float(np.mean(v.earth_visible)), 4)
-            ours = f"{rec['lunanav_sun_mean']:.1%}"
+            rec["adaptlab_sun_mean"] = round(float(np.mean(v.sun_fraction)), 4)
+            rec["adaptlab_earth"] = round(float(np.mean(v.earth_visible)), 4)
+            ours = f"{rec['adaptlab_sun_mean']:.1%}"
         out["sites"][s.id] = rec
         print(f"{s.id:40s} {m_sun:>13.1%} / {ours:>12s} {m_earth:>9.1%} / "
-              f"{(str(round(100 * rec.get('lunanav_earth', float('nan')), 1)) + '%'):>8s} "
+              f"{(str(round(100 * rec.get('adaptlab_earth', float('nan')), 1)) + '%'):>8s} "
               f"{'>' + str(int(a.radius_km)) if dist is None else f'{dist:.2f}':>7s} {area:12.2f}")
     out["skipped_outside_maps"] = outside
     out_path.write_text(json.dumps(out, indent=1))

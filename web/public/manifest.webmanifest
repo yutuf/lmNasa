@@ -1,6 +1,6 @@
 {
-  "name": "Touchdown · Where and when to land on the Moon",
-  "short_name": "Touchdown",
+  "name": "AdaptLab · Where and when to land on the Moon",
+  "short_name": "AdaptLab",
   "description": "Find where and when a lander can land on the Moon and survive, on real NASA data.",
   "start_url": "/",
   "display": "standalone",

@@ -1,10 +1,10 @@
-"""LunaNav's Sun/Earth positions against official JPL Horizons output (no network needed).
+"""AdaptLab's Sun/Earth positions against official JPL Horizons output (no network needed).
 
 tests/fixtures/horizons.json holds apparent azimuth/elevation from the Horizons API (DE441, observer at
 coord@301, 2 m above the 1737.4 km sphere, airless) for the Sun and Earth seen from three sites, every
 6 h through January 2027: 3 sites x 2 bodies x 121 times = 726 positions. It was fetched once with
 scripts/fetch_horizons_fixture.py. The committed series in data/series/ (DE440 via Skyfield,
-lunanav/ephemeris.py, stored as float32) are compared against it.
+adaptlab/ephemeris.py, stored as float32) are compared against it.
 
 Measured when the fixture was added (13 Nov 2026): largest angular separation 0.000015 deg, largest
 altitude difference 0.000004 deg. That is the size of float32 rounding at these values, so the two

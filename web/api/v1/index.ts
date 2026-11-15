@@ -66,7 +66,7 @@ const ENDPOINTS = [
 ] as const
 
 export const INDEX = {
-  name: 'Touchdown',
+  name: 'AdaptLab',
   version: 'v1',
   limits: LIMITS,
   limits_detail: 'Grids are about 2 km south of 84.5°S and about 30 km elsewhere. Slopes come from a 40 m map, so boulders and small craters are invisible. This plans a mission. It does not certify a landing.',
