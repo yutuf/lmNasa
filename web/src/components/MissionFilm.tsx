@@ -242,7 +242,7 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
             <TitleBackdrop />
             <Patch size={128} />
             <div className="fs-title-text">
-              <span className="fs-kicker">{tr ? 'LunaNav sunar' : 'LunaNav presents'}</span>
+              <span className="fs-kicker">{tr ? 'Touchdown sunar' : 'Touchdown presents'}</span>
               <h1>{missionName}</h1>
               <span className="fs-sub">{card.name} · {fmt(landing)}</span>
               <div className="fx-meta" style={{ opacity: reduce ? 1 : Math.min(1, t / 0.22) }}>

@@ -251,7 +251,7 @@ export default function MissionInterview({ lang, onRun, onClose }: {
         <header className="mi-head">
           <span className="mi-badge"><Sparkles size={14} /> {tr ? 'Görev' : 'Mission'}</span>
           <div className="mi-title" id="mi-title">
-            <b>LunaNav</b>
+            <b>Touchdown</b>
             <small>{tr ? 'Görev planı' : 'Mission plan'}</small>
           </div>
           <button type="button" className="mi-x" onClick={onClose} aria-label={tr ? 'Kapat' : 'Close'}>

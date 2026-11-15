@@ -1,4 +1,4 @@
-// Sources and limits: where every number comes from, how it is computed, and what LunaNav does not do. Judges ask
+// Sources and limits: where every number comes from, how it is computed, and what Touchdown does not do. Judges ask
 // these questions; the answers belong in the app, not only in the README.
 import { BookOpen, X } from 'lucide-react'
 import type { Lang } from '../i18n'
@@ -50,7 +50,7 @@ const METHOD: Record<Lang, string[]> = {
 
 const LIMITS: Record<Lang, string[]> = {
   en: [
-    'LunaNav is a planning tool, not a landing certification. Real missions add their own navigation, hazard detection and margins.',
+    'Touchdown is a planning tool, not a landing certification. Real missions add their own navigation, hazard detection and margins.',
     'Whole-Moon points are about 30 km apart: good for choosing regions, not individual landing spots. The 40 m slope check, ice data, the landing-ellipse check and walking/driving exist only around the south pole.',
     'Horizons come from LOLA terrain; a boulder or a small ridge closer than the grid spacing can still cast a shadow.',
     'The Sun is treated as a disk (partly hidden = partly lit). Earth contact uses the centre of Earth’s ~1° disk, as in the Python reference the browser engine is tested against hour by hour; using the disk edge would move contact start and end by at most a couple of hours.',
@@ -59,7 +59,7 @@ const LIMITS: Record<Lang, string[]> = {
     'Launch dates of planned missions slip; one-click CLPS missions use an illustrative landing window.',
   ],
   tr: [
-    'LunaNav bir planlama aracıdır, iniş sertifikası değildir. Gerçek görevler kendi seyrüsefer, tehlike algılama ve paylarını ekler.',
+    'Touchdown bir planlama aracıdır, iniş sertifikası değildir. Gerçek görevler kendi seyrüsefer, tehlike algılama ve paylarını ekler.',
     'Tüm Ay noktaları yaklaşık 30 km arayla: bölge seçmek için iyidir, tek tek iniş noktası için değil. 40 m eğim kontrolü, buz verisi, iniş elipsi kontrolü ve yürüme/sürüş yalnızca güney kutbu çevresinde vardır.',
     'Ufuklar LOLA arazisinden gelir; ızgara aralığından yakın bir kaya ya da küçük sırt yine de gölge düşürebilir.',
     'Güneş bir disk olarak ele alınır (kısmen gizli = kısmen aydınlık). Dünya bağlantısı, tarayıcı motorunun saat saat sınandığı Python referansındaki gibi Dünya’nın ~1° diskinin merkezini kullanır; disk kenarını kullanmak bağlantının başlangıç ve bitişini en fazla birkaç saat kaydırır.',
@@ -71,7 +71,7 @@ const LIMITS: Record<Lang, string[]> = {
 
 const L: Record<string, T> = {
   title: { en: 'Sources & limits', tr: 'Kaynaklar ve sınırlar' },
-  sub: { en: 'Where every number comes from, how it is computed, and what LunaNav does not do.', tr: 'Her sayının nereden geldiği, nasıl hesaplandığı ve LunaNav’ın neyi yapmadığı.' },
+  sub: { en: 'Where every number comes from, how it is computed, and what Touchdown does not do.', tr: 'Her sayının nereden geldiği, nasıl hesaplandığı ve Touchdown’ın neyi yapmadığı.' },
   data: { en: 'Data', tr: 'Veri' }, method: { en: 'Method', tr: 'Yöntem' }, limits: { en: 'Limits', tr: 'Sınırlar' },
 }
 
