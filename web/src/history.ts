@@ -1,4 +1,4 @@
-// Real landings replayed through LunaNav's own engine. For five recent landings, the hourly Sun and Earth around the
+// Real landings replayed through Touchdown's own engine. For five recent landings, the hourly Sun and Earth around the
 // touchdown (history.json, scripts/build_history.py, same kernels as the main ephemeris) are run through the same
 // horizon and sunlight code as the search, at the nearest whole-Moon grid point (about 30 km). The result, how long
 // the Sun stays up and how much Earth is in view, is compared with what each mission actually did.

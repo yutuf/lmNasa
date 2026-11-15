@@ -152,7 +152,7 @@ export default function MissionStory({ lang, cards, ranKey, onSearch, onClose, o
           <button aria-label={tr ? 'Gönder' : 'Send'}>→</button>
         </form>
       )}
-      <p className="story-note">{tr ? 'Luna yalnızca LunaNav motorunun hesapladığı sayıları anlatır.' : 'Luna only tells numbers that LunaNav’s engine computed.'}</p>
+      <p className="story-note">{tr ? 'Luna yalnızca Touchdown motorunun hesapladığı sayıları anlatır.' : 'Luna only tells numbers that Touchdown’s engine computed.'}</p>
     </div>
   )
 }

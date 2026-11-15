@@ -91,8 +91,8 @@ type Text = Record<Lang, string>
 const S = {
   hero: { en: 'Landing site search', tr: 'İniş yeri arama' },
   sub: {
-    en: 'Describe your mission. LunaNav searches 21,856 points near the lunar south pole, hour by hour, over the real terrain, and shows where and when a solar lander survives.',
-    tr: "Görevinizi tarif edin. LunaNav Ay'ın güney kutbu çevresindeki 21.856 noktayı, gerçek arazi üzerinde saat saat tarar ve güneş enerjili bir aracın nerede ve ne zaman yaşayabileceğini gösterir.",
+    en: 'Describe your mission. Touchdown searches 21,856 points near the lunar south pole, hour by hour, over the real terrain, and shows where and when a solar lander survives.',
+    tr: "Görevinizi tarif edin. Touchdown Ay'ın güney kutbu çevresindeki 21.856 noktayı, gerçek arazi üzerinde saat saat tarar ve güneş enerjili bir aracın nerede ve ne zaman yaşayabileceğini gösterir.",
   },
   mission: { en: 'Mission profile', tr: 'Görev profili' },
   window: { en: 'Landing window', tr: 'İniş penceresi' },
@@ -111,7 +111,7 @@ const S = {
   colIce: { en: 'Nearest ice', tr: 'En yakın buz' },
   validTitle: { en: 'How we know the numbers are right', tr: 'Sayıların doğru olduğunu nasıl biliyoruz' },
   rerun: { en: 'Run search · settings changed', tr: 'Aramayı çalıştır · ayarlar değişti' },
-  guideTitle: { en: 'How to use LunaNav', tr: 'LunaNav nasıl kullanılır' },
+  guideTitle: { en: 'How to use Touchdown', tr: 'Touchdown nasıl kullanılır' },
   guide1: { en: 'Pick a mission scenario (or set your own requirements)', tr: 'Bir görev senaryosu seçin (veya kendi gereksinimlerinizi girin)' },
   guide2: { en: 'Run the search: 21,856 points, every landing date, in seconds', tr: 'Aramayı çalıştırın: 21.856 nokta, her iniş tarihi, saniyeler içinde' },
   guide3: { en: 'Open a site: verdict, touchdown zone, spacecraft route, stand on the lander', tr: 'Bir nokta açın: karar, iniş alanı, uzay aracı rotası, iniş aracında durun' },
@@ -576,7 +576,7 @@ export default function App() {
   // a full-screen overlay pauses the canvases behind it (see overlayState.ts)
   const overlayOpen = film || workshop || lab || story || interview || sources || orbitPanel || historyPanel || libration || !!profile || !!drive
   useEffect(() => { setOverlayOpen(overlayOpen) }, [overlayOpen])
-  if (!m || !atlas || !atlasPole) return <><div className="loading"><Patch size={72} />LunaNav<small>{lang === 'tr' ? 'NASA verisi yükleniyor…' : 'loading NASA data…'}</small></div></>
+  if (!m || !atlas || !atlasPole) return <><div className="loading"><Patch size={72} />Touchdown<small>{lang === 'tr' ? 'NASA verisi yükleniyor…' : 'loading NASA data…'}</small></div></>
   const startDate = (s: number) => new Date(Date.parse(ran!.q.start + 'T00:00:00Z') + s * 86400e3)
   const fmtDate = (d: Date) => d.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' })
   const pins: Pin[] = top.map((r, k) => ({ lat: r.lat, lon: r.lon, label: String(k + 1), good: r.goCount > 0 }))
@@ -718,7 +718,7 @@ export default function App() {
 <li>${tr ? 'Bu görevi uygulamada aç: QR kod (tüm ayarlar bağlantıda).' : 'Open this exact mission in the app: the QR code (every setting is in the link).'}</li>
 <li>${tr ? 'Efemeris' : 'Ephemeris'}: ${eStart} → ${eEnd}, ${m.n.toLocaleString()} ${tr ? 'saat' : 'hours'} · ${tr ? 'ızgara' : 'grid'}: ${atlas.n.toLocaleString()} ${tr ? 'nokta' : 'points'} (${atlas.kind === 'pole' ? (tr ? 'güney kutbu, 2 km' : 'south pole, 2 km') : (tr ? 'tüm Ay, ~30 km' : 'whole Moon, ~30 km')})</li>
 <li>${tr ? 'Veri' : 'Data'}: ${catalogueSources(m.sources).map((x) => x.replace(/[<>&]/g, '')).join(' · ')}</li>
-<li>${tr ? 'Oluşturuldu' : 'Generated'}: ${new Date().toISOString().replace('T', ' ').slice(0, 16)} UTC · LunaNav</li>
+<li>${tr ? 'Oluşturuldu' : 'Generated'}: ${new Date().toISOString().replace('T', ' ').slice(0, 16)} UTC · Touchdown</li>
 <li>${tr ? 'Bir planlama aracıdır, iniş sertifikası değildir.' : 'A planning tool, not a landing certification.'}</li></ul></div>`
   }
   // the report: ranked sites, the orbit scenarios, sources; opens the browser's print dialog to save it as a PDF
@@ -809,7 +809,7 @@ export default function App() {
         </Suspense>
       )}
       <header className="nav">
-        <a className="logo" href="#top"><Patch size={34} /><span className="logo-word">Luna<b>Nav</b></span></a>
+        <a className="logo" href="#top"><Patch size={34} /><span className="logo-word">Touch<b>down</b></span></a>
         <span className={`scope-pill ${scope}`}>{scope === 'moon'
           ? (lang === 'tr' ? `TÜM AY · ${(atlasMoon?.n ?? 41276).toLocaleString(loc)} NOKTA · ~30 KM` : `WHOLE MOON · ${(atlasMoon?.n ?? 41276).toLocaleString(loc)} PTS · ~30 KM`)
           : (lang === 'tr' ? `GÜNEY KUTBU · ${atlasPole.n.toLocaleString(loc)} NOKTA · 2 KM` : `SOUTH POLE · ${atlasPole.n.toLocaleString(loc)} PTS · 2 KM`)}</span>

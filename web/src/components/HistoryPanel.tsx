@@ -1,4 +1,4 @@
-// "Our model vs real landings": five recent landings replayed through LunaNav's engine, next to what really happened.
+// "Our model vs real landings": five recent landings replayed through Touchdown's engine, next to what really happened.
 import { useEffect, useState } from 'react'
 import { History, X } from 'lucide-react'
 import type { Lang } from '../i18n'

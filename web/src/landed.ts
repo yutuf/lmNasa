@@ -1,5 +1,5 @@
 // Where landers have already touched down (planetocentric lat, east lon; as published, see data/landed_missions.yaml).
-// LunaNav keeps its recommendations at least KEEP_OUT_KM away: NASA's guidance asks visiting craft to stay clear of
+// Touchdown keeps its recommendations at least KEEP_OUT_KM away: NASA's guidance asks visiting craft to stay clear of
 // heritage sites (Apollo), and plumes would sandblast hardware that is still there.
 export const KEEP_OUT_KM = 2
 

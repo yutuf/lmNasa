@@ -12,10 +12,10 @@ export type TourStep = {
 export const DEFAULT_TOUR: TourStep[] = [
   {
     selector: '.s-hero h1',
-    title: { en: 'What LunaNav is', tr: 'LunaNav nedir' },
+    title: { en: 'What Touchdown is', tr: 'Touchdown nedir' },
     body: {
-      en: 'LunaNav searches the Moon for a place and a date where a lander has sunlight and a radio link home. It plans. It does not certify a landing.',
-      tr: 'LunaNav, iniş aracının güneş ışığı ve Dünya’ya telsiz bağı bulacağı yeri ve tarihi arar. Planlar. Bir inişi onaylamaz.',
+      en: 'Touchdown searches the Moon for a place and a date where a lander has sunlight and a radio link home. It plans. It does not certify a landing.',
+      tr: 'Touchdown, iniş aracının güneş ışığı ve Dünya’ya telsiz bağı bulacağı yeri ve tarihi arar. Planlar. Bir inişi onaylamaz.',
     },
   },
   {

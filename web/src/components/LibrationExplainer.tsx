@@ -247,8 +247,8 @@ export default function LibrationExplainer({ lang, onClose }: { lang: Lang; onCl
               ? 'Yörünge elipstir: Ay yaklaşınca hızlanır, uzaklaşınca yavaşlar. Ekvatoru da 6,7° eğiktir. İkisi birlikte Dünya’yı boylamda yaklaşık ±7,9°, enlemde ±6,7° oynatır. Buna librasyon denir.'
               : 'The orbit is an ellipse, so the Moon speeds up and slows down, and its equator is tilted by 6.7°. Together they swing Earth by about ±7.9° in longitude and ±6.7° in latitude. That is libration.'}</span></li>
             <li><b>3</b><span>{tr
-              ? 'Güney kutbunda Dünya ufuktadır. Bu salınım onu ufkun üstüne çıkarır ya da altına indirir; iniş aracı yalnızca bazı saatlerde eve seslenebilir. LunaNav bu yüzden Dünya’yı saat saat kontrol eder.'
-              : 'At the south pole Earth sits on the horizon. The wobble lifts it above the horizon or drops it below, so a lander can call home only some of the time. That is why LunaNav checks Earth hour by hour.'}</span></li>
+              ? 'Güney kutbunda Dünya ufuktadır. Bu salınım onu ufkun üstüne çıkarır ya da altına indirir; iniş aracı yalnızca bazı saatlerde eve seslenebilir. Touchdown bu yüzden Dünya’yı saat saat kontrol eder.'
+              : 'At the south pole Earth sits on the horizon. The wobble lifts it above the horizon or drops it below, so a lander can call home only some of the time. That is why Touchdown checks Earth hour by hour.'}</span></li>
           </ol>
           <p className="lib-note"><b>{tr ? 'Şema' : 'Schematic'}</b>{tr
             ? 'Belirli bir tarihin tahmini değil. Yörüngenin basıklığı ve eğimi görülsün diye büyütüldü; gerçek dışmerkezlik 0,055’tir. Gökyüzü ölçeklidir: Dünya yaklaşık 1,9° genişliğindedir, kutu ±7,9° ve ±6,7°’dir. Parlak iz bir aydır (27,6 gün), soluk iz sekiz aydır. 27,6 ve 27,2 günlük dönemler örtüşmez, yol kapanmaz. Aramanın kendisi JPL efemerisini kullanır.'
