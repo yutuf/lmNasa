@@ -133,3 +133,12 @@
 .many .ds { padding: 6px 10px; }
 .many .ds-who { font-size: 10.5px; }
 .many .ds-stats b { line-height: 1.1; } .many .ds-stats span { line-height: 1.15; }
+/* inside presentation mode: hidden while the presenter demos the app (still connected) */
+.live.live-hidden { display: none; }
+/* before anyone has sent a plan: one big QR, so the whole room can scan it */
+.live-start .live-body { grid-template-columns: min(62vh, 620px) minmax(0, 560px); justify-content: center; align-items: center; gap: 64px; }
+.live-start .live-join > img { width: 100%; }
+.live-start .live-url { font-size: 30px; }
+.live-start .live-steps { font-size: 26px; gap: 8px; }
+.live-start .live-grid { display: flex; align-items: center; }
+.live-start .live-empty { text-align: left; font-size: 44px; line-height: 1.08; color: #fff; }

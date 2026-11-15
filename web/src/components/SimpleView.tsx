@@ -227,11 +227,15 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
           </div>
         </div>
         {cards.length > 0 && <p className="s-help s-legend"><Info size={15} />{tr
-          ? 'Her kart gerçek araziyi gösterir. “UYGUN 4/30”: 30 günün 4’ünde iniş işe yarar. Yüzde: binlerce simülasyonda görevin başarılı olma şansı. Ayrıntı için karta tıkla.'
-          : 'Each card shows the real terrain. “GO 4/30”: landing works on 4 of the 30 days. The percentage: the chance the mission succeeds over thousands of simulations. Click a card for details.'}</p>}
+          ? (rankBy === 'prob'
+            ? '“UYGUN 4/30”: 30 iniş gününün 4’ünde görev işe yarar. “en iyi”: Güneş, Dünya bağlantısı ve batarya payı en iyi olan iniş günü. “şans”: 300 simüle görevin başarılı olan payı; son 13 robotik inişin yalnızca 8’i yüzeye ulaştığı için düşük. Neden için karta tıkla.'
+            : '“UYGUN 4/30”: 30 iniş gününün 4’ünde görev işe yarar. “en iyi”: Güneş, Dünya bağlantısı ve batarya payı en iyi olan iniş günü. Neden için karta tıkla.')
+          : (rankBy === 'prob'
+            ? '“GO 4/30”: the mission works if it lands on 4 of the 30 days. “best”: the landing day with the best mix of Sun, Earth contact and battery reserve. “odds”: the share of 300 simulated missions that succeed; low because only 8 of the last 13 robotic landings reached the surface. Click a card for why.'
+            : '“GO 4/30”: the mission works if it lands on 4 of the 30 days. “best”: the landing day with the best mix of Sun, Earth contact and battery reserve. Click a card for why.')}</p>}
         {cards.length === 0 ? <p className="s-empty">{tr ? 'Bu pencerede uygun nokta yok; başka bir ay veya görev deneyin.' : 'No site passes in this window; try another month or mission.'}</p> : (
           <div className="card-grid">
-            {cards.map((s) => <SiteCard key={s.r.index} s={s} lang={lang} onOpen={() => onOpen(s)} />)}
+            {cards.map((s) => <SiteCard key={s.r.index} s={s} lang={lang} showOdds={rankBy === 'prob'} onOpen={() => onOpen(s)} />)}
           </div>
         )}
         {polarCards.length > 0 && (
@@ -240,7 +244,7 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
               <h2>{tr ? 'Kutup bölgeleri' : 'Polar regions'}</h2>
               <span>{tr ? 'Ayrı sıralanır: ekvatorda Güneş zamanın yarısı görünür, kutuplarda ufku sıyırır' : 'Ranked apart: near the equator the Sun is up half the time, at the poles it skims the horizon'}</span>
             </div>
-            <div className="card-grid">{polarCards.map((s) => <SiteCard key={s.r.index} s={s} lang={lang} onOpen={() => onOpen(s)} />)}</div>
+            <div className="card-grid">{polarCards.map((s) => <SiteCard key={s.r.index} s={s} lang={lang} showOdds={rankBy === 'prob'} onOpen={() => onOpen(s)} />)}</div>
           </>
         )}
 

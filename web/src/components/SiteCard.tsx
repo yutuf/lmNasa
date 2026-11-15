@@ -49,7 +49,8 @@ export function useSiteImage(s: CardSite) {
   return img
 }
 
-export default function SiteCard({ s, lang, onOpen }: { s: CardSite; lang: Lang; onOpen: () => void }) {
+/** showOdds: the mission-odds badge, only when the list is ranked by it (alone, the number reads as nonsense). */
+export default function SiteCard({ s, lang, onOpen, showOdds = false }: { s: CardSite; lang: Lang; onOpen: () => void; showOdds?: boolean }) {
   const img = useSiteImage(s)
   const go = s.r.goCount > 0
   return (
@@ -62,9 +63,9 @@ export default function SiteCard({ s, lang, onOpen }: { s: CardSite; lang: Lang;
       </span>
       {img ? <img className="sc-img" src={img} alt="" /> : <span className="sc-img sc-img-wait" />}
       <span className="sc-foot">
-        <span className={`sc-go ${go ? 'go' : 'nogo'}`}>{verdictLabel(go, lang)} {s.r.goCount}/{s.row.windowDays}</span>
-        <span>{s.bestDate}</span>
-        {s.prob && <span className="sc-prob" title={lang === 'tr' ? 'Görev başarı olasılığı' : 'Mission success probability'}>{fmtPercent(s.prob.p * 100, lang)}</span>}
+        <span className={`sc-go ${go ? 'go' : 'nogo'}`} title={lang === 'tr' ? `Penceredeki ${s.row.windowDays} günün ${s.r.goCount}'inde iniş işe yarıyor` : `Landing works on ${s.r.goCount} of the ${s.row.windowDays} days in the window`}>{verdictLabel(go, lang)} {s.r.goCount}/{s.row.windowDays}</span>
+        <span>{lang === 'tr' ? 'en iyi' : 'best'} {s.bestDate}</span>
+        {showOdds && s.prob && <span className="sc-prob" title={lang === 'tr' ? '300 simüle görevin başarılı olan payı: fırlatma kayması, batarya yıpranması, ayak altındaki eğim ve son 13 robotik inişin 8’inin yüzeye ulaşması dahil' : 'Share of 300 simulated missions that succeed: launch slips, battery wear, the slope under the feet, and that 8 of the last 13 robotic landings reached the surface'}>{fmtPercent(s.prob.p * 100, lang)} {lang === 'tr' ? 'şans' : 'odds'}</span>}
       </span>
       {s.note && <span className="sc-note">{s.note}</span>}
     </button>

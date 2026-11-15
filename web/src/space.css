@@ -1024,3 +1024,6 @@ html.mission-film-open, html.mission-film-open body { overflow: hidden; height: 
   font-size: 15px; letter-spacing: .16em; text-transform: uppercase; color: #F3F2F5; }
 .logo { gap: 12px; }
 .live-brand .wordmark, .lj-brand .wordmark { font-size: 18px; }
+/* card footer: one line; the legend above the cards explains each label */
+.sc-foot { white-space: nowrap; }
+.sc-foot > span { white-space: nowrap; }

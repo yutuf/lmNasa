@@ -24,7 +24,7 @@ const LiveSession = lazy(() => import('./components/LiveSession'))
 const TradeOff = lazy(() => import('./components/TradeOff'))
 const ArtemisCompare = lazy(() => import('./components/Artemis'))
 import Patch from './components/Patch'
-import Present, { PRESENT_STEPS, type PresentId } from './components/Present'
+import Present, { type PresentView } from './components/Present'
 import SimpleView from './components/SimpleView'
 import { MissionBar, Ticker, type NextWindow } from './components/MissionBar'
 import CoordinateSearch from './components/CoordinateSearch'
@@ -243,10 +243,9 @@ export default function App() {
   const [orbitPanel, setOrbitPanel] = useState(false)
   const [historyPanel, setHistoryPanel] = useState(false)
   const [tour, setTour] = useState(() => /(^|[#&])tour=1/.test(location.hash))
-  // presentation mode: the step shown, or null; #present=1 starts it
-  const [present, setPresent] = useState<number | null>(() => (/(^|[#&])present=1/.test(location.hash) ? 0 : null))
-  const [liveOpen, setLiveOpen] = useState(false)
-  const presentEnter = useRef<(id: PresentId) => void>(() => {})
+  // presentation mode: the screen shown (judges' room, the app, the closing screen), or null; #present=1 starts it
+  const [present, setPresent] = useState<PresentView | null>(() => (/(^|[#&])present=1/.test(location.hash) ? 'room' : null))
+  const [room, setRoom] = useState({ joined: 0, planned: 0 })
   const [libration, setLibration] = useState(false)
   const [pinnedMission, setPinnedMission] = useState<MissionSnap | null>(null)
   const [satOrbit, setSatOrbit] = useState<Design['orbit'] | null>(null)
@@ -582,11 +581,6 @@ export default function App() {
   // a full-screen overlay pauses the canvases behind it (see overlayState.ts)
   const overlayOpen = film || workshop || lab || story || interview || sources || orbitPanel || historyPanel || libration || !!profile || !!drive
   useEffect(() => { setOverlayOpen(overlayOpen) }, [overlayOpen])
-  // presentation mode: re-enter a step whenever it changes (hooks stay above the loading return)
-  const latestCards = useRef(cards)
-  latestCards.current = cards
-  const loaded = !!(m && atlas && atlasPole)
-  useEffect(() => { if (present !== null && loaded) presentEnter.current(PRESENT_STEPS[present].id) }, [present, loaded])
   if (!m || !atlas || !atlasPole) return <><div className="loading"><Patch size={72} />AdaptLab<small>{lang === 'tr' ? 'NASA verisi yükleniyor…' : 'loading NASA data…'}</small></div></>
   const startDate = (s: number) => new Date(Date.parse(ran!.q.start + 'T00:00:00Z') + s * 86400e3)
   const fmtDate = (d: Date) => d.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' })
@@ -811,30 +805,6 @@ export default function App() {
           </section>
   )
 
-  // presentation: each step closes whatever is open and opens its own screen of the real app
-  presentEnter.current = (id: PresentId) => {
-    setProfile(null); setFilm(false); setHistoryPanel(false); setSources(false); setLab(false); setWorkshop(false)
-    setOrbitPanel(false); setStory(false); setTour(false); setLibration(false); setPhone(false); setInterview(false); setLiveOpen(false)
-    const scrollToSel = (sel: string | null) => setTimeout(() => {
-      if (!sel) { scrollTo({ top: 0, behavior: 'smooth' }); return }
-      document.querySelector(sel)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 250)
-    const best = () => latestCards.current.find((c) => c.r.goCount > 0) ?? latestCards.current[0]
-    const whenCards = (f: () => void, tries = 40) => { if (best()) f(); else if (tries > 0) setTimeout(() => whenCards(f, tries - 1), 250) }
-    if (id !== 'close') setUi(id === 'scale' ? 'advanced' : 'simple')   // the closing screen covers the app as it is
-    if (id === 'open' || id === 'scale' || id === 'close') scrollToSel(null)
-    else if (id === 'problem' || id === 'proof') setHistoryPanel(true)
-    else if (id === 'goal') {
-      // water ice on the 2 km south-pole grid (the pitch's 21,856 points, and the film's landing and rover scenes)
-      if (p.target !== 'kind:ice' || p.scope !== 'pole') { const next: Params = { ...p, target: 'kind:ice', scope: 'pole' }; setP(next); run(next) }
-      setTimeout(() => scrollToSel('.s-build'), 500)
-    }
-    else if (id === 'results') scrollToSel('#results')
-    else if (id === 'site') whenCards(() => setProfile(best()!))
-    else if (id === 'film') setFilm(true)
-    else if (id === 'live') setLiveOpen(true)
-  }
-
   return (
     <>
     <div className={`app ${drive ? 'driving' : ''}`}>
@@ -859,7 +829,7 @@ export default function App() {
         </nav>}
         {ui === 'advanced' && <button className="nav-ws" onClick={() => setLab(true)} aria-label={lang === 'tr' ? 'Karar' : 'Decide'}><Scale size={14} /> <span className="nav-label">{lang === 'tr' ? 'Karar' : 'Decide'}</span></button>}
         {ui === 'advanced' && <button className="nav-ws" onClick={() => setWorkshop(true)} aria-label={lang === 'tr' ? 'Atölye' : 'Workshop'}><Wrench size={14} /> <span className="nav-label">{lang === 'tr' ? 'Atölye' : 'Workshop'}</span></button>}
-        <button className="nav-ws nav-present" onClick={() => setPresent(0)} title={lang === 'tr' ? 'Sunum modu: uygulamada adım adım (PageDown / →)' : 'Presentation mode: step through the app (PageDown / →)'}><Presentation size={14} /> <span className="nav-label">{lang === 'tr' ? 'Sunum' : 'Present'}</span></button>
+        <button className="nav-ws nav-present" onClick={() => setPresent('room')} title={lang === 'tr' ? 'Sunum: önce hakemlerin QR’ı, sonra uygulama (PageDown / PageUp)' : 'Present: the judges’ QR first, then the app (PageDown / PageUp)'}><Presentation size={14} /> <span className="nav-label">{lang === 'tr' ? 'Sunum' : 'Present'}</span></button>
         <button className="nav-ws nav-qr" onClick={() => { location.hash = `judges&lang=${lang}` }} title={lang === 'tr' ? 'Jüri sayfası ve QR kodu' : 'Judges page and QR code'} aria-label="QR"><QrCode size={15} /></button>
         <button className="nav-ws nav-phone" onClick={() => setPhone(true)}><Smartphone size={14} /> <span className="nav-label">{lang === 'tr' ? 'Telefon' : 'Phone'}</span></button>
         <button className="nav-story" onClick={() => setFilm(true)} aria-label={lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}><Sparkles size={14} /> <span className="nav-label">{lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}</span></button>
@@ -1368,9 +1338,11 @@ export default function App() {
       })()}
       {interview && <MissionInterview lang={lang} onRun={runInterview} onClose={() => setInterview(false)} />}
       {present === null && <Luna lang={lang} context={lunaContext} onAction={onLuna} onPlan={() => setInterview(true)} />}
-      {liveOpen && <Suspense fallback={null}><LiveSession lang={lang} onClose={() => setLiveOpen(false)} /></Suspense>}
-      {present !== null && <Present lang={lang} step={present} onStep={setPresent}
-        onExit={() => { setPresent(null); setLiveOpen(false); setFilm(false); setHistoryPanel(false); setProfile(null) }} />}
+      {/* while presenting, the judges' room stays mounted (phones stay connected) and is only hidden on the other screens */}
+      {present !== null && <Suspense fallback={null}><LiveSession lang={lang} hidden={present !== 'room'} onClose={() => setPresent('app')}
+        onCount={(joined, planned) => setRoom({ joined, planned })} /></Suspense>}
+      {present !== null && <Present lang={lang} view={present} onView={setPresent} joined={room.joined} planned={room.planned}
+        onExit={() => { setPresent(null); setRoom({ joined: 0, planned: 0 }) }} />}
     </div>
     </>
   )

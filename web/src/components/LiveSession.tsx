@@ -59,7 +59,10 @@ function SpotArt({ spot }: { spot: Spot }) {
 }
 
 /** onClose: inside the app's presentation mode; on its own (#live) the close button clears the hash. */
-export default function LiveSession({ onClose, lang: appLang }: { onClose?: () => void; lang?: 'en' | 'tr' } = {}) {
+/** onClose / hidden / onCount: inside the app's presentation mode (the room stays mounted while hidden, so phones stay
+ *  connected). On its own (#live) the close button clears the hash. */
+export default function LiveSession({ onClose, lang: appLang, hidden = false, onCount }: {
+  onClose?: () => void; lang?: 'en' | 'tr'; hidden?: boolean; onCount?: (joined: number, planned: number) => void } = {}) {
   const lang: 'en' | 'tr' = appLang ?? (/lang=tr/.test(location.hash) ? 'tr' : 'en')
   const tr = lang === 'tr'
   const [code] = useState(liveCode)
@@ -136,6 +139,9 @@ export default function LiveSession({ onClose, lang: appLang }: { onClose?: () =
   const rankOf = (n: number) => ranked.findIndex((r) => r.p.n === n) + 1
   const planned = players.filter((p) => p.plan)
   const shown = planned.slice(-MAX_JUDGES)
+  const onCountRef = useRef(onCount)
+  onCountRef.current = onCount
+  useEffect(() => { onCountRef.current?.(players.length, planned.length) }, [players.length, planned.length])
   const waiting = players.length - planned.length
 
   const say = (p: PlanMsg, d: Duel) => {
@@ -182,7 +188,7 @@ export default function LiveSession({ onClose, lang: appLang }: { onClose?: () =
   )
 
   return (
-    <div className="live">
+    <div className={`live${hidden ? ' live-hidden' : ''}${shown.length === 0 ? ' live-start' : ''}`} aria-hidden={hidden || undefined}>
       <header className="live-head">
         <span className="live-brand"><Patch size={30} /> <b className="wordmark">AdaptLab</b> <span>· {tr ? 'Canlı oturum' : 'Live session'}</span></span>
         <span className="live-window">{tr ? 'İniş penceresi' : 'Landing window'} · {fmtDate(WINDOW.start)}–{fmtDate('2027-09-12')} 2027 · {tr ? 'Güney kutbu, 21.856 nokta' : 'South pole, 21,856 points'}</span>
@@ -210,7 +216,7 @@ export default function LiveSession({ onClose, lang: appLang }: { onClose?: () =
           <button className="live-test" onClick={addTest}><Plus size={16} /> {tr ? 'Test telefonu' : 'Test phone'}</button>
         </aside>
         <main className={`live-grid ${shown.length > 4 ? 'many' : 'few'}`}>
-          {shown.length === 0 && <p className="live-empty">{waiting ? (tr ? 'Hakemler planlıyor…' : 'Judges are planning…') : (tr ? 'Telefonlar bekleniyor…' : 'Waiting for phones…')}</p>}
+          {shown.length === 0 && <p className="live-empty">{waiting ? (tr ? `${waiting} hakem planlıyor…` : `${waiting} ${waiting === 1 ? 'judge is' : 'judges are'} planning…`) : (tr ? <>Kodu tara.<br />Bir iniş planla.<br />AdaptLab’ı yen.</> : <>Scan the code.<br />Plan a landing.<br />Beat AdaptLab.</>)}</p>}
           {shown.map((p) => {
             const plan = p.plan!, g = goalById(plan.goal)!, d = duels[p.n]
             const rank = rankOf(p.n)
