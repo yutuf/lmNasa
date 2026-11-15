@@ -5,7 +5,10 @@ import * as THREE from 'three'
 import { dataUrl } from '../data'
 import { surfacePoint, toThree } from '../geometry'
 import { NasaModel } from './Models'
-import { flightPath, type Approach } from '../flight'
+import type { Approach } from '../flight'
+import Flight from './RouteFlight'
+import { useMissionPlayback } from '../missionPlayback'
+import '../orbit-fix.css'
 
 export interface PoleCapInfo { albedo: string; normal: string; r_max_m: number; edge_lat: number }
 // `under`: a second layer drawn beneath this one (the whole-Moon map under the south-pole cap)
@@ -105,11 +108,17 @@ function CapMesh({ overlay, r }: { overlay: Overlay; r: number }) {
   )
 }
 
-function CameraFlight({ target, wide }: { target: THREE.Vector3 | null; wide: { earth: THREE.Vector3; normal: THREE.Vector3 } | null }) {
+function CameraFlight({ target, wide, whole = false, orbitRadius = null }: { target: THREE.Vector3 | null; wide: { earth: THREE.Vector3; normal: THREE.Vector3 } | null; whole?: boolean; orbitRadius?: number | null }) {
   const { camera } = useThree()
   const goal = useRef<{ pos: THREE.Vector3; look: THREE.Vector3 } | null>(null)
   const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3; update: () => void } | null
+  const aspect = useThree(s => s.size.width / s.size.height)
   useEffect(() => {
+    if (orbitRadius && !wide) {
+      const distance = orbitRadius * 3.6 / Math.min(1, aspect)
+      goal.current = { pos: new THREE.Vector3(.35, -.25, 1).normalize().multiplyScalar(distance), look: new THREE.Vector3() }
+      return
+    }
     if (wide) {
       // the whole Earth-Moon route: look at the middle of it from the side
       // look down onto the orbit plane (so the polar orbit is a ring, not a line), a little tilted, framing Earth too
@@ -121,14 +130,19 @@ function CameraFlight({ target, wide }: { target: THREE.Vector3 | null; wide: { 
     if (!target) return
     // fly to a point above the chosen spot, slightly to the side, and look at the spot itself
     const up = target.clone().normalize()
+    if (whole) {
+      goal.current = { pos: up.multiplyScalar(4.3), look: new THREE.Vector3() }
+      return
+    }
     const side = new THREE.Vector3(0, 0, 1).cross(up).normalize()
     goal.current = { pos: up.clone().multiplyScalar(1.3).add(side.multiplyScalar(0.22)), look: up.clone().multiplyScalar(0.99) }
-  }, [target, wide, controls])
-  useFrame(() => {
+  }, [target, wide, controls, whole, orbitRadius, aspect])
+  useFrame((_, dt) => {
     if (!goal.current) return
-    camera.position.lerp(goal.current.pos, 0.06)
+    const a = 1 - Math.exp(-dt * 6)
+    camera.position.lerp(goal.current.pos, a)
     if (controls) {
-      controls.target.lerp(goal.current.look, 0.06)
+      controls.target.lerp(goal.current.look, a)
       controls.update()
     }
     if (camera.position.distanceTo(goal.current.pos) < 0.003) goal.current = null
@@ -139,6 +153,7 @@ function CameraFlight({ target, wide }: { target: THREE.Vector3 | null; wide: { 
 /** NASA's Lunar Reconnaissance Orbiter in a polar orbit (size and altitude not to scale). */
 function Orbiter() {
   const g = useRef<THREE.Group>(null)
+  const tmp = useMemo(() => ({ p: new THREE.Vector3(), v: new THREE.Vector3() }), [])
   const ring = useMemo(() => {
     const pts = Array.from({ length: 129 }, (_, k) => {
       const a = (k / 128) * Math.PI * 2
@@ -149,10 +164,10 @@ function Orbiter() {
   useFrame(({ clock }) => {
     if (!g.current) return
     const a = clock.elapsedTime * 0.12
-    const p = new THREE.Vector3(Math.cos(a) * 1.16 * Math.cos(0.5), Math.sin(a) * 1.16, Math.cos(a) * 1.16 * Math.sin(0.5))
-    const v = new THREE.Vector3(-Math.sin(a) * Math.cos(0.5), Math.cos(a), -Math.sin(a) * Math.sin(0.5))
+    const p = tmp.p.set(Math.cos(a) * 1.16 * Math.cos(0.5), Math.sin(a) * 1.16, Math.cos(a) * 1.16 * Math.sin(0.5))
+    const v = tmp.v.set(-Math.sin(a) * Math.cos(0.5), Math.cos(a), -Math.sin(a) * Math.sin(0.5))
     g.current.position.copy(p)
-    g.current.lookAt(p.clone().add(v))
+    g.current.lookAt(v.add(p))
   })
   return (
     <>
@@ -207,7 +222,7 @@ function EarthBall() {
   return (
     <mesh rotation={[0.41, 0, 0]}>
       <sphereGeometry args={[0.28, 64, 32]} />
-      <meshStandardMaterial map={map} roughness={0.75} emissive="#0b1e3d" emissiveIntensity={0.35} />
+      <meshStandardMaterial map={map} roughness={1} />
       <Atmosphere radius={0.28} />
     </mesh>
   )
@@ -215,196 +230,76 @@ function EarthBall() {
 
 export type FlightView = 'overview' | 'chase' | 'pilot' | 'site'
 
-/** The spacecraft's route: trans-lunar coast, polar orbit over the site, powered descent; a craft flies it in a loop.
- *  In the follow views the camera rides along (chase, pilot) or watches from the landing site, the descent gets a
- *  bigger share of the loop so it can be followed, and a HUD element (#flight-hud) shows phase, altitude and time. */
-function Flight({ lat, lon, approach, earthDir, labels, view, start = 0, showLabel = true }: { lat: number; lon: number; approach: Approach; earthDir: THREE.Vector3; labels: [string, string, string, string]; view: FlightView; start?: number; showLabel?: boolean }) {
-  const f = useMemo(() => flightPath(lat, lon, earthDir, approach),
-    [lat, lon, earthDir.x, earthDir.y, earthDir.z, approach.headingDeg])  // eslint-disable-line react-hooks/exhaustive-deps
-  const lines = useMemo(() => {
-    const mk = (pts: THREE.Vector3[], color: string, opacity: number, dashed = false) => {
-      const g = new THREE.BufferGeometry().setFromPoints(pts)
-      const mat = dashed ? new THREE.LineDashedMaterial({ color, dashSize: 0.08, gapSize: 0.05, transparent: true, opacity })
-        : new THREE.LineBasicMaterial({ color, transparent: true, opacity })
-      const l = new THREE.Line(g, mat)
-      if (dashed) l.computeLineDistances()
-      return l
-    }
-    return [mk(f.transfer, '#60a5fa', 0.85, true), mk(f.orbit, '#a1a1aa', 0.22), mk(f.parking, '#e4e4e7', 0.7), mk(f.descent, '#fb923c', 1)]
-  }, [f])
-  const craft = useRef<THREE.Group>(null)
-  const label = useRef<HTMLDivElement>(null)
-  const { camera } = useThree()
-  const t0 = useRef<number | null>(null)
-  const follow = view !== 'overview'
-  useEffect(() => {
-    t0.current = null                                  // restart the loop when the view changes
-    const cam = camera as THREE.PerspectiveCamera
-    cam.near = follow ? 0.0002 : 0.01                  // the follow views come within a few km of the ground
-    cam.updateProjectionMatrix()
-    if (!follow) cam.up.set(0, 1, 0)
-    return () => { cam.near = 0.01; cam.up.set(0, 1, 0); cam.updateProjectionMatrix() }
-  }, [follow, view, camera])
-  const site = useMemo(() => surfacePoint(lat, lon, 1.004), [lat, lon])
-  const tmp = useMemo(() => ({ fwd: new THREE.Vector3(), up: new THREE.Vector3(), pos: new THREE.Vector3(), look: new THREE.Vector3(), q: new THREE.Quaternion(),
-    camLook: new THREE.Vector3(), camUp: new THREE.Vector3(0, 1, 0), started: false }), [])
-  // smooth curves through each phase, sampled by distance (constant speed within a phase, no corners)
-  const curves = useMemo(() => [f.transfer, f.parking, f.descent].map((pts) => new THREE.CatmullRomCurve3(pts, false, 'centripetal')), [f])
-  const plume = useRef<THREE.Sprite>(null)
-  const plumeTex = useMemo(() => {
-    const c = document.createElement('canvas'); c.width = c.height = 64
-    const x = c.getContext('2d')!
-    const g = x.createRadialGradient(32, 32, 0, 32, 32, 32)
-    g.addColorStop(0, 'rgba(255,240,200,1)'); g.addColorStop(0.35, 'rgba(255,160,60,0.6)'); g.addColorStop(1, 'rgba(255,120,40,0)')
-    x.fillStyle = g; x.fillRect(0, 0, 64, 64)
-    return new THREE.CanvasTexture(c)
-  }, [])
-  useFrame(({ clock }, dtRaw) => {
-    if (!craft.current) return
-    const dt = Math.min(dtRaw, 0.1)
-    if (t0.current === null) { t0.current = clock.elapsedTime; tmp.started = false }
-    // share of the loop per phase (the rest: landed); the follow views spend longer on the orbit and the descent
-    const T = view === 'overview' ? 16 : view === 'site' ? 22 : 32
-    const w = view === 'overview' ? [0.42, 0.28, 0.22] : view === 'site' ? [0.12, 0.2, 0.58] : [0.22, 0.3, 0.4]
-    const u = ((((clock.elapsedTime - t0.current) % T) / T) + start) % 1   // start: where in the loop to begin (film scenes)
-    let phase: number, s: number
-    if (u < w[0]) { phase = 0; s = u / w[0] }
-    else if (u < w[0] + w[1]) { phase = 1; s = (u - w[0]) / w[1] }
-    else if (u < w[0] + w[1] + w[2]) { phase = 2; s = (u - w[0] - w[1]) / w[2] }
-    else { phase = 3; s = 1 }
-    // the descent brakes: fast at the top, slow into touchdown; the coast eases in and out
-    const e = phase === 2 ? 1 - (1 - s) ** 2.2 : phase === 0 ? s * s * (3 - 2 * s) : s
-    const cv = curves[Math.min(2, phase)]
-    const p = cv.getPointAt(Math.min(1, e))
-    const { fwd, up, pos, look, q } = tmp
-    fwd.copy(cv.getTangentAt(Math.min(0.999, e))).normalize()
-    up.copy(p).normalize()
-    craft.current.position.copy(p)
-    // the lander model stands on its legs: +y along the local vertical
-    q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), up)
-    craft.current.quaternion.copy(q)
-    if (label.current) label.current.textContent = view === 'pilot' ? '' : labels[Math.min(2, phase)]
-    if (plume.current) {
-      // engine glow under the lander while it brakes, flickering a little
-      const on = phase === 2 && s < 0.995
-      plume.current.visible = on
-      const sz = (follow ? 0.004 : 0.02) * (0.8 + 0.3 * Math.random())
-      plume.current.scale.set(sz, sz, 1)
-      plume.current.position.copy(up).multiplyScalar(-(follow ? 0.0012 : 0.006))
-    }
-
-    // HUD: phase, altitude (orbit 100 km, the drawing is lifted for visibility) and time to touchdown
-    const hud = document.getElementById('flight-hud')
-    if (hud) {
-      const altKm = phase === 0 ? null : Math.max(0, ((p.length() - 1.004) / (1.09 - 1.004)) * 100)
-      hud.dataset.phase = phase === 3 ? 'landed' : String(phase)
-      hud.textContent = phase === 3 ? labels[3]
-        : phase === 0 ? `${labels[0]} · ${(e * 4.5).toFixed(1)} / ~4.5 d`
-        : phase === 1 ? `${labels[1]} · ${altKm!.toFixed(0)} km`
-        : `${labels[2]} · ${altKm! < 1 ? `${Math.round(altKm! * 1000)} m` : `${altKm!.toFixed(1)} km`} · T−${((1 - s) * 12).toFixed(1)} min`
-    }
-
-    if (!follow) return
-    if (view === 'chase') {
-      pos.copy(p).addScaledVector(fwd, -0.05).addScaledVector(up, phase === 2 ? 0.012 : 0.025)
-      look.copy(p).addScaledVector(fwd, 0.04)
-    } else if (view === 'pilot') {
-      // from the cockpit: ahead along the track, tipping down toward the ground as the descent goes on
-      const down = phase >= 2 ? 0.25 + 0.75 * Math.min(1, s) : phase === 1 ? 0.15 : 0
-      pos.copy(p).addScaledVector(up, 0.0004)
-      look.copy(p).addScaledVector(fwd, 0.1 * (1 - down)).addScaledVector(up, -0.1 * down)
-    } else {
-      // standing near the landing site, a little to the side, looking up at the craft
-      const side = new THREE.Vector3().crossVectors(up, fwd).normalize()
-      pos.copy(site).addScaledVector(site.clone().normalize(), 0.004).addScaledVector(side, 0.02).addScaledVector(fwd, 0.02)
-      look.copy(p)
-    }
-    // frame-rate independent smoothing for position, aim and roll (no snapping between path segments)
-    const a = (rate: number) => 1 - Math.exp(-dt * rate)
-    if (!tmp.started) { camera.position.copy(pos); tmp.camLook.copy(look); tmp.camUp.copy(up); tmp.started = true }
-    camera.position.lerp(pos, a(view === 'pilot' ? 14 : 5))
-    tmp.camLook.lerp(look, a(view === 'pilot' ? 10 : 6))
-    tmp.camUp.lerp(up, a(4)).normalize()
-    camera.up.copy(tmp.camUp)
-    camera.lookAt(tmp.camLook)
-  })
-  return (
-    <>
-      {lines.map((l, k) => <primitive key={k} object={l} />)}
-      <group ref={craft}>
-        {view === 'pilot' ? null : follow
-          ? <Suspense fallback={<mesh><sphereGeometry args={[0.002, 12, 12]} /><meshBasicMaterial color="#fde68a" /></mesh>}>
-              <NasaModel file="lander.glb" size={view === 'site' ? 0.004 : 0.003} shadows={false} />
-            </Suspense>
-          : <mesh><sphereGeometry args={[0.012, 12, 12]} /><meshBasicMaterial color="#fde68a" /></mesh>}
-        {showLabel && <Html center zIndexRange={[40, 0]} className="tag tag-craft"><div ref={label} /></Html>}
-        <sprite ref={plume} visible={false}><spriteMaterial map={plumeTex} transparent depthWrite={false} blending={THREE.AdditiveBlending} /></sprite>
-      </group>
-    </>
-  )
-}
-
 /** A satellite's orbit around the Moon at true scale (Moon radius = 1), with the satellite moving along it in Kepler
  *  time-lapse (one revolution in about 12 s). Periapsis over the north, apoapsis over the south, as in the Workshop. */
 function OrbitPath({ orbit }: { orbit: { periKm: number; apoKm: number; incDeg: number } }) {
   const R = 1737.4
+  const markerRadius = Math.max(.035, (1 + Math.max(orbit.periKm, orbit.apoKm) / R) * .012)
   const { line, at } = useMemo(() => {
     const rp = (R + Math.min(orbit.periKm, orbit.apoKm)) / R, ra = (R + Math.max(orbit.periKm, orbit.apoKm)) / R
     const a = (rp + ra) / 2, e = (ra - rp) / (ra + rp), inc = (orbit.incDeg * Math.PI) / 180, w = Math.PI / 2
-    const pos = (nu: number) => {
+    const pos = (nu: number, out: THREE.Vector3) => {
       const r = (a * (1 - e * e)) / (1 + e * Math.cos(nu)), u = nu + w
-      return toThree([r * Math.cos(u), r * Math.sin(u) * Math.cos(inc), r * Math.sin(u) * Math.sin(inc)])
+      return out.set(r * Math.cos(u), r * Math.sin(u) * Math.sin(inc), -r * Math.sin(u) * Math.cos(inc))
     }
-    const pts = Array.from({ length: 361 }, (_, k) => pos((k / 360) * 2 * Math.PI))
+    const pts = Array.from({ length: 361 }, (_, k) => pos((k / 360) * 2 * Math.PI, new THREE.Vector3()))
     const geo = new THREE.BufferGeometry().setFromPoints(pts)
     const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: '#ffb020', transparent: true, opacity: 0.85 }))
     // mean anomaly -> true anomaly, so the satellite speeds up near the Moon and lingers at the high point
-    const at = (frac: number) => {
+    const at = (frac: number, out: THREE.Vector3) => {
       const M = 2 * Math.PI * frac
       let E = M
       for (let i = 0; i < 8; i++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E))
-      return pos(2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2)))
+      return pos(2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2)), out)
     }
     return { line, at }
   }, [orbit])
   const sat = useRef<THREE.Mesh>(null)
-  useFrame(({ clock }) => { if (sat.current) sat.current.position.copy(at((clock.elapsedTime / 12) % 1)) })
+  useFrame(({ clock }) => { if (sat.current) at((clock.elapsedTime / 12) % 1, sat.current.position) })
   return (
     <>
       <primitive object={line} />
-      <mesh ref={sat}><sphereGeometry args={[0.035, 16, 12]} /><meshBasicMaterial color="#ffd27a" toneMapped={false} /></mesh>
+      <mesh ref={sat}><sphereGeometry args={[markerRadius, 16, 12]} /><meshBasicMaterial color="#ffd27a" toneMapped={false} /></mesh>
     </>
   )
 }
 
 export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthDir, earthLabel, onPick, flight, targets, onTarget, labels = true, paused = false, orbit = null }: Props & { paused?: boolean }) {
+  const playback = useMissionPlayback()
   const closeUp = !!flight && flight.view !== 'overview'
+  const orbitRadius = orbit ? 1 + Math.max(orbit.periKm, orbit.apoKm) / 1737.4 : null
   const sun = useMemo(() => toThree(sunDir).normalize(), [sunDir])
   const earth = useMemo(() => toThree(earthDir).normalize(), [earthDir])
-  const target = useMemo(() => (selected ? surfacePoint(selected.lat, selected.lon, 1) : surfacePoint(-89.9, 0, 1)),
-    [selected])
+  const globalLayer = !!(overlay?.under?.sphere || overlay?.sphere)
+  const globalViewLon = Math.atan2(sunDir[1], sunDir[0]) * 180 / Math.PI + 45
+  const target = useMemo(() => globalLayer
+    ? surfacePoint(10, globalViewLon, 1)
+    : selected ? surfacePoint(selected.lat, selected.lon, 1) : surfacePoint(-89.9, 0, 1),
+    [selected, globalLayer, globalViewLon])
   const flat = flight?.lat, flon = flight?.lon
   const wide = useMemo(() => {
     if (flat === undefined || flon === undefined) return null
-    const n = new THREE.Vector3().crossVectors(surfacePoint(-90, 0, 1), surfacePoint(flat, flon, 1)).normalize()
+    const n = new THREE.Vector3().crossVectors(surfacePoint(-90, 0, 1), surfacePoint(flat, flon, 1))
+    if (n.lengthSq() < 1e-8) n.set(1, 0, 0)
+    n.normalize()
     return { earth: earth.clone().multiplyScalar(5.2), normal: n }
   }, [flat, flon, earth.x, earth.y, earth.z])  // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <Canvas style={{ touchAction: 'pan-y' }} camera={{ position: [0.6, -3.6, 2.2], fov: 36, near: 0.01, far: 200 }} dpr={[1, 1.5]} frameloop={paused ? 'never' : 'always'} gl={{ alpha: true }} onCreated={({ gl, scene }) => { gl.debug.checkShaderErrors = import.meta.env.DEV; scene.background = null; gl.setClearColor(0x000000, 0) }}>
-      <SunGlow dir={sun} />
+    <><Canvas style={{ touchAction: 'pan-y', background: '#000' }} camera={{ position: [0.6, -3.6, 2.2], fov: 36, near: 0.01, far: Math.max(200, (orbitRadius ?? 1) * 20) }} dpr={[1, 1.5]} frameloop={paused ? 'never' : playback?.current.paused ? 'demand' : 'always'} gl={{ alpha: true }} onCreated={({ gl, scene }) => { gl.debug.checkShaderErrors = false; scene.background = null; gl.setClearColor(0x000000, 0) }}>
+      {(!orbit || flight) && <SunGlow dir={sun} />}
       <ambientLight intensity={0.05} />
-      <hemisphereLight args={['#6d7cff', '#000000', 0.12]} />
+      
       <directionalLight position={sun.clone().multiplyScalar(20)} intensity={3.2} color="#fff6e8" />
       <Moon />
       {orbit && <OrbitPath orbit={orbit} />}
       {poleCap && <PoleCap cap={poleCap} />}
       {overlay?.under && !closeUp && <OverlayCap overlay={overlay.under} />}
       {overlay && !closeUp && <OverlayCap overlay={overlay} r={overlay.under ? 1.0019 : 1.0014} />}
-      <group position={earth.clone().multiplyScalar(5.2)}>
+      {(!orbit || flight) && <group position={earth.clone().multiplyScalar(5.2)}>
         <Suspense fallback={null}><EarthBall /></Suspense>
         {labels && <Html center zIndexRange={[40, 0]} className="tag tag-earth">{earthLabel}</Html>}
-      </group>
-      {!closeUp && targets?.map((t) => (
+      </group>}
+      {!closeUp && !orbit && targets?.map((t) => (
         <group key={t.id} position={surfacePoint(t.lat, t.lon, 1.004)}>
           <mesh onClick={(e) => { e.stopPropagation(); onTarget?.(t.id) }}>
             <octahedronGeometry args={[t.selected ? 0.016 : 0.01, 0]} />
@@ -417,7 +312,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
           )}
         </group>
       ))}
-      {!closeUp && pins.map((p, k) => (
+      {!closeUp && !orbit && pins.map((p, k) => (
         <group key={k} position={surfacePoint(p.lat, p.lon, 1.003)}>
           <mesh onClick={(e) => { e.stopPropagation(); onPick?.(k) }}>
             <sphereGeometry args={[0.009, 12, 12]} />
@@ -431,7 +326,7 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
           )}
         </group>
       ))}
-      {selected && !closeUp && (
+      {selected && !closeUp && !orbit && (
         <group position={surfacePoint(selected.lat, selected.lon, 1.004)}>
           <mesh>
             <sphereGeometry args={[0.014, 16, 16]} />
@@ -440,9 +335,11 @@ export default function Globe({ poleCap, overlay, pins, selected, sunDir, earthD
           <Html center zIndexRange={[40, 0]} className="tag tag-spot">{selected.label}</Html>
         </group>
       )}
-      {flight ? <Flight {...flight} earthDir={earth} showLabel={labels} /> : <Orbiter />}
-      <OrbitControls makeDefault enabled={!flight || flight.view === 'overview'} enablePan={false} enableZoom={false} minDistance={1.06} maxDistance={flight ? 16 : 8} rotateSpeed={0.5} />
-      {(!flight || flight.view === 'overview') && <CameraFlight target={target} wide={wide} />}
-    </Canvas>
+      {flight ? <Flight {...flight} earthDir={earth} showLabel={labels} lang={earthLabel === 'Dünya' ? 'tr' : 'en'} /> : !orbit && <Orbiter />}
+      <OrbitControls makeDefault enabled={!flight || flight.view === 'overview'} enablePan={false} enableZoom={false} minDistance={1.06} maxDistance={orbitRadius ? orbitRadius * 10 : flight ? 16 : 8} rotateSpeed={0.5} />
+      {(!flight || flight.view === 'overview') && <CameraFlight target={target} wide={wide} whole={globalLayer} orbitRadius={orbitRadius} />}
+    </Canvas>{orbit && !flight && <p className="orbit-scale-note">{earthLabel === 'Dünya'
+      ? 'İki cisim şeması · irtifa ölçekli · araç büyütülmüş · tur başına 12 sn'
+      : 'Two-body schematic · altitude to scale · vehicle enlarged · 12 s/revolution'}</p>}</>
   )
 }

@@ -3,7 +3,7 @@
 import type { EllipseCheck } from '../ellipse'
 import { useEffect, useState } from 'react'
 import type { PointResult } from '../engine'
-import type { Lang } from '../i18n'
+import { fmtPercent, verdictLabel, type Lang } from '../i18n'
 import type { SiteRow } from '../report'
 import { renderSite } from '../siteRender'
 import { splitName } from '../teams'
@@ -14,6 +14,7 @@ export interface CardSite {
   row: SiteRow
   rank: number
   name: string
+  placeName?: string      // the feature inside `name`; the bold line is this, not the last word
   region: string | null
   colour: string
   xKm: number
@@ -24,6 +25,17 @@ export interface CardSite {
   prob?: Probability     // Monte Carlo mission success
   targetKm?: number      // distance to the nearest science target
   ellipse?: EllipseCheck | null   // worst case across the landing ellipse (south pole only)
+}
+
+/** The card and site-page title: light words, then the last word in the large face (as on the live site). */
+export function PlaceTitle({ text, light, bold }: { text: string; placeName?: string; light: string; bold: string }) {
+  const [l, b] = splitName(text)
+  return (
+    <>
+      {l && <span className={light}>{l}</span>}
+      <span className={bold}>{b}</span>
+    </>
+  )
 }
 
 export function useSiteImage(s: CardSite) {
@@ -39,22 +51,20 @@ export function useSiteImage(s: CardSite) {
 
 export default function SiteCard({ s, lang, onOpen }: { s: CardSite; lang: Lang; onOpen: () => void }) {
   const img = useSiteImage(s)
-  const [light, bold] = splitName(s.name)
   const go = s.r.goCount > 0
   return (
     <button className="site-card" style={{ ['--team' as string]: s.colour }} onClick={onOpen}
             aria-label={`${s.rank}. ${s.name}`}>
       <span className="sc-text">
-        {light && <span className="sc-first">{light}</span>}
-        <span className="sc-last">{bold}</span>
+        <PlaceTitle text={s.name} placeName={s.placeName} light="sc-first" bold="sc-last" />
         <span className="sc-region">{s.region ?? (lang === 'tr' ? 'Açık arazi' : 'Open terrain')}</span>
         <span className="sc-rank">{String(s.rank).padStart(2, '0')}</span>
       </span>
       {img ? <img className="sc-img" src={img} alt="" /> : <span className="sc-img sc-img-wait" />}
       <span className="sc-foot">
-        <span className={`sc-go ${go ? 'go' : 'nogo'}`}>{go ? 'GO' : 'NO-GO'} {s.r.goCount}/{s.row.windowDays}</span>
+        <span className={`sc-go ${go ? 'go' : 'nogo'}`}>{verdictLabel(go, lang)} {s.r.goCount}/{s.row.windowDays}</span>
         <span>{s.bestDate}</span>
-        {s.prob && <span className="sc-prob" title={lang === 'tr' ? 'Görev başarı olasılığı' : 'Mission success probability'}>{Math.round(s.prob.p * 100)}%</span>}
+        {s.prob && <span className="sc-prob" title={lang === 'tr' ? 'Görev başarı olasılığı' : 'Mission success probability'}>{fmtPercent(s.prob.p * 100, lang)}</span>}
       </span>
       {s.note && <span className="sc-note">{s.note}</span>}
     </button>

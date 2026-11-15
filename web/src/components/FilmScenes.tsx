@@ -115,7 +115,7 @@ export function WindowScene({ plan, landing, t, lang, reduce }: {
     const date = model.chosen ? `${model.chosen}. ` : ''
     if (tr) {
       return model.plan.known
-        ? `${tot} günden ${go} gün uygun. ${date}Yeşil günler GO, sönük günler NO-GO.`
+        ? `${tot} günden ${go} gün uygun. ${date}Yeşil günler UYGUN, sönük günler UYGUN DEĞİL.`
         : `${tot} günden ${go} gün uygun. ${date}Gün gün liste bu kartta yok; yalnızca seçilen tarih işaretli.`
     }
     return model.plan.known
@@ -144,8 +144,8 @@ export function WindowScene({ plan, landing, t, lang, reduce }: {
         </div>
       </div>
       <p className="fx-legend" aria-hidden>
-        <i className="go" /> GO
-        <i className="nogo" /> NO-GO
+        <i className="go" /> {tr ? 'UYGUN' : 'GO'}
+        <i className="nogo" /> {tr ? 'UYGUN DEĞİL' : 'NO-GO'}
         <i className="best" /> {tr ? 'seçilen gün' : 'chosen day'}
       </p>
       {!model.plan.known && (
@@ -246,7 +246,7 @@ export function EllipseScene({ ellipse, t, lang, reduce }: {
   const stats = [
     { k: 'sun', label: tr ? 'En az güneş' : 'Least sunlight', text: `${fmtNum(up(ellipse.worstSun, 0.16), 0, lang)}%`, color: 'var(--sun)' },
     { k: 'earth', label: tr ? 'En az Dünya bağlantısı' : 'Least Earth contact', text: `${fmtNum(up(ellipse.worstEarth, 0.24), 0, lang)}%`, color: 'var(--earth)' },
-    { k: 'dark', label: tr ? 'En uzun karanlık' : 'Longest darkness', text: `${fmtNum(up(ellipse.worstDarkH, 0.32), darkDigits, lang)} h`, color: '#9d7bff' },
+    { k: 'dark', label: tr ? 'En uzun karanlık' : 'Longest darkness', text: `${fmtNum(up(ellipse.worstDarkH, 0.32), darkDigits, lang)} ${tr ? 'sa' : 'h'}`, color: '#9d7bff' },
     { k: 'slope', label: tr ? 'En dik nokta' : 'Steepest point', text: `${fmtNum(up(ellipse.worstSlope, 0.4), 1, lang)}°`, color: 'var(--safe)' },
   ]
   return (

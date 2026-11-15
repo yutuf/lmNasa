@@ -46,10 +46,25 @@ export function MissionBar({ next, eph, startUnix, lang, onOpen }: { next: NextW
   )
 }
 
+/** Phone widths. The marquee is paused when CSS animation is off, so a narrow screen cycles one line at a time. */
+function useNarrow(query: string) {
+  const [on, setOn] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches)
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return
+    const mq = matchMedia(query)
+    const apply = () => setOn(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [query])
+  return on
+}
+
 export function Ticker({ eph, dsn, startUnix, lang, items }: { eph: Ephem; dsn: boolean[]; startUnix: number; lang: Lang; items: string[] }) {
   const now = useNow(60000)
   const hr = (now / 1000 - startUnix) / 3600
   const tr = lang === 'tr'
+  const narrow = useNarrow('(max-width: 760px)')
   const live: string[] = []
   if (hr >= 0 && hr < eph.n - 1) {
     const pole = localSky(eph, 0, 1, hr)
@@ -64,11 +79,22 @@ export function Ticker({ eph, dsn, startUnix, lang, items }: { eph: Ephem; dsn: 
       `NASA DSN ${dsn[h] ? (tr ? 'AY’I GÖRÜYOR' : 'HAS THE MOON IN VIEW') : (tr ? 'AY’I GÖRMÜYOR' : 'CANNOT SEE THE MOON')}`)
   }
   const all = [...live, ...items]
+  const signature = all.join('\u0001')
+  const [cursor, setCursor] = useState(0)
+  useEffect(() => { setCursor(0) }, [signature])
+  useEffect(() => {
+    if (!narrow || all.length < 2) return
+    const id = window.setInterval(() => setCursor((n) => n + 1), 3200)
+    return () => window.clearInterval(id)
+  }, [narrow, signature, all.length])
   const row = all.map((t, k) => <span key={k}>{t}</span>)
+  const line = all.length ? all[cursor % all.length] : ''
   return (
     <div className="ticker" aria-label={tr ? 'Canlı veriler' : 'Live data'}>
-      <span className="ticker-tag">LIVE</span>
-      <div className="ticker-track"><div className="ticker-run">{row}{row}</div></div>
+      <span className="ticker-tag">{tr ? 'CANLI' : 'LIVE'}</span>
+      {narrow
+        ? <div className="ticker-track ticker-cycle"><span className="ticker-line">{line}</span></div>
+        : <div className="ticker-track"><div className="ticker-run">{row}{row}</div></div>}
     </div>
   )
 }

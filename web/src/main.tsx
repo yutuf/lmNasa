@@ -2,6 +2,7 @@ import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import './space.css'
+import './release-fixes.css'
 import { lazyOverlay } from './lazyOverlay.tsx'
 
 // each route's code loads only when that route is opened (the judges page from a QR code stays light)

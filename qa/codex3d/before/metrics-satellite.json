@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "mode": "desktop-satellite-elfo",
+      "fps": 37.349667587937674,
+      "frames": [
+        "before\\desktop-satellite-elfo-01.png",
+        "before\\desktop-satellite-elfo-02.png",
+        "before\\desktop-satellite-elfo-03.png",
+        "before\\desktop-satellite-elfo-04.png",
+        "before\\desktop-satellite-elfo-05.png",
+        "before\\desktop-satellite-elfo-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "phone-satellite-elfo",
+      "fps": 91.92596098746779,
+      "frames": [
+        "before\\phone-satellite-elfo-01.png",
+        "before\\phone-satellite-elfo-02.png",
+        "before\\phone-satellite-elfo-03.png",
+        "before\\phone-satellite-elfo-04.png",
+        "before\\phone-satellite-elfo-05.png",
+        "before\\phone-satellite-elfo-06.png"
+      ],
+      "hud": []
+    }
+  ],
+  "errors": []
+}

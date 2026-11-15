@@ -420,3 +420,24 @@ export function ellipseDots(points: number, go: number): EllipseDot[] {
   }
   return dots
 }
+
+/** Judge cut and the longer technical insert. Durations are wall-clock seconds. */
+export const FILM_DUR = {
+  title: 4, launch: 6, window: 6, coast: 5, descent: 6, landing: 10, site: 6, ellipse: 6, rover: 7, odds: 6, verdict: 5,
+} as const
+
+export type FilmSceneId = keyof typeof FILM_DUR
+
+/** Default is the short judge cut. Technical adds the window, the site board, the ellipse and the odds. */
+export function filmScenes(technical: boolean, opts: { landing: boolean; rover: boolean; ellipse: boolean; odds: boolean }): FilmSceneId[] {
+  const landing = opts.landing ? ['landing' as const] : []
+  const rover = opts.rover ? ['rover' as const] : []
+  if (!technical) return ['title', 'launch', 'coast', 'descent', ...landing, ...rover, 'verdict']
+  const ellipse = opts.ellipse ? ['ellipse' as const] : []
+  const odds = opts.odds ? ['odds' as const] : []
+  return ['title', 'launch', 'window', 'coast', 'descent', ...landing, 'site', ...ellipse, ...rover, ...odds, 'verdict']
+}
+
+export function filmRuntime(ids: readonly FilmSceneId[]) {
+  return ids.reduce((n, id) => n + FILM_DUR[id], 0)
+}

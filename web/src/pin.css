@@ -1,0 +1,36 @@
+/* Coordinate row. Sits in the sidebar or under the simple question. Black field, one red action. */
+
+.pin-search { display: grid; gap: 8px; color: var(--text, #fff); }
+
+.pin-label {
+  display: flex; align-items: flex-start; gap: 8px; cursor: pointer;
+  font-size: 13.5px; font-weight: 600; line-height: 1.35;
+}
+.pin-label svg { color: var(--red, #e10600); flex: none; margin-top: 2px; }
+
+.pin-row { display: flex; gap: 8px; align-items: center; }
+
+.pin-input {
+  flex: 1; min-width: 0; height: 40px; padding: 0 12px; border-radius: 8px;
+  border: 1px solid var(--border-2, #5e5e72); background: #000; color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.pin-input::placeholder { color: var(--text-3, #a8a8b6); }
+.pin-input:focus-visible { border-color: var(--red, #e10600); }
+
+.pin-go {
+  flex: none; height: 40px; padding: 0 14px; border: 0; border-radius: 8px; cursor: pointer;
+  background: var(--red, #e10600); color: #fff;
+  font-family: var(--display, 'Saira', 'Inter', system-ui, sans-serif);
+  font-stretch: 112%; font-weight: 800; font-size: 13px; letter-spacing: .04em; text-transform: uppercase;
+}
+.pin-go:hover { background: #ff1a10; }
+
+.pin-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pin-chip {
+  border: 1px solid var(--border-2, #5e5e72); background: var(--surface-2, #2a2a36); color: var(--text, #fff);
+  border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-weight: 600;
+}
+.pin-chip:hover { border-color: var(--red, #e10600); color: #fff; }
+
+.pin-error { margin: 0; color: var(--nogo, #ff5050); font-size: 12.5px; font-weight: 600; line-height: 1.35; }

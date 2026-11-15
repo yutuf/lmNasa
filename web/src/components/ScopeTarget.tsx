@@ -1,6 +1,6 @@
 // Where the search looks (the south-pole grid or the whole Moon) and what the mission goes for (a science target).
 import type { Lang } from '../i18n'
-import { SCIENCE_KIND, SCIENCE_SITES, inPoleGrid, type ScienceSite } from '../scienceSites'
+import { SCIENCE_KIND, SCIENCE_SITES, inPoleGrid, siteLabel, type ScienceSite } from '../scienceSites'
 
 export default function ScopeTarget({ lang, scope, target, onScope, onTarget }: {
   lang: Lang; scope: 'pole' | 'moon'; target: string; onScope: (s: 'pole' | 'moon') => void; onTarget: (t: ScienceSite | null) => void
@@ -25,7 +25,7 @@ export default function ScopeTarget({ lang, scope, target, onScope, onTarget }: 
           {SCIENCE_SITES.map((s) => (
             <button key={s.id} className={sel?.id === s.id ? 'on' : ''} style={{ ['--k' as string]: SCIENCE_KIND[s.kind].colour }}
                     onClick={() => onTarget(s)} title={s.why[lang]}>
-              <i />{s.name}{!inPoleGrid(s) && scope === 'pole' ? ' ↗' : ''}
+              <i />{siteLabel(s, lang)}{!inPoleGrid(s) && scope === 'pole' ? ' ↗' : ''}
             </button>
           ))}
         </div>

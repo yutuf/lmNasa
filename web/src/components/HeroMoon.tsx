@@ -12,7 +12,7 @@ function Horizon() {
   albedo.colorSpace = THREE.SRGBColorSpace
   albedo.anisotropy = 8                      // stays sharp where the sphere is seen at a grazing angle
   const m = useRef<THREE.Mesh>(null)
-  useFrame((_, dt) => { if (m.current) m.current.rotation.x += dt * 0.004 })
+  useFrame((_, dt) => { if (m.current) m.current.rotation.x += dt * .004 })
   return (
     <mesh ref={m} position={[0, -10.75, -5]} rotation={[0.4, 0.8, 0]}>
       <sphereGeometry args={[10, 256, 128]} />
@@ -38,13 +38,14 @@ function Earth() {
   map.colorSpace = THREE.SRGBColorSpace
   map.anisotropy = 8                      // stays sharp where the sphere is seen at a grazing angle
   const e = useRef<THREE.Mesh>(null)
-  useFrame((_, dt) => { if (e.current) e.current.rotation.y += dt * 0.05 })
+  // Decorative Earthrise: restore the owner's preferred live composition and motion.
+  useFrame((_, dt) => { if (e.current) e.current.rotation.y += dt * .05 })
   return (
     <group position={[6.2, 2.6, -15]}>
       <sprite scale={[3.6, 3.6, 1]}><spriteMaterial map={earthGlow} transparent depthWrite={false} blending={THREE.AdditiveBlending} /></sprite>
       <mesh ref={e} rotation={[0.4, 2.2, 0.2]}>
         <sphereGeometry args={[0.8, 64, 48]} />
-        <meshStandardMaterial map={map} roughness={0.7} />
+        <meshStandardMaterial map={map} roughness={.7} />
       </mesh>
     </group>
   )
@@ -66,10 +67,10 @@ export default function HeroMoon() {
     <div className="hero-sky" aria-hidden="true" ref={box}>
       <Canvas camera={{ position: [0, 0, 0], fov: 40 }} dpr={[1, 1.25]} gl={{ alpha: true, antialias: true }} frameloop={seen && !covered ? 'always' : 'never'}
         onCreated={({ camera, gl }) => { gl.debug.checkShaderErrors = false; camera.lookAt(0, 0.35, -10) }}>
-        <hemisphereLight args={['#2a2a2a', '#000000', 0.2]} />
+        <hemisphereLight args={['#2a2a2a', '#000000', .2]} />
         {/* the Sun low on the left: rakes across the horizon (long shadows) and lights Earth's left half */}
         <directionalLight position={[-10, 1.4, -3]} intensity={4.4} color="#ffe2c4" />
-        <directionalLight position={[5, 2, 4]} intensity={0.35} color="#7aa6ff" />
+        <directionalLight position={[5, 2, 4]} intensity={.35} color="#7aa6ff" />
         <sprite position={[-12, 0.3, -16]} scale={[8, 8, 1]}><spriteMaterial map={sunGlow} transparent depthWrite={false} blending={THREE.AdditiveBlending} /></sprite>
         <Suspense fallback={null}>
           <Horizon />

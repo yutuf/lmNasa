@@ -1,0 +1,453 @@
+{
+  "results": [
+    {
+      "mode": "desktop-hero",
+      "fps": 41.554692943136295,
+      "frames": [
+        "before\\desktop-hero-01.png",
+        "before\\desktop-hero-02.png",
+        "before\\desktop-hero-03.png",
+        "before\\desktop-hero-04.png",
+        "before\\desktop-hero-05.png",
+        "before\\desktop-hero-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "desktop-film-title",
+      "fps": 149.74251287435627,
+      "frames": [
+        "before\\desktop-film-title-01.png",
+        "before\\desktop-film-title-02.png",
+        "before\\desktop-film-title-03.png",
+        "before\\desktop-film-title-04.png",
+        "before\\desktop-film-title-05.png",
+        "before\\desktop-film-title-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "desktop-film-launch",
+      "fps": 93.14918773908293,
+      "frames": [
+        "before\\desktop-film-launch-01.png",
+        "before\\desktop-film-launch-02.png",
+        "before\\desktop-film-launch-03.png",
+        "before\\desktop-film-launch-04.png",
+        "before\\desktop-film-launch-05.png",
+        "before\\desktop-film-launch-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "desktop-film-window",
+      "fps": 162.64834478438846,
+      "frames": [
+        "before\\desktop-film-window-01.png",
+        "before\\desktop-film-window-02.png",
+        "before\\desktop-film-window-03.png",
+        "before\\desktop-film-window-04.png",
+        "before\\desktop-film-window-05.png",
+        "before\\desktop-film-window-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "desktop-film-coast",
+      "fps": 163.9262331949706,
+      "frames": [
+        "before\\desktop-film-coast-01.png",
+        "before\\desktop-film-coast-02.png",
+        "before\\desktop-film-coast-03.png",
+        "before\\desktop-film-coast-04.png",
+        "before\\desktop-film-coast-05.png",
+        "before\\desktop-film-coast-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "desktop-film-descent",
+      "fps": 94.1299842699856,
+      "frames": [
+        "before\\desktop-film-descent-01.png",
+        "before\\desktop-film-descent-02.png",
+        "before\\desktop-film-descent-03.png",
+        "before\\desktop-film-descent-04.png",
+        "before\\desktop-film-descent-05.png",
+        "before\\desktop-film-descent-06.png"
+      ],
+      "hud": [
+        "Descent · 50.4 km · T−6.7 min"
+      ]
+    },
+    {
+      "mode": "desktop-film-landing",
+      "fps": 33.63480080721025,
+      "frames": [
+        "before\\desktop-film-landing-01.png",
+        "before\\desktop-film-landing-02.png",
+        "before\\desktop-film-landing-03.png",
+        "before\\desktop-film-landing-04.png",
+        "before\\desktop-film-landing-05.png",
+        "before\\desktop-film-landing-06.png"
+      ],
+      "hud": [
+        "ALTITUDE 1 m · RANGE 1 m · T−2 s"
+      ]
+    },
+    {
+      "mode": "desktop-film-site",
+      "fps": 44.92318383754843,
+      "frames": [
+        "before\\desktop-film-site-01.png",
+        "before\\desktop-film-site-02.png",
+        "before\\desktop-film-site-03.png",
+        "before\\desktop-film-site-04.png",
+        "before\\desktop-film-site-05.png",
+        "before\\desktop-film-site-06.png"
+      ],
+      "hud": [
+        "CONTACT LIGHT · TOUCHDOWN"
+      ]
+    },
+    {
+      "mode": "desktop-film-ellipse",
+      "fps": 60.18680385594014,
+      "frames": [
+        "before\\desktop-film-ellipse-01.png",
+        "before\\desktop-film-ellipse-02.png",
+        "before\\desktop-film-ellipse-03.png",
+        "before\\desktop-film-ellipse-04.png",
+        "before\\desktop-film-ellipse-05.png",
+        "before\\desktop-film-ellipse-06.png"
+      ],
+      "hud": [
+        "CONTACT LIGHT · TOUCHDOWN"
+      ]
+    },
+    {
+      "mode": "desktop-film-rover",
+      "fps": 54.56855953953102,
+      "frames": [
+        "before\\desktop-film-rover-01.png",
+        "before\\desktop-film-rover-02.png",
+        "before\\desktop-film-rover-03.png",
+        "before\\desktop-film-rover-04.png",
+        "before\\desktop-film-rover-05.png",
+        "before\\desktop-film-rover-06.png"
+      ],
+      "hud": [
+        "CONTACT LIGHT · TOUCHDOWN"
+      ]
+    },
+    {
+      "mode": "desktop-film-odds",
+      "fps": 164.01627680546045,
+      "frames": [
+        "before\\desktop-film-odds-01.png",
+        "before\\desktop-film-odds-02.png",
+        "before\\desktop-film-odds-03.png",
+        "before\\desktop-film-odds-04.png",
+        "before\\desktop-film-odds-05.png",
+        "before\\desktop-film-odds-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "desktop-film-verdict",
+      "fps": 164.7129395885311,
+      "frames": [
+        "before\\desktop-film-verdict-01.png",
+        "before\\desktop-film-verdict-02.png",
+        "before\\desktop-film-verdict-03.png",
+        "before\\desktop-film-verdict-04.png",
+        "before\\desktop-film-verdict-05.png",
+        "before\\desktop-film-verdict-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "desktop-route-overview",
+      "fps": 164.8681055155259,
+      "frames": [
+        "before\\desktop-route-overview-01.png",
+        "before\\desktop-route-overview-02.png",
+        "before\\desktop-route-overview-03.png",
+        "before\\desktop-route-overview-04.png",
+        "before\\desktop-route-overview-05.png",
+        "before\\desktop-route-overview-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "desktop-landing",
+      "fps": 54.79725017432446,
+      "frames": [
+        "before\\desktop-landing-01.png",
+        "before\\desktop-landing-02.png",
+        "before\\desktop-landing-03.png",
+        "before\\desktop-landing-04.png",
+        "before\\desktop-landing-05.png",
+        "before\\desktop-landing-06.png"
+      ],
+      "hud": [
+        "CONTACT LIGHT · TOUCHDOWN"
+      ]
+    },
+    {
+      "mode": "desktop-rover",
+      "fps": 39.57783641158748,
+      "frames": [
+        "before\\desktop-rover-01.png",
+        "before\\desktop-rover-02.png",
+        "before\\desktop-rover-03.png",
+        "before\\desktop-rover-04.png",
+        "before\\desktop-rover-05.png",
+        "before\\desktop-rover-06.png"
+      ],
+      "hud": [
+        ""
+      ]
+    },
+    {
+      "mode": "desktop-walk",
+      "fps": 70.23836210115999,
+      "frames": [
+        "before\\desktop-walk-01.png",
+        "before\\desktop-walk-02.png",
+        "before\\desktop-walk-03.png",
+        "before\\desktop-walk-04.png",
+        "before\\desktop-walk-05.png",
+        "before\\desktop-walk-06.png"
+      ],
+      "hud": [
+        ""
+      ]
+    },
+    {
+      "mode": "phone-hero",
+      "fps": 163.00549176232613,
+      "frames": [
+        "before\\phone-hero-01.png",
+        "before\\phone-hero-02.png",
+        "before\\phone-hero-03.png",
+        "before\\phone-hero-04.png",
+        "before\\phone-hero-05.png",
+        "before\\phone-hero-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "phone-film-title",
+      "fps": 164.91342045420012,
+      "frames": [
+        "before\\phone-film-title-01.png",
+        "before\\phone-film-title-02.png",
+        "before\\phone-film-title-03.png",
+        "before\\phone-film-title-04.png",
+        "before\\phone-film-title-05.png",
+        "before\\phone-film-title-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "phone-film-launch",
+      "fps": 163.39787632720424,
+      "frames": [
+        "before\\phone-film-launch-01.png",
+        "before\\phone-film-launch-02.png",
+        "before\\phone-film-launch-03.png",
+        "before\\phone-film-launch-04.png",
+        "before\\phone-film-launch-05.png",
+        "before\\phone-film-launch-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "phone-film-window",
+      "fps": 164.9381481943043,
+      "frames": [
+        "before\\phone-film-window-01.png",
+        "before\\phone-film-window-02.png",
+        "before\\phone-film-window-03.png",
+        "before\\phone-film-window-04.png",
+        "before\\phone-film-window-05.png",
+        "before\\phone-film-window-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "phone-film-coast",
+      "fps": 164.43422630947626,
+      "frames": [
+        "before\\phone-film-coast-01.png",
+        "before\\phone-film-coast-02.png",
+        "before\\phone-film-coast-03.png",
+        "before\\phone-film-coast-04.png",
+        "before\\phone-film-coast-05.png",
+        "before\\phone-film-coast-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "phone-film-descent",
+      "fps": 165.0436953806511,
+      "frames": [
+        "before\\phone-film-descent-01.png",
+        "before\\phone-film-descent-02.png",
+        "before\\phone-film-descent-03.png",
+        "before\\phone-film-descent-04.png",
+        "before\\phone-film-descent-05.png",
+        "before\\phone-film-descent-06.png"
+      ],
+      "hud": [
+        "Descent · 51.9 km · T−6.9 min"
+      ]
+    },
+    {
+      "mode": "phone-film-landing",
+      "fps": 123.62328613164607,
+      "frames": [
+        "before\\phone-film-landing-01.png",
+        "before\\phone-film-landing-02.png",
+        "before\\phone-film-landing-03.png",
+        "before\\phone-film-landing-04.png",
+        "before\\phone-film-landing-05.png",
+        "before\\phone-film-landing-06.png"
+      ],
+      "hud": [
+        "ALTITUDE 1 m · RANGE 1 m · T−2 s"
+      ]
+    },
+    {
+      "mode": "phone-film-site",
+      "fps": 54.97800879644054,
+      "frames": [
+        "before\\phone-film-site-01.png",
+        "before\\phone-film-site-02.png",
+        "before\\phone-film-site-03.png",
+        "before\\phone-film-site-04.png",
+        "before\\phone-film-site-05.png",
+        "before\\phone-film-site-06.png"
+      ],
+      "hud": [
+        "CONTACT LIGHT · TOUCHDOWN"
+      ]
+    },
+    {
+      "mode": "phone-film-ellipse",
+      "fps": 90.009225322263,
+      "frames": [
+        "before\\phone-film-ellipse-01.png",
+        "before\\phone-film-ellipse-02.png",
+        "before\\phone-film-ellipse-03.png",
+        "before\\phone-film-ellipse-04.png",
+        "before\\phone-film-ellipse-05.png",
+        "before\\phone-film-ellipse-06.png"
+      ],
+      "hud": [
+        "CONTACT LIGHT · TOUCHDOWN"
+      ]
+    },
+    {
+      "mode": "phone-film-rover",
+      "fps": 56.42101058518067,
+      "frames": [
+        "before\\phone-film-rover-01.png",
+        "before\\phone-film-rover-02.png",
+        "before\\phone-film-rover-03.png",
+        "before\\phone-film-rover-04.png",
+        "before\\phone-film-rover-05.png",
+        "before\\phone-film-rover-06.png"
+      ],
+      "hud": [
+        "CONTACT LIGHT · TOUCHDOWN"
+      ]
+    },
+    {
+      "mode": "phone-film-odds",
+      "fps": 97.70114942528735,
+      "frames": [
+        "before\\phone-film-odds-01.png",
+        "before\\phone-film-odds-02.png",
+        "before\\phone-film-odds-03.png",
+        "before\\phone-film-odds-04.png",
+        "before\\phone-film-odds-05.png",
+        "before\\phone-film-odds-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "phone-film-verdict",
+      "fps": 151.70448865329098,
+      "frames": [
+        "before\\phone-film-verdict-01.png",
+        "before\\phone-film-verdict-02.png",
+        "before\\phone-film-verdict-03.png",
+        "before\\phone-film-verdict-04.png",
+        "before\\phone-film-verdict-05.png",
+        "before\\phone-film-verdict-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "phone-route-overview",
+      "fps": 152.44664367465697,
+      "frames": [
+        "before\\phone-route-overview-01.png",
+        "before\\phone-route-overview-02.png",
+        "before\\phone-route-overview-03.png",
+        "before\\phone-route-overview-04.png",
+        "before\\phone-route-overview-05.png",
+        "before\\phone-route-overview-06.png"
+      ],
+      "hud": []
+    },
+    {
+      "mode": "phone-landing",
+      "fps": 50.449550449522214,
+      "frames": [
+        "before\\phone-landing-01.png",
+        "before\\phone-landing-02.png",
+        "before\\phone-landing-03.png",
+        "before\\phone-landing-04.png",
+        "before\\phone-landing-05.png",
+        "before\\phone-landing-06.png"
+      ],
+      "hud": [
+        "ALTITUDE 0 m · RANGE 0 m · T−1 s"
+      ]
+    },
+    {
+      "mode": "phone-rover",
+      "fps": 34.77569675591132,
+      "frames": [
+        "before\\phone-rover-01.png",
+        "before\\phone-rover-02.png",
+        "before\\phone-rover-03.png",
+        "before\\phone-rover-04.png",
+        "before\\phone-rover-05.png",
+        "before\\phone-rover-06.png"
+      ],
+      "hud": [
+        ""
+      ]
+    },
+    {
+      "mode": "phone-walk",
+      "fps": 52.13400184586382,
+      "frames": [
+        "before\\phone-walk-01.png",
+        "before\\phone-walk-02.png",
+        "before\\phone-walk-03.png",
+        "before\\phone-walk-04.png",
+        "before\\phone-walk-05.png",
+        "before\\phone-walk-06.png"
+      ],
+      "hud": [
+        ""
+      ]
+    }
+  ],
+  "errors": []
+}

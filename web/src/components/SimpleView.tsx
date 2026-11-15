@@ -3,14 +3,14 @@
 // advanced interface.
 import { useEffect, useState } from 'react'
 import { Box, CalendarCheck, History, Orbit, PlayCircle, CalendarDays, Car, ChevronDown, Clapperboard, Eye, Flag, Flame, Globe2, Hourglass, Info, Magnet, MoonStar, Percent, Rocket, Scale, ShieldCheck, SlidersHorizontal, Snowflake, Target, Telescope, Tent, Timer, Users, Wrench, Zap, type LucideIcon } from 'lucide-react'
-import type { Lang } from '../i18n'
+import { fmtPercent, type Lang } from '../i18n'
 import { SCENARIOS, type Scenario } from '../scenarios'
-import { LANDERS, ROVERS, type Lander } from '../vehicles'
-import { GOALS, SCIENCE_KIND, SCIENCE_SITES, type ScienceKind } from '../scienceSites'
+import { LANDERS, ROVERS, roverFitsLander, type Lander } from '../vehicles'
+import { GOALS, SCIENCE_KIND, SCIENCE_SITES, siteLabel, type ScienceKind } from '../scienceSites'
 import { polarXY } from '../places'
 import { renderSite } from '../siteRender'
 import HeroMoon from './HeroMoon'
-import { CLPS, type ClpsMission } from '../clps'
+import { CLPS, clpsChipWhen, type ClpsMission } from '../clps'
 import MissionCompare, { type MissionSnap } from './MissionCompare'
 import SiteCard, { type CardSite } from './SiteCard'
 import VehiclePhoto from './VehiclePhoto'
@@ -51,18 +51,22 @@ function GoalRender({ goal, lang }: { goal: ScienceKind | null; lang: Lang }) {
   }, [site])
   if (!site) return null
   const tr = lang === 'tr'
+  const example = goal == null
+  const label = siteLabel(site, lang)
+  const span = site.lat < -84.6 ? (tr ? 'Gerçek LOLA arazisi · 60 km' : 'Real LOLA terrain · 60 km across') : (tr ? 'Gerçek LOLA arazisi · 120 km' : 'Real LOLA terrain · 120 km across')
   return (
     <figure className="s-goal-render">
       {img?.id === site.id ? <img src={img.url} alt="" /> : <span className="s-goal-wait" />}
       <figcaption>
-        <b>{site.name}</b>
-        <span>{site.lat < -84.6 ? (tr ? 'Gerçek LOLA arazisi · 60 km' : 'Real LOLA terrain · 60 km across') : (tr ? 'Gerçek LOLA arazisi · 120 km' : 'Real LOLA terrain · 120 km across')}</span>
+        <b>{example ? (tr ? 'Örnek arazi' : 'Example terrain') : label}</b>
+        <span>{example ? (tr ? `${label}: bu bir örnek, arama sonucu değil. ` : `${label}: an example, not the search result. `) : ''}{span}</span>
       </figcaption>
     </figure>
   )
 }
 
-export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, busy, progress, cards, windowLabel, onScenario, onStart, onRun, onOpen, onAdvanced, lander, rover, onLander, onRover, onStory, onDecide, onWorkshop, onSources, onMission, onOrbits, onHistory, onTour, onLibration, pinned, current, onPin, onClearPin, polarCards, points, targetName, scope, goal, onScope, onGoal, rankBy, onRankBy }: {
+export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, busy, progress, cards, windowLabel, onScenario, onStart, onRun, onOpen, onDrive, onAdvanced, lander, rover, onLander, onRover, onStory, onDecide, onWorkshop, onSources, onMission, onOrbits, onHistory, onTour, onLibration, pinned, current, onPin, onClearPin, polarCards, points, targetName, scope, goal, onScope, onGoal, rankBy, onRankBy }: {
+  onDrive: (site: CardSite) => void
   rankBy: 'go' | 'prob'; onRankBy: (v: 'go' | 'prob') => void
   polarCards: CardSite[]; points: number; targetName: string | null
   scope: 'pole' | 'moon'; goal: ScienceKind | null; onScope: (s: 'pole' | 'moon') => void; onGoal: (k: ScienceKind | null) => void
@@ -72,6 +76,7 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
   lang: Lang; scenarioId: string | null; start: string; minDate: string; maxDate: string; busy: boolean; progress: number | null
   cards: CardSite[]; windowLabel: string; onScenario: (s: Scenario) => void; onStart: (d: string) => void; onRun: () => void
   onOpen: (s: CardSite) => void; onAdvanced: () => void
+  onCoordinate?: (lat: number, lon: number) => void
 }) {
   const tr = lang === 'tr'
   const [more, setMore] = useState(false)
@@ -133,20 +138,21 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
               <label className="s-date"><span><CalendarDays size={13} /> {tr ? 'Şu tarihten itibaren' : 'From'}</span>
                 <input type="date" value={start} min={minDate} max={maxDate} onChange={(e) => e.target.value && onStart(e.target.value)} /></label>
               <button className="btn primary s-run" onClick={onRun} disabled={busy}>
-                {busy ? `${tr ? 'Aranıyor' : 'Searching'} ${Math.round((progress ?? 0) * 100)}%` : <><Rocket size={17} /> {tr ? 'İniş yerlerini bul' : 'Find landing sites'}</>}
+                {busy ? `${tr ? 'Aranıyor' : 'Searching'} ${fmtPercent(Math.round((progress ?? 0) * 100), lang)}` : <><Rocket size={17} /> {tr ? 'İniş yerlerini bul' : 'Find landing sites'}</>}
               </button>
             </div>
             <p className="s-help"><Info size={15} />{tr ? 'Sonraki birkaç hafta içindeki her iniş günü denenir.' : 'Every landing day in the following weeks is tried.'}</p>
           </li>
         </ol>
 
+
         <div className="s-clps">
           <span><Rocket size={15} /> {tr ? 'Ya da gerçek bir NASA CLPS görevini dene:' : 'Or try a real NASA CLPS mission:'}</span>
           <div>{CLPS.map((m) => {
             const site = SCIENCE_SITES.find((x) => x.id === m.target)
             return (
-              <button key={m.id} onClick={() => onMission(m)} title={m.note[lang]}>
-                <b>{m.name}</b><small>{m.company} · {m.year} · {site?.name}</small>
+              <button key={m.id} onClick={() => onMission(m)} title={`${clpsChipWhen(m, lang, minDate)}. ${m.note[lang]}`}>
+                <b>{m.name}</b><small>{m.company} · {m.year} · {site ? siteLabel(site, lang) : ''}</small>
               </button>
             )
           })}</div>
@@ -183,7 +189,7 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
             <div className="s-vrow">
               <span className="s-vlabel"><Car size={13} /> {tr ? 'Gezgin' : 'Rover'}</span>
               <div className="s-vchips" role="radiogroup" aria-label={tr ? 'Gezgin' : 'Rover'}>
-                {ROVERS.map((r) => (
+                {ROVERS.filter((r) => roverFitsLander(lander, r.id)).map((r) => (
                   <button key={r.id} role="radio" aria-checked={rover === r.id} className={rover === r.id ? 'on' : ''} onClick={() => onRover(r.id)} title={r.pitch[lang]}>
                     <VehiclePhoto kind="rover" id={r.id} alt="" className="vchip-img" />
                     <b>{r.name}</b><span>{r.maker} · {r.maxSpeed >= 1 ? `${(r.maxSpeed * 3.6).toFixed(0)} km/h` : `${Math.round(r.maxSpeed * 100)} cm/s`}</span>
@@ -191,6 +197,9 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
                 ))}
               </div>
             </div>
+            <p className="s-vnote">{lander === 'hls'
+              ? (tr ? 'HLS + gezgin: kavramsal plan; kargo yerleşimi ve indirme sistemi doğrulanmadı.' : 'HLS + rover: conceptual plan; cargo fit and deployment are not verified.')
+              : (tr ? 'Gezgin seçimi iniş aracının görev eşleşmesiyle sınırlandırılır: Vikram–Pragyan, Apollo–LRV.' : 'Rover choices follow mission pairings: Vikram–Pragyan, Apollo–LRV.')}</p>
             <button className="s-model-bay" onClick={() => setShowModelBay(true)}>
               <span className="s-model-bay-icon"><Box size={17} /></span>
               <span><b>{tr ? '3D model galerisi' : 'Open the 3D model gallery'}<small>{tr ? 'Apollo LM · Vikram · Starship · Pragyan · Yutu-2 · LRO' : 'Apollo LM · Vikram · Starship · Pragyan · Yutu-2 · LRO'}</small></b></span>
@@ -203,6 +212,12 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
       {showModelBay && <VehicleShowroom lang={lang} onClose={() => setShowModelBay(false)} />}
 
       <section className="s-results" id="results">
+        {cards[0] && <div className="s-rover-access">
+          <button className="btn primary" disabled={scope !== 'pole'} onClick={() => onDrive(cards[0])}><Car size={17} /> {tr ? `${roverName ?? 'Gezgin'} sür` : `Drive ${roverName ?? 'the rover'}`}</button>
+          <p className="s-vnote">{scope === 'pole'
+            ? (tr ? 'İlk sonuçta sürüşü açar. W/S: sür · A/D: dön · P: rota planla.' : 'Drive at the first result. W/S: drive · A/D: steer · P: plan a route.')
+            : (tr ? 'Gezgin sürüş arazisi yalnızca güney kutbunda mevcut. Sürmek için kapsamı Güney kutbu yapın.' : 'Rover driving terrain is available at the south pole. Choose South pole to drive.')}</p>
+        </div>}
         <div className="s-head">
           <h2>{targetName ? (tr ? `${targetName} için en iyi iniş yerleri` : `Best landing sites for ${targetName}`) : polarCards.length ? (tr ? 'En iyi iniş yerleri · kutuplar dışında' : 'Top landing sites · away from the poles') : (tr ? 'En iyi iniş yerleri' : 'Top landing sites')}</h2>
           <span>{windowLabel}</span>
@@ -212,7 +227,7 @@ export default function SimpleView({ lang, scenarioId, start, minDate, maxDate, 
           </div>
         </div>
         {cards.length > 0 && <p className="s-help s-legend"><Info size={15} />{tr
-          ? 'Her kart gerçek araziyi gösterir. “GO 4/30”: 30 günün 4’ünde iniş işe yarar. Yüzde: binlerce simülasyonda görevin başarılı olma şansı. Ayrıntı için karta tıkla.'
+          ? 'Her kart gerçek araziyi gösterir. “UYGUN 4/30”: 30 günün 4’ünde iniş işe yarar. Yüzde: binlerce simülasyonda görevin başarılı olma şansı. Ayrıntı için karta tıkla.'
           : 'Each card shows the real terrain. “GO 4/30”: landing works on 4 of the 30 days. The percentage: the chance the mission succeeds over thousands of simulations. Click a card for details.'}</p>}
         {cards.length === 0 ? <p className="s-empty">{tr ? 'Bu pencerede uygun nokta yok; başka bir ay veya görev deneyin.' : 'No site passes in this window; try another month or mission.'}</p> : (
           <div className="card-grid">

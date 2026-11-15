@@ -2,6 +2,7 @@
 // Parsing lives in interview.ts and works with the network off. /api/ask may fill a missing date, length, or ice goal.
 import { useEffect, useRef, useState } from 'react'
 import { ArrowUp, Pencil, Rocket, Sparkles, X } from 'lucide-react'
+import { fmtWhText } from '../i18n'
 import '../interview.css'
 import {
   acknowledge,
@@ -262,19 +263,19 @@ export default function MissionInterview({ lang, onRun, onClose }: {
           {bubbles.map((bubble, index) => (
             <div className="mi-turn" key={`${index}-${bubble.who}`}>
               {bubble.text && (
-                <div className={`mi-bubble ${bubble.who}`}>
+                <div className={`mi-bubble mi-${bubble.who}`}>
                   <p>{bubble.text}</p>
                 </div>
               )}
               {bubble.card && (
                 <article className="mi-card">
                   <h3>{bubble.card.title}</h3>
-                  <p className="mi-body">{bubble.card.body}</p>
+                  <p className="mi-body">{fmtWhText(bubble.card.body, lang)}</p>
                   <div className="mi-rows">
                     {bubble.card.rows.map((row) => (
                       <div key={row.key}>
                         <small>{row.label}</small>
-                        <b>{row.value}</b>
+                        <b>{fmtWhText(row.value, lang)}</b>
                       </div>
                     ))}
                   </div>
@@ -283,7 +284,7 @@ export default function MissionInterview({ lang, onRun, onClose }: {
             </div>
           ))}
           {busy && (
-            <div className="mi-bubble luna mi-typing" aria-hidden="true">
+            <div className="mi-bubble mi-luna mi-typing" aria-hidden="true">
               <p><i /><i /><i /></p>
             </div>
           )}

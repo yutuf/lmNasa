@@ -1,0 +1,586 @@
+{
+  "rows": [
+    {
+      "id": "en-360x740-moon",
+      "shot": "139-en-360x740-moon.png",
+      "scopeShot": "138-en-360x740-moon-scope.png",
+      "before": {
+        "sel": ".st-scope button:nth-child(2)",
+        "missing": false,
+        "text": "WHOLE MOON",
+        "x": 128,
+        "y": 355,
+        "w": 111,
+        "h": 29,
+        "inView": true,
+        "covered": false,
+        "hitName": "BUTTON.",
+        "hitText": "WHOLE MOON",
+        "offX": false
+      },
+      "facts": {
+        "scope": [
+          {
+            "text": "SOUTH POLE",
+            "checked": "false"
+          },
+          {
+            "text": "WHOLE MOON",
+            "checked": "true"
+          }
+        ],
+        "more": "More optionsWhole Moon · Vikram + Pragyan",
+        "heads": [
+          "TOP LANDING SITES · AWAY FROM THE POLES Solar lander · 14 days · 1 Sept 2027 + 30 days MOST GOOD DAYS BEST ODDS",
+          "POLAR REGIONS Ranked apart: near the equator the Sun is up half the time, at the poles it skims the horizon"
+        ],
+        "cardCount": 14,
+        "cards": [
+          "16.5 km NW of Simpelius B Open terrain 01 GO 4/30 9 Sept 2027 40%",
+          "on Le Gentil A Open terrain 02 GO 3/30 12 Sept 2027 49%",
+          "20.1 km S of Pingre rim Open terrain 03 GO 3/30 15 Sept 2027 40%",
+          "5.0 km NW of Epimenides S Open terrain 04 GO 3/30 11 Sept 2027 38%"
+        ],
+        "empty": null,
+        "searching": false
+      },
+      "audit": {
+        "overflow": {
+          "scrollWidth": 360,
+          "innerWidth": 360,
+          "innerHeight": 740,
+          "clientWidth": 360,
+          "delta": 0
+        },
+        "nav": {
+          "w": 360,
+          "right": 360,
+          "maxChildRight": 348,
+          "kids": [
+            {
+              "text": "",
+              "x": 12,
+              "r": 46,
+              "w": 34
+            },
+            {
+              "text": "SIMPLE ADVANCED",
+              "x": 54,
+              "r": 217,
+              "w": 163
+            },
+            {
+              "text": "Tell me the mission",
+              "x": 225,
+              "r": 259,
+              "w": 34
+            },
+            {
+              "text": "EN TR",
+              "x": 268,
+              "r": 348,
+              "w": 80
+            }
+          ]
+        },
+        "controls": [],
+        "cut": [],
+        "overlaps": [
+          {
+            "a": "SIMPLE",
+            "b": "on Simpelius D Open terrain 10 GO 3/30 8 Sept 2027 40%",
+            "acls": "on",
+            "bcls": "site-card",
+            "frac": 80
+          },
+          {
+            "a": "ADVANCED",
+            "b": "on Simpelius D Open terrain 10 GO 3/30 8 Sept 2027 40%",
+            "acls": "",
+            "bcls": "site-card",
+            "frac": 80
+          },
+          {
+            "a": "EN",
+            "b": "on Simpelius D Open terrain 10 GO 3/30 8 Sept 2027 40%",
+            "acls": "on",
+            "bcls": "site-card",
+            "frac": 83
+          },
+          {
+            "a": "TR",
+            "b": "on Simpelius D Open terrain 10 GO 3/30 8 Sept 2027 40%",
+            "acls": "",
+            "bcls": "site-card",
+            "frac": 62
+          },
+          {
+            "a": "NEXT GO WINDOW 7 SEPT – 10 SEPT 2027",
+            "b": "on Simpelius D Open terrain 10 GO 3/30 8 Sept 2027 40%",
+            "acls": "mb-next",
+            "bcls": "site-card",
+            "frac": 98
+          },
+          {
+            "a": "NEXT GO WINDOW 7 SEPT – 10 SEPT 2027",
+            "b": "on Simpelius D Open terrain 10",
+            "acls": "mb-next",
+            "bcls": "sc-text",
+            "frac": 70
+          },
+          {
+            "a": "NEXT GO WINDOW 7 SEPT – 10 SEPT 2027",
+            "b": "on",
+            "acls": "mb-next",
+            "bcls": "sc-first",
+            "frac": 100
+          },
+          {
+            "a": "NEXT GO WINDOW",
+            "b": "on Simpelius D Open terrain 10 GO 3/30 8 Sept 2027 40%",
+            "acls": "mb-label",
+            "bcls": "site-card",
+            "frac": 100
+          },
+          {
+            "a": "NEXT GO WINDOW",
+            "b": "on Simpelius D Open terrain 10",
+            "acls": "mb-label",
+            "bcls": "sc-text",
+            "frac": 71
+          },
+          {
+            "a": "7 SEPT – 10 SEPT 2027",
+            "b": "on Simpelius D Open terrain 10 GO 3/30 8 Sept 2027 40%",
+            "acls": "mb-dates",
+            "bcls": "site-card",
+            "frac": 100
+          },
+          {
+            "a": "7 SEPT – 10 SEPT 2027",
+            "b": "on Simpelius D Open terrain 10",
+            "acls": "mb-dates",
+            "bcls": "sc-text",
+            "frac": 92
+          },
+          {
+            "a": "7 SEPT – 10 SEPT 2027",
+            "b": "on",
+            "acls": "mb-dates",
+            "bcls": "sc-first",
+            "frac": 85
+          }
+        ],
+        "aria": [
+          {
+            "label": "LunaNav",
+            "title": null,
+            "cls": "[object SVGAnimatedString]"
+          },
+          {
+            "label": "Interface",
+            "title": null,
+            "cls": "ui-switch"
+          },
+          {
+            "label": "Tell me the mission",
+            "title": null,
+            "cls": "nav-story"
+          },
+          {
+            "label": "Language",
+            "title": null,
+            "cls": "seg"
+          },
+          {
+            "label": "9. E rim of Clavius",
+            "title": null,
+            "cls": "site-card"
+          },
+          {
+            "label": "10. on Simpelius D",
+            "title": null,
+            "cls": "site-card"
+          },
+          {
+            "label": null,
+            "title": "Mission success probability",
+            "cls": "sc-prob"
+          },
+          {
+            "label": "1. NW rim of Drygalski",
+            "title": null,
+            "cls": "site-card"
+          },
+          {
+            "label": null,
+            "title": "Mission success probability",
+            "cls": "sc-prob"
+          },
+          {
+            "label": "2. 15.6 km E of Casatus E",
+            "title": null,
+            "cls": "site-card"
+          }
+        ],
+        "lines": [
+          "Simple",
+          "Advanced",
+          "EN",
+          "TR",
+          "NEXT GO WINDOW",
+          "7 SEPT – 10 SEPT 2027",
+          "T−",
+          "297",
+          "DAYS",
+          "on",
+          "Simpelius D",
+          "Open terrain",
+          "10",
+          "GO",
+          "30",
+          "8 Sept 2027",
+          "40%",
+          "Polar regions",
+          "Ranked apart: near the equator the Sun is up half the time, at the poles it skims the horizon",
+          "NW rim of",
+          "Drygalski",
+          "Open terrain",
+          "01",
+          "GO",
+          "30",
+          "16 Sept 2027",
+          "54%",
+          "15.6 km E of",
+          "Casatus E",
+          "Ask Luna"
+        ],
+        "bg": [],
+        "coarse": true,
+        "hoverNone": true,
+        "viteError": null
+      },
+      "fps": {
+        "frames": 465,
+        "seconds": 3.01,
+        "fps": 154.7,
+        "canvases": [
+          {
+            "w": 360,
+            "h": 420,
+            "y": -5944
+          },
+          {
+            "w": 360,
+            "h": 474,
+            "y": 3419
+          }
+        ]
+      },
+      "console": [],
+      "pageerror": [],
+      "net": []
+    },
+    {
+      "id": "tr-360x740-moon",
+      "shot": "142-tr-360x740-moon.png",
+      "scopeShot": "141-tr-360x740-moon-scope.png",
+      "before": {
+        "sel": ".st-scope button:nth-child(2)",
+        "missing": false,
+        "text": "TÜM AY",
+        "x": 243,
+        "y": 356,
+        "w": 68,
+        "h": 29,
+        "inView": true,
+        "covered": false,
+        "hitName": "BUTTON.",
+        "hitText": "TÜM AY",
+        "offX": false
+      },
+      "facts": {
+        "scope": [
+          {
+            "text": "GÜNEY KUTBU",
+            "checked": "false"
+          },
+          {
+            "text": "TÜM AY",
+            "checked": "true"
+          }
+        ],
+        "more": "Diğer seçeneklerTüm Ay · Vikram + Pragyan",
+        "heads": [
+          "EN IYI INIŞ YERLERI · KUTUPLAR DIŞINDA Güneş enerjili iniş aracı · 14 gün · 1 Eyl 2027 + 30 gün EN ÇOK UYGUN GÜN EN YÜKSEK BAŞARI",
+          "KUTUP BÖLGELERI Ayrı sıralanır: ekvatorda Güneş zamanın yarısı görünür, kutuplarda ufku sıyırır"
+        ],
+        "cardCount": 14,
+        "cards": [
+          "Simpelius B 16,5 km KB Açık arazi 01 UYGUN 4/30 9 Eyl 2027 %40",
+          "Le Gentil A üzerinde Açık arazi 02 UYGUN 3/30 12 Eyl 2027 %49",
+          "Pingre kenarının 20,1 km G Açık arazi 03 UYGUN 3/30 15 Eyl 2027 %40",
+          "Epimenides S 5,0 km KB Açık arazi 04 UYGUN 3/30 11 Eyl 2027 %38"
+        ],
+        "empty": null,
+        "searching": false
+      },
+      "audit": {
+        "overflow": {
+          "scrollWidth": 360,
+          "innerWidth": 360,
+          "innerHeight": 740,
+          "clientWidth": 360,
+          "delta": 0
+        },
+        "nav": {
+          "w": 360,
+          "right": 360,
+          "maxChildRight": 348,
+          "kids": [
+            {
+              "text": "",
+              "x": 12,
+              "r": 46,
+              "w": 34
+            },
+            {
+              "text": "BASIT GELIŞMIŞ",
+              "x": 54,
+              "r": 199,
+              "w": 145
+            },
+            {
+              "text": "Görevi anlat",
+              "x": 207,
+              "r": 241,
+              "w": 34
+            },
+            {
+              "text": "EN TR",
+              "x": 268,
+              "r": 348,
+              "w": 80
+            }
+          ]
+        },
+        "controls": [],
+        "cut": [],
+        "overlaps": [
+          {
+            "a": "SONRAKİ UYGUN PENCERE 7 EYL – 10 EYL 2027",
+            "b": "Simpelius D üzerinde Açık arazi 10 UYGUN 3/30 8 Eyl 2027 %40",
+            "acls": "mb-next",
+            "bcls": "site-card",
+            "frac": 98
+          },
+          {
+            "a": "SONRAKİ UYGUN PENCERE 7 EYL – 10 EYL 2027",
+            "b": "Simpelius D üzerinde Açık arazi 10",
+            "acls": "mb-next",
+            "bcls": "sc-text",
+            "frac": 43
+          },
+          {
+            "a": "SONRAKİ UYGUN PENCERE",
+            "b": "Simpelius D üzerinde Açık arazi 10 UYGUN 3/30 8 Eyl 2027 %40",
+            "acls": "mb-label",
+            "bcls": "site-card",
+            "frac": 100
+          },
+          {
+            "a": "7 EYL – 10 EYL 2027",
+            "b": "Simpelius D üzerinde Açık arazi 10 UYGUN 3/30 8 Eyl 2027 %40",
+            "acls": "mb-dates",
+            "bcls": "site-card",
+            "frac": 100
+          },
+          {
+            "a": "7 EYL – 10 EYL 2027",
+            "b": "Simpelius D üzerinde Açık arazi 10",
+            "acls": "mb-dates",
+            "bcls": "sc-text",
+            "frac": 73
+          },
+          {
+            "a": "T− 297 GÜN",
+            "b": "Simpelius D üzerinde Açık arazi 10 UYGUN 3/30 8 Eyl 2027 %40",
+            "acls": "",
+            "bcls": "site-card",
+            "frac": 89
+          },
+          {
+            "a": "297",
+            "b": "Simpelius D üzerinde Açık arazi 10 UYGUN 3/30 8 Eyl 2027 %40",
+            "acls": "",
+            "bcls": "site-card",
+            "frac": 89
+          },
+          {
+            "a": "GÜN",
+            "b": "Simpelius D üzerinde Açık arazi 10 UYGUN 3/30 8 Eyl 2027 %40",
+            "acls": "",
+            "bcls": "site-card",
+            "frac": 84
+          },
+          {
+            "a": "Casatus E 15,6 km D Açık arazi 02 UYGUN 4/30 13 Eyl 2027 %46",
+            "b": "Luna'ya sor",
+            "acls": "site-card",
+            "bcls": "luna-fab ",
+            "frac": 97
+          }
+        ],
+        "aria": [
+          {
+            "label": "LunaNav",
+            "title": null,
+            "cls": "[object SVGAnimatedString]"
+          },
+          {
+            "label": "Arayüz",
+            "title": null,
+            "cls": "ui-switch"
+          },
+          {
+            "label": "Görevi anlat",
+            "title": null,
+            "cls": "nav-story"
+          },
+          {
+            "label": "Language",
+            "title": null,
+            "cls": "seg"
+          },
+          {
+            "label": "9. Clavius krater kenarı, D",
+            "title": null,
+            "cls": "site-card"
+          },
+          {
+            "label": null,
+            "title": "Görev başarı olasılığı",
+            "cls": "sc-prob"
+          },
+          {
+            "label": "10. Simpelius D üzerinde",
+            "title": null,
+            "cls": "site-card"
+          },
+          {
+            "label": null,
+            "title": "Görev başarı olasılığı",
+            "cls": "sc-prob"
+          },
+          {
+            "label": "1. Drygalski krater kenarı, KB",
+            "title": null,
+            "cls": "site-card"
+          },
+          {
+            "label": null,
+            "title": "Görev başarı olasılığı",
+            "cls": "sc-prob"
+          },
+          {
+            "label": "2. Casatus E 15,6 km D",
+            "title": null,
+            "cls": "site-card"
+          }
+        ],
+        "lines": [
+          "Basit",
+          "Gelişmiş",
+          "EN",
+          "TR",
+          "SONRAKİ UYGUN PENCERE",
+          "7 EYL – 10 EYL 2027",
+          "T−",
+          "297",
+          "GÜN",
+          "UYGUN",
+          "30",
+          "9 Eyl 2027",
+          "%41",
+          "Simpelius D",
+          "üzerinde",
+          "Açık arazi",
+          "10",
+          "UYGUN",
+          "30",
+          "8 Eyl 2027",
+          "%40",
+          "Kutup bölgeleri",
+          "Ayrı sıralanır: ekvatorda Güneş zamanın yarısı görünür, kutuplarda ufku sıyırır",
+          "Drygalski",
+          "krater kenarı, KB",
+          "Açık arazi",
+          "01",
+          "UYGUN",
+          "30",
+          "16 Eyl 2027",
+          "%54",
+          "Casatus E",
+          "15,6 km D",
+          "Luna'ya sor"
+        ],
+        "bg": [],
+        "coarse": true,
+        "hoverNone": true,
+        "viteError": null
+      },
+      "fps": {
+        "frames": 471,
+        "seconds": 3.06,
+        "fps": 154.1,
+        "canvases": [
+          {
+            "w": 360,
+            "h": 420,
+            "y": -5835
+          },
+          {
+            "w": 360,
+            "h": 474,
+            "y": 3382
+          }
+        ]
+      },
+      "console": [],
+      "pageerror": [],
+      "net": []
+    }
+  ],
+  "log": [
+    {
+      "fail": "en-390x844-moon",
+      "error": "sers\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\_sync_base.py\", line 124, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"C:\\Users\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\channel_owner.py\", line 387, in finish\n    raise e from None\n  File \"C:\\Users\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\channel_owner.py\", line 352, in finish\n    result = await zone.run_async(lambda: awaitable)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\utils\\zones.py\", line 58, in run_async\n    return await func()\n           ^^^^^^^^^^^^\n  File \"C:\\Users\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\locator.py\", line 763, in scroll_into_view_if_needed\n    return await self._with_element(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\locator.py\", line 162, in _with_element\n    result = await self._frame._channel.waitForSelector(\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\channel_owner.py\", line 398, in _mapped\n    return mapper(await awaitable)\n                  ^^^^^^^^^^^^^^^\nplaywright._impl._errors.TimeoutError: Locator.scroll_into_view_if_needed: Timeout 20000ms exceeded.\nCall log:\n  - waiting for locator(\".st-scope\")\n\n",
+      "shot": "137-en-390x844-moon-error.png",
+      "console": [
+        {
+          "flow": "moon",
+          "type": "error",
+          "text": "Attempted to synchronously unmount a root while React was already rendering. React cannot finish unmounting the root until the current render has completed, which may lead to a race condition."
+        },
+        {
+          "flow": "moon",
+          "type": "error",
+          "text": "Attempted to synchronously unmount a root while React was already rendering. React cannot finish unmounting the root until the current render has completed, which may lead to a race condition."
+        }
+      ],
+      "pageerror": [],
+      "net": []
+    },
+    {
+      "fail": "tr-390x844-moon",
+      "error": "sers\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\_sync_base.py\", line 124, in _sync\n    return task.result()\n           ^^^^^^^^^^^^^\n  File \"C:\\Users\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\channel_owner.py\", line 387, in finish\n    raise e from None\n  File \"C:\\Users\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\channel_owner.py\", line 352, in finish\n    result = await zone.run_async(lambda: awaitable)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\utils\\zones.py\", line 58, in run_async\n    return await func()\n           ^^^^^^^^^^^^\n  File \"C:\\Users\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\locator.py\", line 763, in scroll_into_view_if_needed\n    return await self._with_element(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\locator.py\", line 162, in _with_element\n    result = await self._frame._channel.waitForSelector(\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\kayma\\Desktop\\lmNasa Lunar\\.venv\\Lib\\site-packages\\playwright\\_impl\\channel_owner.py\", line 398, in _mapped\n    return mapper(await awaitable)\n                  ^^^^^^^^^^^^^^^\nplaywright._impl._errors.TimeoutError: Locator.scroll_into_view_if_needed: Timeout 20000ms exceeded.\nCall log:\n  - waiting for locator(\".st-scope\")\n\n",
+      "shot": "140-tr-390x844-moon-error.png",
+      "console": [],
+      "pageerror": [],
+      "net": []
+    },
+    {
+      "console_tail": "see rows"
+    }
+  ]
+}

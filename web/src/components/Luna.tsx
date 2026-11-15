@@ -81,8 +81,10 @@ export default function Luna({ lang, context, onAction, onPlan }: { lang: Lang; 
 
   return (
     <>
-      <button className={`luna-fab ${open ? 'on' : ''}`} onClick={() => setOpen(!open)}>
-        <Sparkles size={14} /> {lang === 'tr' ? "Luna'ya sor" : 'Ask Luna'}
+      <button className={`luna-fab ${open ? 'on' : ''}`} onClick={() => setOpen(!open)}
+              aria-label={lang === 'tr' ? "Luna'ya sor" : 'Ask Luna'}>
+        <Sparkles size={16} />
+        <span className="luna-fab-label">{lang === 'tr' ? "Luna'ya sor" : 'Ask Luna'}</span>
       </button>
       {open && (
         <div className="luna">
@@ -90,7 +92,7 @@ export default function Luna({ lang, context, onAction, onPlan }: { lang: Lang; 
             <b>Luna
               {typeof speechSynthesis !== 'undefined' && (
                 <button className="luna-voice" onClick={() => { if (voice) speechSynthesis.cancel(); else speech.speak(lang === 'tr' ? 'Görev kontrol dinlemede. Bir Ay iniş planı hazırlıyoruz.' : 'Mission control is listening. We are preparing a lunar landing plan.', 0.96); setVoice(!voice) }}
-                        aria-label={voice ? 'Mute' : 'Read answers aloud'} title={lang === 'tr' ? 'Yanıtları sesli oku' : 'Read answers aloud'}>
+                        aria-label={voice ? (lang === 'tr' ? 'Sesi kapat' : 'Mute') : (lang === 'tr' ? 'Yanıtları sesli oku' : 'Read answers aloud')} title={lang === 'tr' ? 'Yanıtları sesli oku' : 'Read answers aloud'}>
                   {voice ? <Volume2 size={14} /> : <VolumeX size={14} />}
                 </button>
               )}
@@ -125,7 +127,7 @@ export default function Luna({ lang, context, onAction, onPlan }: { lang: Lang; 
           <form className="luna-input" onSubmit={(e) => { e.preventDefault(); send(text) }}>
             <input value={text} onChange={(e) => setText(e.target.value)} maxLength={500}
                    placeholder={lang === 'tr' ? 'ör. 2028 yazında 10 günlük bir görev…' : 'e.g. a 10-day mission in summer 2028…'} />
-            <button disabled={busy || !text.trim()} aria-label="Send"><ArrowUp size={15} /></button>
+            <button disabled={busy || !text.trim()} aria-label={lang === 'tr' ? 'Gönder' : 'Send'}><ArrowUp size={15} /></button>
           </form>
           <p className="luna-note">{offline
             ? (lang === 'tr' ? 'Çevrimdışı rehber: yanıtlar doğrudan LunaNav motorunun sonuçlarından gelir (yapay zekâ anahtarı yok).'

@@ -1,0 +1,5 @@
+Fixed all five findings and wrote [CODEX_RESULT.md](CODEX_RESULT.md). Screenshots and measurements are in `qa/codex/`.
+
+TypeScript, ESLint, all 396 tests, and the production build pass. Tests/build required Vite’s alternate config loader due to sandbox restrictions.
+
+No git commands, installs, or downloads.

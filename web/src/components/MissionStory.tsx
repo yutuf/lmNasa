@@ -115,10 +115,10 @@ export default function MissionStory({ lang, cards, ranKey, onSearch, onClose, o
       <div className="story-head">
         <span className="story-luna"><Sparkles size={15} /> Luna</span>
         <span className="story-title">{tr ? 'Görevi anlat' : 'Tell me the mission'}</span>
-        <button className="icon-btn" onClick={() => { if (voice) speechSynthesis.cancel(); setVoice(!voice) }} aria-label={voice ? 'Mute' : 'Read aloud'}>
+        <button className="icon-btn" onClick={() => { if (voice) speechSynthesis.cancel(); setVoice(!voice) }} aria-label={voice ? (tr ? 'Sessize al' : 'Mute') : (tr ? 'Sesli oku' : 'Read aloud')}>
           {voice ? <Volume2 size={15} /> : <VolumeX size={15} />}
         </button>
-        <button className="icon-btn" onClick={onClose} aria-label="Close"><X size={15} /></button>
+        <button className="icon-btn" onClick={onClose} aria-label={tr ? 'Kapat' : 'Close'}><X size={15} /></button>
       </div>
       <div className="story-msgs">
         {msgs.map((m, k) => (
@@ -149,7 +149,7 @@ export default function MissionStory({ lang, cards, ranKey, onSearch, onClose, o
           <input value={text} onChange={(e) => setText(e.target.value)} maxLength={300}
                  placeholder={step === 'goal' ? (tr ? 'ya da kendi sözlerinle: “buza yakın 3 haftalık gezgin”' : 'or in your own words: “a 3-week rover near ice”')
                    : step === 'lander' ? (tr ? 'ya da bir isim yaz: “Blue Ghost”' : 'or type a name: “Blue Ghost”') : (tr ? 'ya da: “Mart 2028”' : 'or: “March 2028”')} />
-          <button aria-label="Send">→</button>
+          <button aria-label={tr ? 'Gönder' : 'Send'}>→</button>
         </form>
       )}
       <p className="story-note">{tr ? 'Luna yalnızca LunaNav motorunun hesapladığı sayıları anlatır.' : 'Luna only tells numbers that LunaNav’s engine computed.'}</p>

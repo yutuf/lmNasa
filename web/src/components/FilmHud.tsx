@@ -5,6 +5,8 @@ import { useEffect, useRef } from 'react'
 import type { Lang } from '../i18n'
 import type { Probability } from '../probability'
 import { coastReadout, dayIndex, descentReadout, fmtClock, fmtKm, fmtLat, fmtLon, fmtVel, rise, siteReadout } from '../filmProfile'
+import { orbitalDescent } from '../motion3d'
+import { useMissionPlayback } from '../missionPlayback'
 
 const CAUSE: Record<keyof Probability['causes'], Record<Lang, string>> = {
   landing: { en: 'Landing', tr: 'İniş' },
@@ -99,7 +101,7 @@ export function SunSpark({ values, t, lang, compact = false }: { values: number[
     <div className="fx-spark">
       <div className="fx-spark-h">
         <span>{tr ? 'Güneş · görev günü' : 'Sun · mission day'}</span>
-        <b>D{String(day + 1).padStart(2, '0')} {pct}%</b>
+        <b>{tr ? 'G' : 'D'}{String(day + 1).padStart(2, '0')} {pct}%</b>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={tr ? `Görev günü ${day + 1}, güneş %${pct}` : `Mission day ${day + 1}, sunlight ${pct}%`}>
         <line x1="1" y1="2" x2={W - 1} y2="2" stroke="rgba(255,255,255,.16)" strokeWidth="1" />
@@ -126,7 +128,8 @@ export function FilmHud({ lang, phase, t, heightM, lat, lon, sunDaily }: {
 }) {
   const tr = lang === 'tr'
   const loc = tr ? 'tr-TR' : 'en-GB'
-  const read = phase === 'coast' ? coastReadout(t) : phase === 'descent' ? descentReadout(t) : siteReadout(heightM)
+  const playback = useMissionPlayback()
+  const read = phase === 'coast' ? coastReadout(t) : phase === 'descent' ? (playback?.current.handoff ? orbitalDescent(t, true) : descentReadout(t)) : siteReadout(heightM)
   const rows: { k: string; sub: string; v: string }[] = phase === 'site'
     ? [
         { k: 'ALT', sub: tr ? 'arazi · hesap' : 'terrain · computed', v: `${Math.round(heightM).toLocaleString(loc)} m` },
@@ -165,8 +168,9 @@ export function FilmHud({ lang, phase, t, heightM, lat, lon, sunDaily }: {
           </li>
         ))}
       </ul>
-      {phase === 'site' && <p className="fx-hud-where">{fmtLat(lat, lang)} {fmtLon(lon, lang)}{sunDaily.length > 0 ? ` · D${String(day + 1).padStart(2, '0')}` : ''}</p>}
-      <SunSpark values={sunDaily} t={t} lang={lang} compact />
+      {phase === 'descent' && <p className="fx-flight-note">{tr ? 'Şema · araç görünürlük için büyütülmüştür.' : 'Schematic · vehicle enlarged for visibility.'}</p>}
+      {phase === 'site' && <p className="fx-hud-where">{fmtLat(lat, lang)} {fmtLon(lon, lang)}{sunDaily.length > 0 ? ` · ${tr ? 'G' : 'D'}${String(day + 1).padStart(2, '0')}` : ''}</p>}
+      {phase === 'site' && <SunSpark values={sunDaily} t={t} lang={lang} compact />}
     </aside>
   )
 }

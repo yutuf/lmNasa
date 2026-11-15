@@ -1,33 +1,32 @@
-// "Tell me the mission": a short film of the mission, built from the computed result. Scenes play in order:
-// title, launch from Earth, the landing window, the coast, the descent (cockpit), touchdown, the site,
-// the landing ellipse (when that check has more than one point), the rover drive,
-// the odds (when a Monte Carlo was passed in), and the verdict.
-// 3D scenes come from the app's own engines; subtitles and every number come from the mission that was passed in.
-// Coast and descent readouts are a nominal profile (see filmProfile), labelled as such.
-// The window, the odds and the ellipse are 2D. Ellipse positions are a schematic of the reported totals.
+// "Tell me the mission": a short film of the computed result.
+// Default cut, about 45 s: title, launch, coast, descent, touchdown, a few seconds of the rover, verdict.
+// The window, the site board, the ellipse and the odds stay on the site page. Pass `technical` to put them back.
+// The launch picture is a typical heavy-lift ascent, not this lander's pad. Coast and descent readouts are a
+// nominal profile (see filmProfile), labelled as such. Ellipse positions are a schematic of the reported totals.
 import { preloadModel } from './Models'
 import { landerFile, roverFile } from './VehicleModels'
 import { ROVERS } from '../vehicles'
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { ChevronRight, Footprints, Pause, Play, RotateCcw, Volume2, VolumeX, X } from 'lucide-react'
 import type { Lang } from '../i18n'
 import type { Chapter } from '../story'
 import type { Lander } from '../vehicles'
-import { fmtLat, fmtLon, fmtNum, rise, windowPlan } from '../filmProfile'
+import { FILM_DUR, filmScenes, fmtLat, fmtLon, fmtNum, rise, windowPlan, type FilmSceneId } from '../filmProfile'
 import Patch from './Patch'
 import VehiclePhoto from './VehiclePhoto'
 import { useSiteImage, type CardSite } from './SiteCard'
 import { useSpeechVoice } from '../speech'
-import { FilmHud, SimGauge, SunSpark, TitleBackdrop } from './FilmHud'
+import { FilmHud, TitleBackdrop } from './FilmHud'
 import { EllipseScene, OddsScene, WindowScene } from './FilmScenes'
 import '../film.css'
+import '../film-fix.css'
+import { MissionPlaybackContext, type MissionPlayback } from '../missionPlayback'
 
 const LaunchScene = lazy(() => import('./LaunchScene'))
+const TransferScene = lazy(() => import('./TransferScene'))
 
-type SceneId = 'title' | 'launch' | 'window' | 'coast' | 'descent' | 'landing' | 'site' | 'ellipse' | 'rover' | 'odds' | 'verdict'
-const DUR: Record<SceneId, number> = {
-  title: 5, launch: 10, window: 6, coast: 6, descent: 7, landing: 30, site: 9, ellipse: 6, rover: 13, odds: 7, verdict: 9,
-}
+type SceneId = FilmSceneId
+const DUR: Record<SceneId, number> = FILM_DUR
 const FADE = 0.36
 
 const NAMES: Record<SceneId, Record<Lang, string>> = {
@@ -44,6 +43,7 @@ function useClock(paused: boolean) {
   const [t, setT] = useState(0)
   const origin = useRef(performance.now())
   const pausedAt = useRef<number | null>(null)
+  const seekRevision = useRef(0)
   useEffect(() => {
     if (paused) { pausedAt.current = performance.now(); return }
     if (pausedAt.current !== null) { origin.current += performance.now() - pausedAt.current; pausedAt.current = null }
@@ -54,8 +54,9 @@ function useClock(paused: boolean) {
     id = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(id)
   }, [paused])
-  const seek = (s: number) => { origin.current = performance.now() - s * 1000; if (pausedAt.current !== null) pausedAt.current = performance.now(); setT(s) }
-  return [t, seek] as const
+  const seek = useCallback((s: number) => { origin.current = performance.now() - s * 1000; if (pausedAt.current !== null) pausedAt.current = performance.now(); seekRevision.current++; setT(s) }, [])
+  const readTime = useCallback(() => ((pausedAt.current ?? performance.now()) - origin.current) / 1000, [])
+  return [t, seek, readTime, seekRevision.current] as const
 }
 
 function useReducedMotion() {
@@ -80,10 +81,6 @@ function enter(t: number, at: number, reduce: boolean, span = 0.1): CSSPropertie
   return { opacity: u, transform: `translateY(${((1 - u) * 12).toFixed(1)}px)` }
 }
 
-function counted(to: number, t: number, at: number, reduce: boolean) {
-  return to * rise(t, at, 0.16, reduce) ** 0.6
-}
-
 function wipeOf(local: number, dur: number, last: boolean, paused: boolean): { cover: number; mode: 'in' | 'out' | 'none' } {
   if (paused) return { cover: 0, mode: 'none' }
   const remain = dur - local
@@ -94,7 +91,8 @@ function wipeOf(local: number, dur: number, last: boolean, paused: boolean): { c
   return { cover: inC, mode: 'in' }
 }
 
-export default function MissionFilm({ lang, card, chapters, lander, roverName, missionName, launch, landing, globe, rover, touchdown, onClose, onWalk }: {
+export default function MissionFilm({ lang, card, chapters, lander, roverName, missionName, launch, landing, globe, rover, touchdown, onClose, onWalk, technical = false }: {
+  technical?: boolean
   touchdown: ((mode: 'landing' | 'rover') => ReactNode) | null
   lang: Lang; card: CardSite; chapters: Chapter[]; lander: Lander; roverName: string; missionName: string
   launch: Date; landing: Date
@@ -103,16 +101,23 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
   onClose: () => void; onWalk: (() => void) | null
 }) {
   const tr = lang === 'tr'
-  const ellipseOn = !!card.ellipse && card.ellipse.points > 1
-  const oddsOn = !!card.prob && card.prob.trials > 0
-  const scenes = useMemo(() => (['title', 'launch', 'window', 'coast', 'descent', ...(touchdown ? ['landing' as const] : []), 'site', ...(ellipseOn ? ['ellipse' as const] : []), ...(rover ? ['rover' as const] : []), ...(oddsOn ? ['odds' as const] : []), 'verdict'] as SceneId[]), [rover, touchdown, ellipseOn, oddsOn])
+  const ellipseOn = technical && !!card.ellipse && card.ellipse.points > 1
+  const oddsOn = technical && !!card.prob && card.prob.trials > 0
+  // The default film tells the flight. Window, site, ellipse and odds stay on the site page
+  // unless technical mode is on.
+  const scenes = useMemo(() => filmScenes(technical, {
+    landing: !!touchdown, rover: !!rover, ellipse: ellipseOn, odds: oddsOn,
+  }), [technical, touchdown, rover, ellipseOn, oddsOn])
   const starts = useMemo(() => scenes.reduce<number[]>((a, _s, k) => [...a, k ? a[k - 1] + DUR[scenes[k - 1]] : 0], []), [scenes])
   const total = starts[starts.length - 1] + DUR[scenes[scenes.length - 1]]
   const [paused, setPaused] = useState(false)
+  const [autoHold, setAutoHold] = useState(false)
+  const [groundReady, setGroundReady] = useState({ landing: false, rover: false })
+  const markSurfaceReady = useCallback((mode: 'landing' | 'rover') => setGroundReady(old => old[mode] ? old : { ...old, [mode]: true }), [])
   const [voice, setVoice] = useState(false)
   const speech = useSpeechVoice(lang)
   const reduce = useReducedMotion()
-  const [time, setTime] = useClock(paused)
+  const [time, setTime, readTime, seekRevision] = useClock(paused || autoHold)
   // decode the mission's lander and rover now, not on the first frame of the scenes that show them
   useEffect(() => {
     preloadModel(landerFile(lander.id))
@@ -124,6 +129,24 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
   const local = time - starts[k]
   const t = Math.min(1, Math.max(0, local / DUR[scene]))
   const ended = time >= total
+  const playback = useRef<MissionPlayback>({ scene, start: starts[k], duration: DUR[scene], paused, time: readTime, handoff: !!touchdown })
+  playback.current.scene = scene
+  playback.current.start = starts[k]
+  playback.current.duration = DUR[scene]
+  playback.current.paused = paused || autoHold || ended
+  playback.current.time = readTime
+  playback.current.handoff = !!touchdown
+  playback.current.lander = lander.id
+  playback.current.visit = seekRevision
+  playback.current.onSurfaceReady = markSurfaceReady
+  const surfaceVisit = useRef('')
+  const visitKey = `${scene}:${seekRevision}`
+  if (scene === 'landing' && surfaceVisit.current !== visitKey) {
+    playback.current.surface = { altitude: 1600, range: 2400, seconds: 180, landed: false }
+    surfaceVisit.current = visitKey
+  }
+  // Notify consumers at a cut or pause, sharing the mutable clock at full frame rate.
+  const playbackContext = useMemo(() => ({ current: playback.current }), [scene, paused, autoHold, seekRevision]) // eslint-disable-line react-hooks/exhaustive-deps
   const wipe = wipeOf(local, DUR[scene], k === scenes.length - 1, paused || reduce)
   const img = useSiteImage(card)
   const ch = (tone: Chapter['tone']) => chapters.find((c) => c.tone === tone)?.text ?? ''
@@ -134,17 +157,20 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
   const loc = tr ? 'tr-TR' : 'en-GB'
   const win = useMemo(() => windowPlan(r.perStart, r.windowDays, card.r.bestStart, r.goDates, card.r.bestGo), [r.perStart, r.windowDays, card.r.bestStart, r.goDates, card.r.bestGo])
   const kmTxt = card.ellipse ? fmtNum(card.ellipse.radiusKm, 0, lang) : ''
+  const verdictLine = tr
+    ? `${card.name}, ${fmt(landing)}. ${go ? 'UYGUN.' : 'UYGUN DEĞİL.'}`
+    : `${card.name}, ${fmt(landing)}. ${go ? 'GO.' : 'NO-GO.'}`
 
   const subtitle: Record<SceneId, string> = {
     title: lander.pitch[lang],
     launch: ch('launch'),
     window: win.known
-      ? (tr ? `${fmtNum(win.go, 0, lang)} / ${fmtNum(win.total, 0, lang)} gün uygun. Yeşil günler GO, sönük günler NO-GO. Halka seçilen iniştir.`
+      ? (tr ? `${fmtNum(win.go, 0, lang)} / ${fmtNum(win.total, 0, lang)} gün uygun. Yeşil günler UYGUN, sönük günler UYGUN DEĞİL. Halka seçilen iniştir.`
         : `${fmtNum(win.go, 0, lang)} of ${fmtNum(win.total, 0, lang)} days work. Green is GO, dim is NO-GO. The ring is the chosen landing.`)
       : (tr ? `${fmtNum(win.go, 0, lang)} / ${fmtNum(win.total, 0, lang)} gün uygun. Gün gün liste yok; yalnızca seçilen tarih işaretli.`
         : `${fmtNum(win.go, 0, lang)} of ${fmtNum(win.total, 0, lang)} days work. The day-by-day list is not on this card; only the chosen date is marked.`),
-    coast: tr ? 'Yaklaşık 4,5 gün ve 384.000 km. Ay bizi bir kutup yörüngesine yakalar; seçilen nokta tam altımızdan geçer.'
-      : 'About 4.5 days and 384,000 km. The Moon captures us into a polar orbit whose track runs right over the chosen site.',
+    coast: tr ? 'Nominal 4,5 günlük bir yol, bu uçuşun rotası değil. Ay ileri yönde hareket eder; rota varıştaki konumuna yönelir. Yörüngeye girmek için fren ateşlemesi gerekir. Görüntü şematik ve hızlandırılmıştır.'
+      : 'A nominal 4.5-day coast, not this flight’s path. The Moon moves prograde; the route aims for its arrival position. A braking burn is needed to enter lunar orbit. The picture is a schematic, sped up.',
     descent: tr ? 'Kutup yörüngesinden fren ateşlemesi başlar: saatte 6.000 km’den sıfıra, yaklaşık 12 dakikada.'
       : 'From the polar orbit the braking burn begins: from 6,000 km/h to zero in about 12 minutes.',
     landing: ch('land'),
@@ -153,13 +179,13 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
       ? (tr ? `Şema. Aynı iniş tarihi, ${kmTxt} km içindeki her ızgara noktası. Konumlar harita değil.`
         : `Schematic. Same landing date, every grid point within ${kmTxt} km. Positions are not the map.`)
       : '',
-    rover: tr ? `${roverName} rampadan iner ve güneşli bir rota planlar.${r.iceKm !== null ? ` Buz ${r.iceKm.toFixed(1)} km ötede.` : ''}`
-      : `${roverName} rolls off the ramp and plans a sunlit route.${r.iceKm !== null ? ` The ice is ${r.iceKm.toFixed(1)} km away.` : ''}`,
+    rover: tr ? `${roverName}, gerçek arazi üzerinde kısa ve temsili bir sürüşe çıkar. Zaman çarpanı ekranda gösterilir; bu, buz hedefine giden bir sefer değildir.`
+      : `${roverName} makes a short illustrative departure over the real terrain. The time multiplier is shown on screen; this is not the traverse to the ice target.`,
     odds: card.prob
       ? (tr ? `${fmtNum(card.prob.trials, 0, lang)} simüle görev. Noktalar bildirilen paylara göre beş sonuca iner.`
         : `${fmtNum(card.prob.trials, 0, lang)} simulated missions. The dots fall into five outcomes, in the reported shares.`)
       : '',
-    verdict: ch('verdict'),
+    verdict: verdictLine,
   }
   // read each scene's subtitle aloud when voice is on
   useEffect(() => {
@@ -178,17 +204,10 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
   }, [k, starts, scenes, onClose, setTime])
 
   const launchBoxes = [
-    { at: 0.02, k: 'T+0', v: tr ? 'KALKIŞ · Kennedy LC-39B · 28,6°K' : 'LIFTOFF · Kennedy LC-39B · 28.6°N' },
-    { at: 0.13, k: 'T+8 min', v: tr ? 'YÖRÜNGE · 185 km · 7,8 km/sn' : 'ORBIT · 185 km · 7.8 km/s' },
-    { at: 0.7, k: 'T+1 h 30', v: tr ? 'AY’A TRANSFER ATEŞLEMESİ · +3,1 km/sn' : 'TRANS-LUNAR INJECTION · +3.1 km/s' },
-    { at: 0.82, k: fmt(launch), v: tr ? 'AY’A DOĞRU · 10,9 km/sn' : 'BOUND FOR THE MOON · 10.9 km/s' },
-  ]
-
-  const metrics: { key: string; label: string; text: string; color: string; at: number }[] = [
-    { key: 'sun', label: tr ? 'Güneş' : 'Sunlight', text: `${fmtNum(counted(r.sunPct, t, 0.34, reduce), 0, lang)}%`, color: 'var(--sun)', at: 0.32 },
-    { key: 'earth', label: tr ? 'Dünya' : 'Earth', text: `${fmtNum(counted(r.earthPct, t, 0.42, reduce), 0, lang)}%`, color: 'var(--earth)', at: 0.40 },
-    { key: 'dark', label: tr ? 'Karanlık' : 'Dark', text: `${fmtNum(counted(r.longestDarkH, t, 0.50, reduce), 0, lang)} h`, color: '#9d7bff', at: 0.48 },
-    { key: 'go', label: tr ? 'Uygun gün' : 'GO days', text: `${fmtNum(counted(r.goDates, t, 0.58, reduce), 0, lang)}/${r.windowDays}`, color: 'var(--go)', at: 0.56 },
+    { at: 0.02, k: 'T+0', v: tr ? 'KALKIŞ · tipik ağır profil · bu aracın rampası değil' : 'LIFTOFF · typical heavy-lift profile · not this vehicle’s pad' },
+    { at: 0.18, k: tr ? 'T+8 dk' : 'T+8 min', v: tr ? 'NOMİNAL YÖRÜNGE · 185 km · 7,8 km/sn' : 'NOMINAL ORBIT · 185 km · 7.8 km/s' },
+    { at: 0.72, k: tr ? 'T+1 sa 30 dk' : 'T+1 h 30', v: tr ? 'NOMİNAL TRANSFER · +3,1 km/sn' : 'NOMINAL TRANS-LUNAR INJECTION · +3.1 km/s' },
+    { at: 0.82, k: fmt(launch), v: tr ? 'PLANLAMA TARİHİ · inişten 5 gün önce' : 'PLANNING DATE · 5 days before landing' },
   ]
   const hud = (phase: 'coast' | 'descent' | 'site') => (
     <FilmHud lang={lang} phase={phase} t={t} heightM={r.heightM} lat={r.lat} lon={r.lon} sunDaily={r.sunDaily} />
@@ -196,13 +215,18 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
 
   // The 3D scenes are built once per scene, not on every clock tick: the film re-renders 60 times a second for its
   // text and counters, and rebuilding a react-three-fiber tree that often makes the 3D stutter.
-  const coastEl = useMemo(() => (scene === 'coast' ? globe('overview', 0) : null), [scene])      // eslint-disable-line react-hooks/exhaustive-deps
   const descentEl = useMemo(() => (scene === 'descent' ? globe('pilot', 0.5) : null), [scene])   // eslint-disable-line react-hooks/exhaustive-deps
-  // one drive view for touchdown, site and rover: built once, hidden behind the 2D site scene, then switched to the
-  // rover, so the rover scene needs no new 3D world (that rebuild froze the picture for seconds).
-  // The ellipse is a 2D insert between site and rover; keep the same view mounted and hidden across it.
-  const groundLive = !!touchdown && (scene === 'landing' || scene === 'site' || scene === 'ellipse' || scene === 'rover')
-  const groundMode: 'landing' | 'rover' = scene === 'landing' ? 'landing' : 'rover'
+  // One drive world for the descent premount, touchdown and rover. Hidden during descent so the
+  // short landing shot is not a load hitch. filmMode stays "landing" across that cut, so the world
+  // is not rebuilt and the approach clock is not reset. Technical inserts keep it hidden too.
+  const groundLive = !!touchdown && (scene === 'descent' || scene === 'landing' || scene === 'site' || scene === 'ellipse' || scene === 'rover')
+  const groundMode: 'landing' | 'rover' = scene === 'descent' || scene === 'landing' ? 'landing' : 'rover'
+  const groundShown = scene === 'landing' || scene === 'rover'
+  const readyForShot = !touchdown || !groundShown || groundReady[scene === 'landing' ? 'landing' : 'rover']
+  useEffect(() => { setAutoHold(!readyForShot) }, [readyForShot])
+  useEffect(() => {
+    if (!groundLive) setGroundReady(old => old.landing || old.rover ? { landing: false, rover: false } : old)
+  }, [groundLive])
   const groundEl = useMemo(() => (groundLive ? touchdown!(groundMode) : null), [groundLive, groundMode]) // eslint-disable-line react-hooks/exhaustive-deps
   // the rover scene starts loading (terrain, route, shaders) while the light 2D site scene plays, hidden, so the cut
   // to it is instant instead of freezing for a few seconds
@@ -210,7 +234,7 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
   const roverEl = useMemo(() => (roverLive ? rover!() : null), [roverLive])          // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="film" role="dialog" aria-label={tr ? 'Görev filmi' : 'Mission film'}>
+    <MissionPlaybackContext.Provider value={playbackContext}><div className="film" role="dialog" aria-label={tr ? 'Görev filmi' : 'Mission film'}>
       <div className={`film-stage s-${scene}`}>
         {scene === 'title' && (
           /* Flex row, not a centered absolute. translateX(-50%) here once collapsed the title. */
@@ -233,28 +257,32 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
         )}
         {scene === 'launch' && (
           <>
-            <Suspense fallback={null}><LaunchScene t={t} /></Suspense>
+            <Suspense fallback={null}><LaunchScene t={t} launch={launch} /></Suspense>
             <div className="fs-boxes left">
               {launchBoxes.filter((b) => t >= b.at).map((b) => <div key={b.k} className="fs-box"><b>{b.k}</b><span>{b.v}</span></div>)}
             </div>
-            <span className="fs-note">{tr ? 'Gerçek olay sırası ve süreleri; çizim ölçeksiz.' : 'Real event sequence and timings; not to scale.'}</span>
+            <span className="fs-note">{tr ? 'Nominal profil · zaman sıkıştırılmış · ölçeksiz. Işık: fırlatma tarihi (yaklaşık).' : 'Nominal profile · time compressed · not to scale. Lighting: launch date (approximate).'}</span>
           </>
         )}
         {scene === 'window' && <WindowScene plan={win} landing={landing} t={t} lang={lang} reduce={reduce} />}
         {scene === 'coast' && (
           <>
-            {coastEl}
+            <Suspense fallback={null}><TransferScene launch={launch} /></Suspense>
             {hud('coast')}
+            <span className="fs-note">{tr ? `Şema · nominal 4,5 gün / ${DUR.coast} sn · boyutlar ve uzaklıklar ölçeksiz` : `Schematic · nominal 4.5 days / ${DUR.coast} s · sizes and distances not to scale`}</span>
           </>
         )}
         {scene === 'descent' && (
           <>
             {descentEl}
-            <div className="flight-hud-wrap pilot"><div className="reticle" /><div id="flight-hud" className="flight-hud" /></div>
             {hud('descent')}
           </>
         )}
-        {groundLive && <div className={scene === 'landing' || scene === 'rover' ? 'fs-rover-live' : 'fs-premount'} aria-hidden={scene !== 'landing' && scene !== 'rover'}>{groundEl}</div>}
+        {groundLive && <div className={groundShown ? 'fs-rover-live' : 'fs-premount'} aria-hidden={!groundShown}>{groundEl}</div>}
+        {groundShown && !readyForShot && <div className="fs-ground-loading">
+          {img && <img src={img} alt="" />}
+          <p>{tr ? 'Arazi ve araç hazırlanıyor…' : 'Preparing terrain and vehicle…'}</p>
+        </div>}
         {scene === 'site' && (
           <div className="fs-site" style={{ ['--team' as string]: card.colour }}>
             {img && <img src={img} alt="" className="fs-site-img" style={{ transform: `scale(${1 + t * 0.12}) translateX(${-t * 2}%)` }} />}
@@ -262,7 +290,7 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
             <div className="fs-boxes grid">
               <div className="fs-box stat sun"><b><Count to={r.sunPct} t={t} suffix="%" /></b><span>{tr ? 'Güneş' : 'Sunlight'}</span></div>
               <div className="fs-box stat earth"><b><Count to={r.earthPct} t={t} suffix="%" /></b><span>{tr ? 'Dünya bağlantısı' : 'Earth contact'}</span></div>
-              <div className="fs-box stat dark"><b><Count to={r.longestDarkH} t={t} suffix=" h" /></b><span>{tr ? 'En uzun karanlık' : 'Longest dark'}</span></div>
+              <div className="fs-box stat dark"><b><Count to={r.longestDarkH} t={t} suffix={tr ? ' sa' : ' h'} /></b><span>{tr ? 'En uzun karanlık' : 'Longest dark'}</span></div>
               {r.zoneSlopeDeg !== null && <div className="fs-box stat safe"><b><Count to={r.zoneSlopeDeg} t={t} digits={1} suffix="°" /></b><span>{tr ? 'İniş alanı eğimi' : 'Landing zone slope'}</span></div>}
               {r.iceKm !== null && <div className="fs-box stat ice"><b><Count to={r.iceKm} t={t} digits={1} suffix=" km" /></b><span>{tr ? 'Buza uzaklık' : 'To water ice'}</span></div>}
               <div className="fs-box stat go"><b><Count to={r.goDates} t={t} />/{r.windowDays}</b><span>{tr ? 'Uygun iniş tarihi' : 'GO landing dates'}</span></div>
@@ -272,51 +300,21 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
         )}
         {scene === 'ellipse' && card.ellipse && card.ellipse.points > 1 && <EllipseScene ellipse={card.ellipse} t={t} lang={lang} reduce={reduce} />}
         {roverLive && <div className={scene === 'rover' ? 'fs-rover-live' : 'fs-premount'} aria-hidden={scene !== 'rover'}>{roverEl}</div>}
-        {scene === 'rover' && rover && (
-          <>
-            <div className="fs-boxes left">
-              <div className="fs-box"><b>{roverName}</b><span>{tr ? 'otopilot · güneşli rota' : 'autopilot · sunlit route'}</span></div>
-            </div>
-          </>
-        )}
         {scene === 'odds' && card.prob && <OddsScene prob={card.prob} t={t} lang={lang} reduce={reduce} />}
         {scene === 'verdict' && (
-          <div className={`fs-verdict ${go ? 'go' : 'nogo'}`}>
-            {img && <img src={img} alt="" className="fs-bg" />}
-            <div className="fx-v-left">
-              <figure className="fx-frame" style={{ ['--team' as string]: card.colour, ...enter(t, 0.06, reduce, 0.12) }}>
-                {img ? <img src={img} alt="" /> : <div className="fx-wait">{tr ? 'Arazi çiziliyor' : 'Rendering terrain'}</div>}
-                <i className="fx-br fx-br-tl" /><i className="fx-br fx-br-tr" /><i className="fx-br fx-br-bl" /><i className="fx-br fx-br-br" />
-                <figcaption>
-                  <b>{card.name}</b>
-                  <span>{fmtLat(r.lat, lang)} {fmtLon(r.lon, lang)} · {r.heightM.toLocaleString(loc)} m</span>
-                </figcaption>
-                <VehiclePhoto kind="lander" id={lander.id} alt={lander.name} className="fx-ship" />
-              </figure>
-              <div className="fx-v-lower">
-                {card.prob && <SimGauge prob={card.prob} t={t} lang={lang} reduce={reduce} />}
-                <SunSpark values={r.sunDaily} t={rise(t, 0.48, 0.34, reduce)} lang={lang} />
-              </div>
-            </div>
-            <div className="fx-v-right">
-              <span className="fs-kicker">{missionName}</span>
-              <h1 style={enter(t, 0, reduce, 0.08)}>{go ? 'GO' : 'NO-GO'}</h1>
-              <div className="fx-when" style={enter(t, 0.08, reduce)}>
-                <span><i>{tr ? 'Fırlatma' : 'Launch'}</i><b>{fmt(launch)}</b></span>
-                <span><i>{tr ? 'İniş' : 'Landing'}</i><b>{fmt(landing)}</b></span>
-              </div>
-              <p className="fx-blurb" style={enter(t, 0.12, reduce)}>{subtitle.verdict}</p>
-              <span className="fx-craft" style={enter(t, 0.16, reduce)}>{lander.name}{rover ? ` · ${roverName}` : ''}</span>
-              <div className="fx-metrics">
-                {metrics.map((m) => (
-                  <div key={m.key} className="fx-metric" style={{ ['--k' as string]: m.color, ...enter(t, m.at, reduce) }}>
-                    <span>{m.label}</span>
-                    <b>{m.text}</b>
-                  </div>
-                ))}
-              </div>
-              <span className="fs-dates-label" style={enter(t, 0.62, reduce)}>{tr ? 'Penceredeki her iniş tarihi' : 'Every landing date in the window'}</span>
-              <div className="fs-dates" style={enter(t, 0.64, reduce)}>{r.perStart.map((g, i) => <i key={i} className={`${g ? 'go' : ''} ${i === card.r.bestStart ? 'best' : ''}`} />)}</div>
+          <div className={`fs-verdict fv-verdict ${go ? 'go' : 'nogo'}`} style={{ ['--team' as string]: card.colour }}>
+            <section className="fv-summary">
+              <span className="fs-kicker">{tr ? 'Hesaplanan görev kararı' : 'Computed mission verdict'}</span>
+              <h1 style={enter(t, 0, reduce, 0.08)}>{tr ? (go ? 'UYGUN' : 'UYGUN DEĞİL') : (go ? 'GO' : 'NO-GO')}</h1>
+              <h2 className="fv-site">{card.name}</h2>
+              <p className="fv-date">{fmt(landing)}</p>
+              <dl className="fv-metrics">
+                <div><dt>{tr ? 'Güneş ışığı' : 'Sunlight'}</dt><dd>{fmtNum(r.sunPct, 0, lang)}%</dd></div>
+                <div><dt>{tr ? 'Dünya bağlantısı' : 'Earth contact'}</dt><dd>{fmtNum(r.earthPct, 0, lang)}%</dd></div>
+                <div><dt>{tr ? 'En uzun karanlık' : 'Longest darkness'}</dt><dd>{fmtNum(r.longestDarkH, 0, lang)} <small>{tr ? 'sa' : 'h'}</small></dd></div>
+                {card.prob && <div><dt>{tr ? 'Simüle başarı' : 'Simulated success'}</dt><dd>{fmtNum(card.prob.p * 100, 0, lang)}%</dd></div>}
+              </dl>
+              <p className="fv-limit">{tr ? 'Planlama kararıdır; iniş sertifikası değildir.' : 'A planning verdict, not a landing certification.'}</p>
               {ended && (
                 <div className="fs-actions">
                   {onWalk && <button className="btn primary" onClick={onWalk}><Footprints size={15} /> {tr ? 'Ay’da yürü' : 'Walk on the Moon'}</button>}
@@ -324,7 +322,7 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
                   <button className="btn" onClick={onClose}>{tr ? 'Kapat' : 'Close'}</button>
                 </div>
               )}
-            </div>
+            </section>
           </div>
         )}
       </div>
@@ -339,10 +337,18 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
       <div className="film-bar top" />
       <div className="film-bar bottom" />
       <div className="film-scene"><b>{String(k + 1).padStart(2, '0')}</b> {NAMES[scene][lang]}</div>
+      {scene === 'landing' && (() => {
+        const state = playback.current.surface!
+        return <div className="film-landing-telemetry" data-landed={state.landed ? '1' : '0'}>
+          <b>{state.landed ? (tr ? 'TEMAS · MOTOR KAPALI' : 'CONTACT · ENGINE OFF')
+            : `${tr ? 'İRTİFA' : 'ALTITUDE'} ${fmtNum(state.altitude, 0, lang)} m · ${tr ? 'MESAFE' : 'RANGE'} ${fmtNum(state.range, 0, lang)} m · T−${Math.ceil(state.seconds)} ${tr ? 'sn' : 's'}`}</b>
+          <span>{tr ? `Nominal son yaklaşma · 180 sn / ${DUR.landing} sn` : `Nominal final approach · 180 s / ${DUR.landing} s`}</span>
+        </div>
+      })()}
       {scene !== 'verdict' && <p className="film-sub" key={`sub-${scene}`}>{subtitle[scene]}</p>}
       <div className="film-ctl">
-        <button onClick={() => setPaused(!paused)} aria-label={paused ? 'Play' : 'Pause'}>{paused ? <Play size={16} /> : <Pause size={16} />}</button>
-        <button onClick={() => setTime(starts[Math.min(scenes.length - 1, k + 1)])} aria-label="Next"><ChevronRight size={16} /></button>
+        <button onClick={() => setPaused(!paused)} aria-label={paused ? (tr ? 'Oynat' : 'Play') : (tr ? 'Duraklat' : 'Pause')}>{paused ? <Play size={16} /> : <Pause size={16} />}</button>
+        <button onClick={() => setTime(starts[Math.min(scenes.length - 1, k + 1)])} aria-label={tr ? 'Sonraki' : 'Next'}><ChevronRight size={16} /></button>
         <div className="film-progress">
           {scenes.map((s, i) => (
             <button key={s} className={i < k ? 'done' : i === k ? 'on' : ''} onClick={() => setTime(starts[i])} title={NAMES[s][lang]}>
@@ -350,9 +356,9 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
             </button>
           ))}
         </div>
-        <button onClick={() => { if (voice) speechSynthesis.cancel(); setVoice(!voice) }} aria-label={voice ? 'Mute' : 'Narrate'}>{voice ? <Volume2 size={16} /> : <VolumeX size={16} />}</button>
-        <button onClick={onClose} aria-label="Close"><X size={16} /></button>
+        <button onClick={() => { if (voice) speechSynthesis.cancel(); setVoice(!voice) }} aria-label={voice ? (tr ? 'Sessize al' : 'Mute') : (tr ? 'Seslendir' : 'Narrate')}>{voice ? <Volume2 size={16} /> : <VolumeX size={16} />}</button>
+        <button onClick={onClose} aria-label={tr ? 'Kapat' : 'Close'}><X size={16} /></button>
       </div>
-    </div>
+    </div></MissionPlaybackContext.Provider>
   )
 }

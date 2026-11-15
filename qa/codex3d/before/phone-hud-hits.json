@@ -1,0 +1,44 @@
+[
+  {
+    "text": " Back to the lander",
+    "rect": {
+      "x": 198.6875,
+      "y": 697,
+      "width": 162.3125,
+      "height": 34,
+      "top": 697,
+      "right": 361,
+      "bottom": 731,
+      "left": 198.6875
+    },
+    "clickable": true
+  },
+  {
+    "text": " Sky compass",
+    "rect": {
+      "x": 198.6875,
+      "y": 739,
+      "width": 162.3125,
+      "height": 34,
+      "top": 739,
+      "right": 361,
+      "bottom": 773,
+      "left": 198.6875
+    },
+    "clickable": true
+  },
+  {
+    "text": " Exit",
+    "rect": {
+      "x": 198.6875,
+      "y": 781,
+      "width": 162.3125,
+      "height": 34,
+      "top": 781,
+      "right": 361,
+      "bottom": 815,
+      "left": 198.6875
+    },
+    "clickable": true
+  }
+]

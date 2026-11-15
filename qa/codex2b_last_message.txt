@@ -1,0 +1,9 @@
+Appended “Verification run” to [CODEX_RESULT_2.md](CODEX_RESULT_2.md).
+
+- Cold transfer: **21.77 MB → 18.75 MB**, down **13.9%**.
+- First card: **2.52 s → 4.33 s**; no measured speedup.
+- TypeScript, 396 tests, lint, and build passed.
+- Vercel already serves Brotli; removed the gzip rewrite.
+- Warm/offline checks passed; baseline worktree removed.
+
+Protected files remained untouched. Hero texture deferral still needs its owner’s integration.

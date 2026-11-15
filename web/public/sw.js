@@ -1,7 +1,7 @@
 // LunaNav offline support. After one visit, the app and every NASA data file and 3D model it used are kept, so the
 // site works without a network (a judging room with bad wifi). Pages: network first, cached copy when offline.
 // Data, models, code and fonts: cache first (they are versioned by file name or never change). /api is never cached.
-const VERSION = 'lunanav-v1'
+const VERSION = 'lunanav-v2-gzip'
 
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (e) => {

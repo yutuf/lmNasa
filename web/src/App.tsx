@@ -1,7 +1,8 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { dataUrl, FIRST_DATE, LAST_DATE, loadManifest, type Manifest, type Series } from './data'
 import { gcKm, insideRing, parseAtlas, parseGlobalAtlas, parseEphem, parseHazard, parseIceReach, passesIce, passesTerrain, pointTrack, searchPoint, sunlitMap, zoneSlopeAt, type Atlas, type Hazard, type IceReach, type PointResult } from './engine'
-import { T, fmtPct, hours, why, type Lang } from './i18n'
+import { resolvePin } from './pinSite'
+import { T, catalogueSources, fmtHoursShort, fmtIsoDate, fmtLonEast, fmtPct, fmtPercent, hours, localizeReportHtml, verdictLabel, why, type Lang } from './i18n'
 import { evaluateWindow, requiredBatteryWh, type Constraints } from './model'
 import { EngineRunner } from './runner'
 import { chooseApproach, PHASES } from './flight'
@@ -24,6 +25,7 @@ const ArtemisCompare = lazy(() => import('./components/Artemis'))
 import Patch from './components/Patch'
 import SimpleView from './components/SimpleView'
 import { MissionBar, Ticker, type NextWindow } from './components/MissionBar'
+import CoordinateSearch from './components/CoordinateSearch'
 import SiteProfile from './components/SiteProfile'
 const MissionStory = lazyOverlay(() => import('./components/MissionStory'))
 const MissionInterview = lazyOverlay(() => import('./components/MissionInterview'))
@@ -50,8 +52,8 @@ import ProbabilityPanel from './components/ProbabilityPanel'
 import { launchDate, missionStory } from './story'
 import type { CardSite } from './components/SiteCard'
 import { regionColour } from './teams'
-import { ROVERS, landerById, type Lander } from './vehicles'
-import { SCIENCE_KIND, SCIENCE_SITES, farSide, inPoleGrid, targetSites, type ScienceKind, type ScienceSite } from './scienceSites'
+import { ROVERS, compatibleRover, landerById, type Lander } from './vehicles'
+import { SCIENCE_KIND, SCIENCE_SITES, farSide, inPoleGrid, siteLabel, targetSites, type ScienceKind, type ScienceSite } from './scienceSites'
 import { paintOverlay } from './overlays'
 import ScopeTarget from './components/ScopeTarget'
 import { localSky } from './terrain'
@@ -184,11 +186,11 @@ const S = {
 
 const STEPS: Record<Lang, string[][]> = {
     en: [['Terrain', 'Horizons ray-marched in 180 directions over NASA LOLA elevation maps for 21,856 points around the south pole.'],
-      ['Sky', 'Sun and Earth positions every hour from JPL DE440, with Earth parallax for each point.'],
+      ['Sky', 'Sun and Earth positions every hour from JPL DE421, with Earth parallax for each point.'],
       ['Mission check', 'For every landing date: sunlight share, Earth contact (optionally needing a free NASA DSN dish), longest darkness and a battery simulation.'],
       ['Ranking', 'Points that pass on the most landing dates come first; the detail shows why each one passes or fails.']],
     tr: [['Arazi', 'Güney kutbu çevresindeki 21.856 nokta için NASA LOLA yükseklik haritaları üzerinde 180 yönde ufuk hesaplandı.'],
-      ['Gökyüzü', 'Güneş ve Dünya konumları JPL DE440 ile saat saat, her nokta için Dünya paralaksı dahil.'],
+      ['Gökyüzü', 'Güneş ve Dünya konumları JPL DE421 ile saat saat, her nokta için Dünya paralaksı dahil.'],
       ['Görev kontrolü', 'Her iniş tarihi için güneş payı, Dünya bağlantısı (isteğe bağlı boş bir NASA DSN anteni), en uzun karanlık ve batarya simülasyonu.'],
       ['Sıralama', 'En çok iniş tarihinde geçen noktalar önce gelir; ayrıntı her birinin neden geçtiğini ya da kaldığını gösterir.']],
   }
@@ -222,6 +224,16 @@ export default function App() {
   const [story, setStory] = useState(false)
   const [interview, setInterview] = useState(false)
   const [film, setFilm] = useState(() => /(^|[#&])film=1/.test(location.hash))
+  useEffect(() => {
+    if (!film) return
+    document.documentElement.classList.add('mission-film-open')
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFilm(false) }
+    addEventListener('keydown', onKey)
+    return () => {
+      document.documentElement.classList.remove('mission-film-open')
+      removeEventListener('keydown', onKey)
+    }
+  }, [film])
   const [phone, setPhone] = useState(false)
   const [workshop, setWorkshop] = useState(false)
   const [lab, setLab] = useState(false)
@@ -238,6 +250,10 @@ export default function App() {
   const [pendingDrive, setPendingDrive] = useState<DriveMode | null>(null)
   const enterRef = useRef<(m: DriveMode) => void>(() => {})
   const [p, setP] = useState<Params>(init.p)
+  useEffect(() => {
+    const rover = compatibleRover(p.lander, p.rover)
+    if (rover !== p.rover) setP((current) => ({ ...current, rover: compatibleRover(current.lander, current.rover) }))
+  }, [p.lander, p.rover])
   const [m, setM] = useState<Manifest | null>(null)
   const [atlasPole, setAtlas] = useState<Atlas | null>(null)
   const [hazardData, setHazard] = useState<Hazard | null>(null)
@@ -328,6 +344,55 @@ export default function App() {
       initSite.current = null
     }
     setProgress(null)
+  }
+  // A typed point: snap to the grid that covers it, score that one cell, and open its site page.
+  // ensureMoon's atlas is used directly; setAtlasMoon has not re-rendered this closure yet.
+  async function openPin(lat: number, lon: number) {
+    if (!m || !atlasPole || !eph || !dsn) return
+    let moonAtlas = atlasMoon
+    if (lat >= -84.5 && moonAtlas === null) {
+      try {
+        moonAtlas = (await ensureMoon()).atlas
+      } catch {
+        return
+      }
+    }
+    if (lat >= -84.5 && !moonAtlas) return
+    const pin = resolvePin(atlasPole, moonAtlas ?? atlasPole, lat, lon, lang)
+    if (pin.index < 0) return
+    const grid: Atlas = pin.grid === 'pole' ? atlasPole : moonAtlas!
+    const qParams = ran?.q ?? p
+    const fh = firstHour(qParams)
+    const nStarts = Math.max(1, Math.min(qParams.windowDays, Math.floor((m.n - fh - qParams.days * 24) / 24) + 1))
+    if (fh < 0 || nStarts < 1) return
+    const c = constraints(qParams)
+    if (!c) return
+    const qSearch = { firstHour: fh, nStarts, strideH: 24, durationH: qParams.days * 24, maxSlope: pin.grid === 'moon' ? Math.max(qParams.slope, 12) : qParams.slope, needDsn: qParams.dsn, relay: qParams.relay, zone: pin.grid === 'moon' ? 0 : qParams.zone, zoneSlope: qParams.zslope, iceKm: pin.grid === 'moon' ? 0 : qParams.ice }
+    const result = searchPoint(grid, eph, dsn, pin.index, qSearch, c)
+    const mission = { ...qParams, windowDays: nStarts }
+    const zoneSlopeDeg = pin.grid === 'pole' ? zoneSlopeAt(hazard, qParams.zone, result.index) : null
+    const iceKm = pin.grid === 'pole' && ice && !Number.isNaN(ice.distKm[result.index]) ? ice.distKm[result.index] : null
+    const regionName = m.regions?.find((g) => g.rings.some((ring) => insideRing(grid.xKm[result.index], grid.yKm[result.index], ring)))?.name.replace(/_/g, ' ') ?? null
+    const lon360 = ((result.lon % 360) + 360) % 360
+    const described = describePlace(result.lat, lon360, feats, lang)
+    const row = siteRow(grid, eph, dsn, result, 1, mission, c, fh, [regionName, described?.text].filter(Boolean).join(' · ') || null, { zoneSlopeDeg, iceKm })
+    const tr = lang === 'tr'
+    const name = described?.text ?? regionName ?? `${result.lat.toFixed(2)}°, ${fmtLonEast(lon360, lang, 1)}`
+    const placeName = described?.name ?? name
+    const sky = localSky(eph, grid.xKm[result.index] * 1000, grid.yKm[result.index] * 1000, fh + result.bestStart * 24 + 12)
+    const best = new Date(Date.parse(qParams.start + 'T00:00:00Z') + result.bestStart * 86400e3)
+    const nt = nearestTarget(result)
+    const baseNote = farSide(result.lat, result.lon) ? (qParams.relay ? (tr ? 'Uzak yüz: röle uydusuyla konuşur' : 'Far side: talks via the relay') : (tr ? 'Uzak yüz: Dünya hiç doğmaz' : 'Far side: Earth never rises'))
+      : nt ? `${nt.d.toFixed(0)} km ${tr ? '→' : 'to'} ${siteLabel(nt.s, lang)}` : undefined
+    const note = pin.note ? (baseNote ? `${baseNote} · ${pin.note}` : pin.note) : baseNote
+    const lim = qParams.zone > 0 && grid.kind === 'pole' ? qParams.zslope : landerById(qParams.lander).zslope
+    const prob = successProbability({ atlas: grid, eph, dsn, r: result, firstHour: fh, days: qParams.days, windowDays: mission.windowDays, needDsn: qParams.dsn, relay: qParams.relay,
+      c, zoneSlopeP95: row.zoneSlopeDeg ?? grid.slope[result.index] * 1.6,
+      slopeLimit: lim - (qParams.landing === 'rough' ? 3 : 0), zoneM: qParams.zone || 1000, history: withRecord, trials: 300 })
+    setProfile({ r: result, row, rank: 1, name, placeName, region: regionName, colour: regionColour(regionName), xKm: grid.xKm[result.index], yKm: grid.yKm[result.index],
+      sun: { az: sky.sun.az, alt: sky.sun.alt }, note, prob, targetKm: nt?.d,
+      ellipse: ellipseCheck(grid, eph, dsn, result.index, fh, result.bestStart, qParams.days, qParams.dsn, c, qParams.zone >= 1000 ? 2.1 : 0, qParams.relay),
+      bestDate: best.toLocaleDateString(tr ? 'tr-TR' : 'en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) })
   }
   // run every scenario over the current landing window and summarise each one
   async function simulate() {
@@ -443,17 +508,19 @@ export default function App() {
     return list.map((r, k) => {
       const reg = region(r) ?? null
       // the place name is the card title (several sites can share a region); the region is the coloured label
-      const name = describePlace(r.lat, ((r.lon % 360) + 360) % 360, feats, lang)?.text ?? reg ?? `${r.lat.toFixed(2)}°, ${(((r.lon % 360) + 360) % 360).toFixed(1)}°E`
+      const described = describePlace(r.lat, ((r.lon % 360) + 360) % 360, feats, lang)
+      const name = described?.text ?? reg ?? `${r.lat.toFixed(2)}°, ${fmtLonEast(r.lon, lang, 1)}`
+      const placeName = described?.name ?? name
       const sky = localSky(eph, atlas.xKm[r.index] * 1000, atlas.yKm[r.index] * 1000, fh + r.bestStart * 24 + 12)
       const best = new Date(Date.parse(ran.q.start + 'T00:00:00Z') + r.bestStart * 86400e3)
       const nt = nearestTarget(r)
       const note = farSide(r.lat, r.lon) ? (ran.q.relay ? (tr ? 'Uzak yüz: röle uydusuyla konuşur' : 'Far side: talks via the relay') : (tr ? 'Uzak yüz: Dünya hiç doğmaz' : 'Far side: Earth never rises'))
-        : nt ? `${nt.d.toFixed(0)} km ${tr ? '→' : 'to'} ${nt.s.name}` : undefined
+        : nt ? `${nt.d.toFixed(0)} km ${tr ? '→' : 'to'} ${siteLabel(nt.s, lang)}` : undefined
       const lim = ran.q.zone > 0 && atlas.kind === 'pole' ? ran.q.zslope : landerById(ran.q.lander).zslope
       const prob = successProbability({ atlas, eph, dsn: dsn!, r, firstHour: fh, days: ran.q.days, windowDays: ran.q.windowDays, needDsn: ran.q.dsn, relay: ran.q.relay,
         c: constraints(ran.q)!, zoneSlopeP95: listRows[k]?.zoneSlopeDeg ?? atlas.slope[r.index] * 1.6,
         slopeLimit: lim - (ran.q.landing === 'rough' ? 3 : 0), zoneM: ran.q.zone || 1000, history: withRecord, trials: 300 })
-      return { r, row: listRows[k], rank: k + 1, name, region: reg, colour: regionColour(reg), xKm: atlas.xKm[r.index], yKm: atlas.yKm[r.index],
+      return { r, row: listRows[k], rank: k + 1, name, placeName, region: reg, colour: regionColour(reg), xKm: atlas.xKm[r.index], yKm: atlas.yKm[r.index],
         sun: { az: sky.sun.az, alt: sky.sun.alt }, note, prob, targetKm: nt?.d,
         ellipse: // the 2 km grid resolves only a +-1 km landing zone: a precise lander (100-500 m) is covered by the 40 m zone check
         ellipseCheck(atlas, eph, dsn!, r.index, fh, r.bestStart, ran.q.days, ran.q.dsn, constraints(ran.q)!, ran.q.zone >= 1000 ? 2.1 : 0, ran.q.relay),
@@ -570,12 +637,12 @@ export default function App() {
   enterRef.current = enter
   const loc = lang === 'tr' ? 'tr-TR' : 'en-US'
   const place = (r: PointResult) => describePlace(r.lat, ((r.lon % 360) + 360) % 360, feats, lang)?.text
-  const coords = (r: PointResult) => `${r.lat.toFixed(2)}°, ${(((r.lon % 360) + 360) % 360).toFixed(1)}°E`
+  const coords = (r: PointResult) => `${r.lat.toFixed(2)}°, ${fmtLonEast(r.lon, lang, 1)}`
   const siteName = (r: PointResult) => region(r) ?? place(r) ?? coords(r)
   const scenario = matchScenario(p)
   const dirty = !!ran && (Object.keys(p) as (keyof Params)[]).some((k) => p[k] !== ran.asked[k])
   // the mission comes from the scenario, the hardware (battery, landing precision, slope limit, longest stay) from the lander
-  const withLander = (q: Params, l: Lander): Params => ({ ...q, lander: l.id, batt: l.batt, zone: l.zone, zslope: l.zslope, days: Math.min(q.days, l.maxDays) })
+  const withLander = (q: Params, l: Lander): Params => ({ ...q, lander: l.id, rover: compatibleRover(l.id, q.rover), batt: l.batt, zone: l.zone, zslope: l.zslope, days: Math.min(q.days, l.maxDays) })
   const watchLanding = () => {
     if (atlas.kind === 'pole') { setPendingDrive('landing'); return }
     setMapMode('route'); setFlightView('pilot')
@@ -637,7 +704,7 @@ export default function App() {
   // unreadable heap around the pole)
   const goalKind = p.target.startsWith('kind:') ? p.target.slice(5) : null
   const globeTargets = SCIENCE_SITES.filter((s) => s.id === p.target || s.kind === goalKind).map((s): Target => ({
-    id: s.id, name: s.name, lat: s.lat, lon: s.lon, colour: SCIENCE_KIND[s.kind].colour, selected: s.id === p.target,
+    id: s.id, name: siteLabel(s, lang), lat: s.lat, lon: s.lon, colour: SCIENCE_KIND[s.kind].colour, selected: s.id === p.target,
     label: s.id === p.target || s.kind === goalKind }))
   // provenance for the report: a QR back to this exact mission, the data behind every number, and when it was made
   const provenanceHtml = () => {
@@ -650,7 +717,7 @@ export default function App() {
 <ul style="margin:0;font-size:12px;line-height:1.6">
 <li>${tr ? 'Bu görevi uygulamada aç: QR kod (tüm ayarlar bağlantıda).' : 'Open this exact mission in the app: the QR code (every setting is in the link).'}</li>
 <li>${tr ? 'Efemeris' : 'Ephemeris'}: ${eStart} → ${eEnd}, ${m.n.toLocaleString()} ${tr ? 'saat' : 'hours'} · ${tr ? 'ızgara' : 'grid'}: ${atlas.n.toLocaleString()} ${tr ? 'nokta' : 'points'} (${atlas.kind === 'pole' ? (tr ? 'güney kutbu, 2 km' : 'south pole, 2 km') : (tr ? 'tüm Ay, ~30 km' : 'whole Moon, ~30 km')})</li>
-<li>${tr ? 'Veri' : 'Data'}: ${m.sources.map((x) => x.replace(/[<>&]/g, '')).join(' · ')}</li>
+<li>${tr ? 'Veri' : 'Data'}: ${catalogueSources(m.sources).map((x) => x.replace(/[<>&]/g, '')).join(' · ')}</li>
 <li>${tr ? 'Oluşturuldu' : 'Generated'}: ${new Date().toISOString().replace('T', ' ').slice(0, 16)} UTC · LunaNav</li>
 <li>${tr ? 'Bir planlama aracıdır, iniş sertifikası değildir.' : 'A planning tool, not a landing certification.'}</li></ul></div>`
   }
@@ -659,8 +726,8 @@ export default function App() {
     if (!ran) return
     const w = window.open('', '_blank')
     if (!w) return
-    const html = reportHtml(cmpRows.length >= 2 ? cmpRows : rows, ran.q, constraints(ran.q)!, m.sources, lang)
-      .replace('</body></html>', `${results ? scenarioHtml(results, (r) => place(r) ?? coords(r), lang) : ''}${provenanceHtml()}<script>setTimeout(() => print(), 400)</script></body></html>`)
+    const html = localizeReportHtml(reportHtml(cmpRows.length >= 2 ? cmpRows : rows, ran.q, constraints(ran.q)!, catalogueSources(m.sources), lang)
+      .replace('</body></html>', `${results ? scenarioHtml(results, (r) => place(r) ?? coords(r), lang) : ''}${provenanceHtml()}<script>setTimeout(() => print(), 400)</script></body></html>`), lang)
     w.document.write(html); w.document.close()
   }
   const missionLabel = ran ? `${customName ?? matchScenario(ran.asked)?.name[lang] ?? (lang === 'tr' ? 'Özel görev' : 'Custom mission')} · ${fmtDate(new Date(ran.q.start + 'T00:00:00Z'))} + ${ran.q.windowDays} ${S.days[lang]}` : ''
@@ -699,7 +766,7 @@ export default function App() {
                 )}
                 {mapMode === 'sun' && ran && (
                   <div className="map-time">
-                    <button className="icon-btn" onClick={() => setMapPlay(!mapPlay)} aria-label="Play">{mapPlay ? <Pause size={14} /> : <Play size={14} />}</button>
+                    <button className="icon-btn" onClick={() => setMapPlay(!mapPlay)} aria-label={mapPlay ? (lang === 'tr' ? 'Duraklat' : 'Pause') : (lang === 'tr' ? 'Oynat' : 'Play')}>{mapPlay ? <Pause size={14} /> : <Play size={14} />}</button>
                     <input className="rng" type="range" min={0} max={Math.max(1, mapSpan - 1)} value={mapH}
                            style={{ ['--p' as string]: `${(mapH / Math.max(1, mapSpan - 1)) * 100}%` }}
                            onChange={(e) => { setMapPlay(false); setMapH(+e.target.value) }} />
@@ -755,13 +822,13 @@ export default function App() {
           <a href="#site">{S.navSite[lang]}</a>
           <a href="#method">{S.navMethod[lang]}</a>
         </nav>}
-        {ui === 'advanced' && <button className="nav-ws" onClick={() => setLab(true)}><Scale size={14} /> {lang === 'tr' ? 'Karar' : 'Decide'}</button>}
-        {ui === 'advanced' && <button className="nav-ws" onClick={() => setWorkshop(true)}><Wrench size={14} /> {lang === 'tr' ? 'Atölye' : 'Workshop'}</button>}
+        {ui === 'advanced' && <button className="nav-ws" onClick={() => setLab(true)} aria-label={lang === 'tr' ? 'Karar' : 'Decide'}><Scale size={14} /> <span className="nav-label">{lang === 'tr' ? 'Karar' : 'Decide'}</span></button>}
+        {ui === 'advanced' && <button className="nav-ws" onClick={() => setWorkshop(true)} aria-label={lang === 'tr' ? 'Atölye' : 'Workshop'}><Wrench size={14} /> <span className="nav-label">{lang === 'tr' ? 'Atölye' : 'Workshop'}</span></button>}
         <button className="nav-ws nav-qr" onClick={() => { location.hash = `judges&lang=${lang}` }} title={lang === 'tr' ? 'Jüri sayfası ve QR kodu' : 'Judges page and QR code'} aria-label="QR"><QrCode size={15} /></button>
-        <button className="nav-ws" onClick={() => setPhone(true)}><Smartphone size={14} /> {lang === 'tr' ? 'Telefon' : 'Phone'}</button>
-        <button className="nav-story" onClick={() => setFilm(true)}><Sparkles size={14} /> {lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}</button>
+        <button className="nav-ws nav-phone" onClick={() => setPhone(true)}><Smartphone size={14} /> <span className="nav-label">{lang === 'tr' ? 'Telefon' : 'Phone'}</span></button>
+        <button className="nav-story" onClick={() => setFilm(true)} aria-label={lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}><Sparkles size={14} /> <span className="nav-label">{lang === 'tr' ? 'Görevi anlat' : 'Tell me the mission'}</span></button>
         <div className="nav-r">
-          <div className="seg" role="group" aria-label="Language">
+          <div className="seg" role="group" aria-label={lang === 'tr' ? 'Dil' : 'Language'}>
             {(['en', 'tr'] as Lang[]).map((l) => (
               <button key={l} className={l === lang ? 'on' : ''} onClick={() => setLang(l)}>{l.toUpperCase()}</button>
             ))}
@@ -788,14 +855,15 @@ export default function App() {
               busy={progress !== null} progress={progress} points={atlas.n} rankBy={rankBy} onRankBy={setRankBy}
               cards={rankBy === 'prob' ? [...cards].sort((a, b) => (b.prob?.p ?? 0) - (a.prob?.p ?? 0)).map((c, i) => ({ ...c, rank: i + 1 })) : cards}
               polarCards={rankBy === 'prob' ? [...polarCards].sort((a, b) => (b.prob?.p ?? 0) - (a.prob?.p ?? 0)).map((c, i) => ({ ...c, rank: i + 1 })) : polarCards}
-              targetName={targetSite?.name ?? (targets.length ? SCIENCE_KIND[targets[0].kind].label[lang] : null)}
+              targetName={targetSite ? siteLabel(targetSite, lang) : (targets.length ? SCIENCE_KIND[targets[0].kind].label[lang] : null)}
               scope={p.scope} goal={p.target.startsWith('kind:') ? (p.target.slice(5) as ScienceKind) : null} onScope={chooseScope} onGoal={chooseGoal}
               windowLabel={missionLabel}
               lander={p.lander} rover={p.rover}
               onLander={(l) => { const next = withLander(p, l); setP(next); run(next) }}
-              onRover={(id) => set('rover', id)}
+              onRover={(id) => set('rover', compatibleRover(p.lander, id))}
+              onDrive={(c) => { setPinned(c.r); setPendingDrive('rover') }}
               onScenario={(sc) => { const next = applyScenario(sc); setCustomName(null); setP(next); run(next) }}
-              onStart={(d) => set('start', d)} onRun={() => run(p)} onOpen={setProfile}
+              onStart={(d) => set('start', d)} onRun={() => run(p)} onOpen={setProfile} onCoordinate={openPin}
               onAdvanced={() => { setUi('advanced'); scrollTo({ top: 0 }) }} onStory={() => setFilm(true)}
               onDecide={() => setLab(true)} onWorkshop={() => setWorkshop(true)} onSources={() => setSources(true)} onMission={runClps} onOrbits={() => setOrbitPanel(true)} onHistory={() => setHistoryPanel(true)} onTour={() => setTour(true)} onLibration={() => setLibration(true)}
               pinned={pinnedMission} current={snapOf(missionLabel, cards[0])}
@@ -813,6 +881,9 @@ export default function App() {
           <div className="group">
             <div className="group-label">{lang === 'tr' ? 'Kapsam ve hedef' : 'Scope and target'}</div>
             {scopeTarget}
+          </div>
+          <div className="group">
+            <CoordinateSearch lang={lang} onGo={openPin} />
           </div>
           <div className="group">
             <div className="group-label">{S.mission[lang]}</div>
@@ -835,9 +906,9 @@ export default function App() {
           <div className="group">
             <div className="group-label">{S.requirements[lang]}</div>
             <Field label={S.stay[lang]} v={p.days} min={1} max={30} on={(v) => set('days', v)} unit={S.days[lang]} />
-            <Field label={S.needSun[lang]} v={p.sun} min={0} max={100} step={5} on={(v) => set('sun', v)} unit="%" />
-            <Field label={S.needEarth[lang]} v={p.earth} min={0} max={100} step={5} on={(v) => set('earth', v)} unit="%" />
-            <Field label={S.maxShadow[lang]} v={p.shadow} min={0} max={240} step={6} on={(v) => set('shadow', v)} unit="h" />
+            <Field label={S.needSun[lang]} v={p.sun} min={0} max={100} step={5} on={(v) => set('sun', v)} unit="%" lead={lang === 'tr'} />
+            <Field label={S.needEarth[lang]} v={p.earth} min={0} max={100} step={5} on={(v) => set('earth', v)} unit="%" lead={lang === 'tr'} />
+            <Field label={S.maxShadow[lang]} v={p.shadow} min={0} max={240} step={6} on={(v) => set('shadow', v)} unit={lang === 'tr' ? 'sa' : 'h'} />
             <Field label={S.battery[lang]} v={p.batt} min={500} max={20000} step={500} on={(v) => set('batt', v)} unit="Wh" />
             <Field label={S.slope[lang]} v={p.slope} min={2} max={20} on={(v) => set('slope', v)} unit="°" />
             <label className="checkbox"><input type="checkbox" checked={p.dsn} onChange={(e) => set('dsn', e.target.checked)} /><span>{S.dsn[lang]}</span></label>
@@ -876,7 +947,7 @@ export default function App() {
           )}
           <div className="side-foot">
             <button className={`btn primary block ${dirty && progress === null ? 'dirty' : ''}`} disabled={progress !== null} onClick={() => run(p)}>
-              {progress !== null ? `${S.searching[lang]} ${Math.round(progress * 100)}%` : dirty ? S.rerun[lang] : S.search[lang]}
+              {progress !== null ? `${S.searching[lang]} ${fmtPercent(Math.round(progress * 100), lang)}` : dirty ? S.rerun[lang] : S.search[lang]}
             </button>
             <button className="btn block sim-btn" disabled={progress !== null} onClick={simulate}><FlaskConical size={14} /> {S.simulate[lang]}</button>
             {progress !== null && <div className="progress"><i style={{ width: `${progress * 100}%` }} /></div>}
@@ -937,8 +1008,8 @@ export default function App() {
                               <span className="meter"><i className={o.best.goCount > 0 ? 'go' : 'nogo'} style={{ width: `${Math.max(4, (o.best.goCount / o.windowDays) * 100)}%` }} /></span>
                               <span className="num">{o.best.goCount}/{o.windowDays}</span>
                             </div>)}</td>
-                          <td className="num">{o.best ? `${Math.round(o.best.sunFrac * 100)}%` : '–'}</td>
-                          <td className="num">{o.best ? `${Math.round(o.best.commFrac * 100)}%` : '–'}</td>
+                          <td className="num">{o.best ? fmtPercent(o.best.sunFrac * 100, lang) : '–'}</td>
+                          <td className="num">{o.best ? fmtPercent(o.best.commFrac * 100, lang) : '–'}</td>
                         </tr>
                       )
                     })}
@@ -988,9 +1059,9 @@ export default function App() {
                             <span className="num">{r.goCount}/{ran.q.windowDays}</span>
                           </div>
                         </td>
-                        <td>{fmtDate(startDate(r.bestStart))}</td>
-                        <td className="num">{Math.round(r.sunFrac * 100)}%</td>
-                        <td className="num">{Math.round(r.commFrac * 100)}%</td>
+                        <td className="col-date">{fmtDate(startDate(r.bestStart))}</td>
+                        <td className="num">{fmtPercent(r.sunFrac * 100, lang)}</td>
+                        <td className="num">{fmtPercent(r.commFrac * 100, lang)}</td>
                         <td className="num">{atlas.slope[r.index].toFixed(1)}°</td>
                         {ran.q.zone > 0 && hazard && <td className="num">{zoneSlopeAt(hazard, ran.q.zone, r.index)?.toFixed(1)}°</td>}
                         {ice && <td className="num">{Number.isNaN(ice.distKm[r.index]) ? '–' : `${ice.distKm[r.index].toFixed(1)} km`}</td>}
@@ -1027,7 +1098,7 @@ export default function App() {
                   <div>
                     <div className="eyebrow">{S.siteN[lang]}{pickRank ? ` ${pickRank}` : ''}{region(pick) ? ` · ${S.inRegion[lang]}` : ''}</div>
                     <h2>{siteName(pick)}</h2>
-                    <p className="sub">{region(pick) && place(pick) ? `${place(pick)} · ` : ''}{pick.lat.toFixed(3)}°, {(((pick.lon % 360) + 360) % 360).toFixed(3)}°E · {S.bestDate[lang]} {fmtDate(startDate(pick.bestStart))} · {ran.q.days} {S.days[lang]} ·{' '}
+                    <p className="sub">{region(pick) && place(pick) ? `${place(pick)} · ` : ''}{pick.lat.toFixed(3)}°, {fmtLonEast(pick.lon, lang, 3)} · {S.bestDate[lang]} {fmtDate(startDate(pick.bestStart))} · {ran.q.days} {S.days[lang]} ·{' '}
                       {lang === 'tr' ? 'eğim' : 'slope'} {atlas.slope[pick.index].toFixed(1)}° · {lang === 'tr' ? 'yükseklik' : 'height'} {atlas.height[pick.index].toLocaleString(loc)} m</p>
                   </div>
                   <div className="actions">
@@ -1043,7 +1114,7 @@ export default function App() {
                 </div>
                 {(() => { const cs = cards.find((c) => c.r.index === pick.index); return cs?.prob ? <ProbabilityPanel prob={cs.prob} lang={lang} history={withRecord} onHistory={setWithRecord} /> : null })()}
                 <div className={`verdict-row ${detail.w.go ? 'go' : 'nogo'}`}>
-                  <span className={`badge ${detail.w.go ? 'go' : 'nogo'}`}>{detail.w.go ? 'GO' : 'NO-GO'}</span>
+                  <span className={`badge ${detail.w.go ? 'go' : 'nogo'}`}>{verdictLabel(detail.w.go, lang)}</span>
                   <p>{why(detail.w, 1, detail.c, lang)}</p>
                 </div>
                 {(() => {
@@ -1074,11 +1145,11 @@ export default function App() {
                   </p>
                 )}
                 <div className="stats">
-                  <Stat icon={<Sun size={14} />} label={T.sunlight[lang]} value={fmtPct(detail.w.sunFrac, lang)} need={`≥ ${ran.q.sun}%`}
+                  <Stat icon={<Sun size={14} />} label={T.sunlight[lang]} value={fmtPct(detail.w.sunFrac, lang)} need={`≥ ${fmtPercent(ran.q.sun, lang)}`}
                         frac={detail.w.sunFrac} ok={detail.w.sunFrac >= detail.c.min_sun_frac} />
-                  <Stat icon={<Earth size={14} />} label={S.colEarth[lang]} value={fmtPct(detail.w.commFrac, lang)} need={`≥ ${ran.q.earth}%${ran.q.dsn ? ' · DSN' : ''}`}
+                  <Stat icon={<Earth size={14} />} label={S.colEarth[lang]} value={fmtPct(detail.w.commFrac, lang)} need={`≥ ${fmtPercent(ran.q.earth, lang)}${ran.q.dsn ? ' · DSN' : ''}`}
                         frac={detail.w.commFrac} ok={detail.w.commFrac >= detail.c.min_comm_frac} />
-                  <Stat icon={<MoonStar size={14} />} label={S.longestDark[lang]} value={hours(detail.w.longestDarkH, lang)} need={`≤ ${ran.q.shadow} h`}
+                  <Stat icon={<MoonStar size={14} />} label={S.longestDark[lang]} value={hours(detail.w.longestDarkH, lang)} need={`≤ ${fmtHoursShort(ran.q.shadow, lang)}`}
                         frac={Math.min(1, detail.w.longestDarkH / Math.max(1, ran.q.shadow))} ok={detail.w.longestDarkH <= detail.c.max_dark_hours} invert />
                   <Stat icon={<BatteryMedium size={14} />} label={T.battery[lang]} ok={detail.w.survived}
                         value={detail.w.survived ? T.lasts[lang] : `${lang === 'tr' ? 'Biter' : 'Empty at'} ${hours(detail.w.power.firstFailure ?? 0, lang)}`}
@@ -1164,7 +1235,7 @@ export default function App() {
             <ul className="valid">
               {VALIDATION[lang].map(([what, num]) => <li key={what}><CheckCircle2 size={14} /><span>{what}</span><b>{num}</b></li>)}
             </ul>
-            <p className="hint">{m.sources.join(' · ')}</p>
+            <p className="hint">{catalogueSources(m.sources).join(' · ')}</p>
             <div className="links">
               <a href={REPO_URL} target="_blank" rel="noreferrer">{T.source[lang]} · GitHub ↗</a>
               <a href={PLANNER_URL} target="_blank" rel="noreferrer">{T.planner[lang]} ↗</a>
@@ -1224,7 +1295,12 @@ export default function App() {
       })()}
       {film && (() => {
         const c = cards.find((x) => x.r.goCount > 0) ?? cards[0]
-        if (!c || !ran || !eph || !dsn) return null
+        if (!c || !ran || !eph || !dsn) return (
+          <div className="film film-wait" role="dialog" aria-label={lang === 'tr' ? 'Görev filmi' : 'Mission film'}>
+            <p>{lang === 'tr' ? 'Bir iniş yeri aranıyor.' : 'Finding a landing site.'}</p>
+            <button type="button" className="btn" onClick={() => setFilm(false)}>{lang === 'tr' ? 'Kapat' : 'Close'}</button>
+          </div>
+        )
         const l = landerById(p.lander)
         const sc = matchScenario(ran.asked) ?? null
         const landingDay = new Date(Date.parse(c.row.bestLanding + 'T00:00:00Z'))
@@ -1266,11 +1342,11 @@ function Compare({ rows, lang, onClear }: { rows: SiteRow[]; lang: Lang; onClear
   // metric, value, higher-is-better (null = no ranking)
   const lines: [string, (r: SiteRow) => string, ((r: SiteRow) => number) | null, boolean][] = [
     [tr ? 'Uygun iniş tarihleri' : 'GO landing dates', (r) => `${r.goDates} / ${r.windowDays}`, (r) => r.goDates, true],
-    [tr ? 'En iyi iniş' : 'Best landing', (r) => `${r.bestLanding} · ${r.go ? 'GO' : 'NO-GO'}`, null, true],
-    [tr ? 'Güneş ışığı' : 'Sunlight', (r) => `${r.sunPct}%`, (r) => r.sunPct, true],
-    [tr ? 'Dünya bağlantısı' : 'Earth contact', (r) => `${r.earthPct}%`, (r) => r.earthPct, true],
-    [tr ? 'En uzun karanlık' : 'Longest dark', (r) => `${r.longestDarkH} h`, (r) => r.longestDarkH, false],
-    [tr ? 'Gereken batarya' : 'Battery needed', (r) => `${r.batteryNeedWh.toLocaleString()} Wh`, (r) => r.batteryNeedWh, false],
+    [tr ? 'En iyi iniş' : 'Best landing', (r) => `${fmtIsoDate(r.bestLanding, lang)} · ${verdictLabel(r.go, lang)}`, null, true],
+    [tr ? 'Güneş ışığı' : 'Sunlight', (r) => fmtPercent(r.sunPct, lang), (r) => r.sunPct, true],
+    [tr ? 'Dünya bağlantısı' : 'Earth contact', (r) => fmtPercent(r.earthPct, lang), (r) => r.earthPct, true],
+    [tr ? 'En uzun karanlık' : 'Longest dark', (r) => fmtHoursShort(r.longestDarkH, lang), (r) => r.longestDarkH, false],
+    [tr ? 'Gereken batarya' : 'Battery needed', (r) => `${r.batteryNeedWh.toLocaleString(tr ? 'tr-TR' : 'en-US')} Wh`, (r) => r.batteryNeedWh, false],
     [tr ? 'Eğim' : 'Slope', (r) => `${r.slopeDeg.toFixed(1)}°`, (r) => r.slopeDeg, false],
     [tr ? 'İniş alanı eğimi (%95)' : 'Landing zone slope (95%)', (r) => (r.zoneSlopeDeg === null ? '–' : `${r.zoneSlopeDeg.toFixed(1)}°`), (r) => r.zoneSlopeDeg ?? 99, false],
     [tr ? 'En yakın buz' : 'Nearest ice', (r) => (r.iceKm === null ? '–' : `${r.iceKm.toFixed(1)} km`), (r) => r.iceKm ?? 999, false],
@@ -1281,7 +1357,7 @@ function Compare({ rows, lang, onClear }: { rows: SiteRow[]; lang: Lang; onClear
     <section className="card compare">
       <div className="card-head"><div><h2>{S.compareTitle[lang]}</h2></div><div className="actions"><button className="btn" onClick={onClear}>{S.clear[lang]}</button></div></div>
       <div className="table-wrap"><table className="table">
-        <thead><tr><th />{rows.map((r) => <th key={r.index}>#{r.rank}<small>{r.region ?? `${r.lat.toFixed(2)}°, ${r.lon.toFixed(1)}°E`}</small></th>)}</tr></thead>
+        <thead><tr><th />{rows.map((r) => <th key={r.index}>#{r.rank}<small>{r.region ?? `${r.lat.toFixed(2)}°, ${fmtLonEast(r.lon, lang, 1)}`}</small></th>)}</tr></thead>
         <tbody>
           {lines.map(([name, show, score, up]) => {
             const vals = score ? rows.map(score) : []
@@ -1304,23 +1380,24 @@ function Compare({ rows, lang, onClear }: { rows: SiteRow[]; lang: Lang; onClear
   )
 }
 
-function NumberInput({ v, min, max, step = 1, on, unit }: { v: number; min: number; max: number; step?: number; on: (v: number) => void; unit: string }) {
+function NumberInput({ v, min, max, step = 1, on, unit, lead = false }: { v: number; min: number; max: number; step?: number; on: (v: number) => void; unit: string; lead?: boolean }) {
   const [txt, setTxt] = useState(String(v))
   useEffect(() => setTxt(String(v)), [v])
   const commit = () => { const n = Number(txt); if (Number.isFinite(n)) on(Math.min(max, Math.max(min, Math.round(n / step) * step))); else setTxt(String(v)) }
   return (
     <span className="num-input">
+      {lead && <em>{unit}</em>}
       <input inputMode="numeric" value={txt} onChange={(e) => setTxt(e.target.value)} onBlur={commit}
              onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); on(Math.min(max, Math.max(min, v + (e.key === 'ArrowUp' ? step : -step)))) } }} />
-      <em>{unit}</em>
+      {!lead && <em>{unit}</em>}
     </span>
   )
 }
 
-function Field({ label, v, min, max, step = 1, on, unit }: { label: string; v: number; min: number; max: number; step?: number; on: (v: number) => void; unit: string }) {
+function Field({ label, v, min, max, step = 1, on, unit, lead = false }: { label: string; v: number; min: number; max: number; step?: number; on: (v: number) => void; unit: string; lead?: boolean }) {
   return (
     <div className="field">
-      <div className="field-top"><label>{label}</label><NumberInput v={v} min={min} max={max} step={step} on={on} unit={unit} /></div>
+      <div className="field-top"><label>{label}</label><NumberInput v={v} min={min} max={max} step={step} on={on} unit={unit} lead={lead} /></div>
       <input className="rng" type="range" min={min} max={max} step={step} value={v} aria-label={label}
              style={{ ['--p' as string]: `${((v - min) / (max - min)) * 100}%` }} onChange={(e) => on(+e.target.value)} />
     </div>

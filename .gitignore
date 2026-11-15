@@ -12,6 +12,7 @@ data/dem
 *.egg-info/
 data/illumination
 build/
+node_modules/
 
 # KiCad local state
 *.kicad_prl

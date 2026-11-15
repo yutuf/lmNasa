@@ -26,8 +26,9 @@
 }
 html, body { background: #000000; }
 #root { position: relative; z-index: 1; background: transparent; }
-/* One star field for the whole page, including the gaps around the Moon. Fixed, so scrolling moves the UI over it. */
-body::before {
+/* One star field for the whole page, including the gaps around the Moon. Fixed, so scrolling moves the UI over it.
+   Full-screen panels draw their own copy on a black ground, so the page under them does not show through. */
+body::before, .profile::before, .workshop::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -175,7 +176,8 @@ h2, .card-head h2 { font-weight: 800; letter-spacing: -0.005em; font-size: 17px;
 
 /* ---------- site profile page ---------- */
 body.no-scroll { overflow: hidden; }
-.profile { position: fixed; inset: 0; z-index: 60; overflow-y: auto; background: transparent; }
+.profile { position: fixed; inset: 0; z-index: 60; overflow-y: auto; background: #000; }
+.profile::before, .workshop::before { z-index: -1; }
 .profile-hero { position: relative; min-height: 400px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center;
   padding: 64px 40px 30px; overflow: hidden; isolation: isolate;
   background: linear-gradient(120deg, color-mix(in srgb, var(--team) 66%, #1c1c26) 0%, color-mix(in srgb, var(--team) 28%, #1c1c26) 80%); }
@@ -422,6 +424,9 @@ body.no-scroll { overflow: hidden; }
 
 /* ---------- the mission film ---------- */
 .film { position: fixed; inset: 0; z-index: 90; background: #000; color: #fff; overflow: hidden; }
+html.mission-film-open, html.mission-film-open body { overflow: hidden; height: 100%; max-height: 100dvh; }
+.film-wait { display: grid; place-items: center; align-content: center; gap: 18px; padding: 24px; text-align: center; }
+.film-wait p { margin: 0; max-width: 16em; font: 800 clamp(22px, 3vw, 40px)/1.25 var(--display); font-stretch: 112%; }
 .film-stage { position: absolute; inset: 0; animation: filmIn .8s ease both; }
 .film-stage > div:first-child:not(.fs-title):not(.fs-site):not(.fs-verdict), .film-stage canvas { width: 100%; height: 100%; }
 .film-stage .drive { position: absolute; inset: 0; }
@@ -455,7 +460,7 @@ body.no-scroll { overflow: hidden; }
 @keyframes landerIn { from { transform: translateY(-60px); opacity: 0; } to { transform: none; opacity: 1; } }
 .fs-boxes { position: absolute; z-index: 2; display: grid; gap: 10px; }
 .fs-boxes.left { left: 28px; top: 13vh; } .fs-boxes.right { right: 28px; top: 13vh; }
-.fs-box { display: grid; gap: 2px; padding: 10px 14px; border-radius: 6px; background: rgba(10, 10, 16, .78); border-left: 3px solid var(--red);
+.fs-box { display: grid; gap: 2px; padding: 10px 14px; border-radius: 6px; background: rgba(10, 10, 16, .78);
   animation: boxIn .6s cubic-bezier(.2, .8, .2, 1) both; min-width: 220px; }
 @keyframes boxIn { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
 .fs-box b { font: 900 16px var(--display); font-stretch: 118%; font-variant-numeric: tabular-nums; }
@@ -468,7 +473,7 @@ body.no-scroll { overflow: hidden; }
 .fs-site-name span { font: 800 13px var(--display); letter-spacing: .14em; text-transform: uppercase; color: rgba(255, 255, 255, .8); }
 .fs-site-name h2 { margin: 0; font: 900 clamp(30px, 4.6vw, 60px)/1.02 var(--display); font-stretch: 125%; }
 .fs-boxes.grid { left: 6vw; top: 34vh; grid-template-columns: repeat(3, minmax(170px, 1fr)); }
-.fs-box.stat { border-left-color: var(--k, #fff); }
+
 .fs-box.stat b { font-size: 34px; }
 .fs-box.sun { --k: var(--sun); } .fs-box.earth { --k: var(--earth); } .fs-box.dark { --k: #9d7bff; } .fs-box.safe { --k: var(--safe); }
 .fs-box.ice { --k: var(--ice); } .fs-box.go { --k: var(--go); }
@@ -492,7 +497,7 @@ body.no-scroll { overflow: hidden; }
 .fs-verdict h1 { font-size: clamp(90px, 13vw, 200px); line-height: .9; }
 .fs-verdict .fs-lander-v { width: min(22vw, 260px); filter: drop-shadow(0 24px 30px rgba(0, 0, 0, .8)); animation: landerIn 1.6s ease both .3s; }
 .fs-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.fs-summary div { padding: 10px 12px; border-radius: 6px; background: rgba(10, 10, 16, .72); border-left: 3px solid var(--k, rgba(255, 255, 255, .5));
+.fs-summary div { padding: 10px 12px; border-radius: 6px; background: rgba(10, 10, 16, .72);
   animation: boxIn .6s cubic-bezier(.2, .8, .2, 1) both; }
 .fs-summary span { display: block; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .6); }
 .fs-summary b { font: 900 18px var(--display); font-stretch: 112%; }
@@ -509,7 +514,7 @@ body.no-scroll { overflow: hidden; }
 .nav-ws { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 999px; cursor: pointer;
   background: transparent; border: 1px solid var(--border-2); color: #fff; font: 800 12px var(--display); font-stretch: 112%; letter-spacing: .05em; text-transform: uppercase; }
 .nav-ws:hover { border-color: #fff; }
-.workshop { position: fixed; inset: 0; z-index: 65; background: transparent; overflow-y: auto; display: flex; flex-direction: column; }
+.workshop { position: fixed; inset: 0; z-index: 65; background: #000; overflow-y: auto; display: flex; flex-direction: column; }
 .ws-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding: 22px 28px 14px; border-bottom: 1px solid var(--border);
   background-image: repeating-linear-gradient(115deg, rgba(255, 255, 255, .025) 0 2px, transparent 2px 9px); }
 .ws-head h1 { margin: 0; font: 900 34px var(--display); font-stretch: 125%; text-transform: uppercase; }
@@ -916,3 +921,83 @@ body.no-scroll { overflow: hidden; }
 .ph-cal.marks i.go::after { content: '✓'; color: #06140c; }
 .ph-cal.marks i.nogo::after { content: '×'; color: rgba(255, 255, 255, .4); }
 .msg-trace { display: block; margin-top: 6px; padding-top: 5px; border-top: 1px solid rgba(255, 255, 255, .1); font-size: 10.5px; line-height: 1.4; color: var(--text-3); }
+
+.ph-text .place-rest { font-weight: 560; font-size: clamp(16px, 2.1vw, 24px); line-height: 1.2; margin-top: 2px; }
+.sc-text .place-rest { font-weight: 550; font-size: 15px; line-height: 1.25; }
+.ticker-cycle { mask-image: none; -webkit-mask-image: none; display: flex; align-items: center; min-width: 0; }
+.ticker-line { display: block; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 0 12px; font-weight: 600; letter-spacing: .04em; color: var(--text-2); }
+
+/* Phone: the bar keeps the switch, the film and the language on one line. Decide and Workshop
+   keep their names on aria-label. QR, Phone and GitHub stay on wider screens. */
+@media (max-width: 760px) {
+  .nav { gap: 8px; padding: 0 12px; }
+  .logo-word, .nav-qr, .nav-phone, .gh-btn { display: none; }
+  .ui-switch button { padding: 5px 9px; }
+  .nav-story { width: 34px; padding: 0; justify-content: center; }
+  .nav-story .nav-label { display: none; }
+
+  html body .app .nav { gap: 4px; padding: 0 8px; max-width: 100%; }
+  html body .app .logo { flex: none; }
+  html body .app .logo svg { width: 28px; height: 28px; }
+  html body .app .nav .ui-switch { flex: none; }
+  html body .app .nav .ui-switch button { padding: 5px 7px; font-size: 11px; }
+  html body .app .nav-ws {
+    flex: none; width: 32px; min-width: 32px; max-width: 32px; height: 32px;
+    padding: 0; gap: 0; justify-content: center; overflow: hidden;
+  }
+  html body .app .nav-ws .nav-label { display: none; }
+  html body .app .nav-ws svg { width: 16px; height: 16px; flex: none; }
+  html body .app .nav-story { flex: none; width: 34px; min-width: 34px; max-width: 34px; height: 32px; }
+  html body .app .nav-r { margin-left: auto; gap: 4px; flex: none; }
+  html body .app .nav-r .seg button { padding: 4px 7px; font-size: 11px; }
+
+  html body .profile { max-width: 100%; overflow-x: clip; }
+  html body .profile .profile-body { min-width: 0; max-width: 100%; contain: inline-size; }
+  html body .profile .profile-body > *,
+  html body .profile .sx,
+  html body .profile .sx-box,
+  html body .profile .sx-cal,
+  html body .profile .sx-cal-grid,
+  html body .profile .ph-strips,
+  html body .profile .ph-cal { min-width: 0; max-width: 100%; }
+  html body .profile .sx-cal-grid { overflow-x: hidden; }
+  html body .profile .sx-canvas { min-width: 0; max-width: 100%; overflow-x: auto; }
+  html body .profile .ph-actions {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; max-width: 100%;
+  }
+  html body .profile .ph-actions .btn {
+    min-width: 0; width: 100%; height: auto; min-height: 44px; padding: 8px 10px; white-space: normal;
+  }
+  html body .profile .ph-cal i { min-width: 0; }
+
+  html body .app .table-wrap { max-width: 100%; overflow-x: auto; }
+  html body .app .table-wrap > .table { width: max-content; min-width: 100%; }
+  html body .app .table-wrap .col-date { white-space: nowrap; }
+
+  html body .app button.luna-fab {
+    right: 10px; bottom: 10px; width: 44px; min-width: 44px; max-width: 44px; height: 44px;
+    padding: 0; border-radius: 50%; gap: 0; justify-content: center;
+  }
+  html body .app button.luna-fab .luna-fab-label {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+  html body .app button.luna-fab svg { width: 18px; height: 18px; flex: none; }
+  html body .app .simple-shell .main { padding-left: 16px; padding-right: 70px; padding-bottom: 72px; }
+  html body .app .shell:not(.simple-shell) .main { padding-bottom: 76px; }
+  html body .app .card-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+  html body .app .sc-text { max-width: 74%; }
+  html body .app .map-legend { left: 12px; right: 68px; flex-wrap: wrap; max-width: calc(100% - 80px); }
+  html body .app .legend-note { white-space: normal; flex-basis: 100%; }
+  html body .app .ticker-track { min-width: 0; }
+}
+@media (max-width: 400px) {
+  html body .app .nav { gap: 3px; padding: 0 6px; }
+  html body .app .logo svg { width: 24px; height: 24px; }
+  html body .app .nav .ui-switch button { padding: 4px 5px; font-size: 10px; }
+  html body .app .nav-ws { width: 30px; min-width: 30px; max-width: 30px; height: 30px; }
+  html body .app .nav-story { width: 32px; min-width: 32px; max-width: 32px; height: 30px; }
+  html body .app .nav-r .seg button { padding: 3px 5px; font-size: 10px; }
+}
+

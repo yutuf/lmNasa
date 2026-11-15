@@ -47,10 +47,26 @@ export function describePlace(lat: number, lon: number, feats: Feature[], lang: 
   const isCrater = /crater/i.test(f[4])
   const tr = lang === 'tr'
   if (isCrater && d < r * 0.8) return { name: f[0], kind: 'inside', distKm: d, dir, text: tr ? `${f[0]} krateri içinde` : `inside ${f[0]} crater` }
-  if (isCrater && d <= r * 1.25) return { name: f[0], kind: 'rim', distKm: d, dir, text: tr ? `${f[0]} krater kenarı, ${dir}` : `${dir} rim of ${f[0]}` }
+  // NBSP keeps the compass word ("GB", "KB") on the same line as the phrase in front of it.
+  if (isCrater && d <= r * 1.25) return { name: f[0], kind: 'rim', distKm: d, dir, text: tr ? `${f[0]} krater kenarı,\u00A0${dir}` : `${dir} rim of ${f[0]}` }
   if (!isCrater && d < r) return { name: f[0], kind: 'inside', distKm: d, dir, text: tr ? `${f[0]} üzerinde` : `on ${f[0]}` }
   const away = Math.max(0.1, d - r)
+  const awayKm = away.toFixed(1)
+  const nearTr = `${f[0]}${isCrater ? ' kenarının' : ''} ${awayKm.replace('.', ',')} km\u00A0${dir}`
   return { name: f[0], kind: 'near', distKm: away, dir,
-    text: tr ? `${f[0]} ${isCrater ? 'kenarının' : ''} ${away.toFixed(1).replace('.', ',')} km ${dir}`.replace(/\s+/g, ' ')
-      : `${away.toFixed(1)} km ${dir} of ${f[0]}${isCrater ? ' rim' : ''}` }
+    text: tr ? nearTr : `${awayKm} km ${dir} of ${f[0]}${isCrater ? ' rim' : ''}` }
+}
+
+/**
+ * Split a place title so the bold span is the feature name, with the words before and after it kept.
+ * "39.4 km NE of Slater rim" + "Slater" → before "39.4 km NE of", name "Slater", after "rim".
+ * When the name is missing or is the whole title, the whole string is the bold part.
+ */
+export function splitPlaceTitle(text: string, placeName: string): { before: string; name: string; after: string } {
+  const name = placeName.trim()
+  const whole = text.trim()
+  if (!name || name === whole) return { before: '', name: text, after: '' }
+  const i = text.indexOf(name)
+  if (i < 0) return { before: '', name: text, after: '' }
+  return { before: text.slice(0, i).trim(), name, after: text.slice(i + name.length).trim() }
 }

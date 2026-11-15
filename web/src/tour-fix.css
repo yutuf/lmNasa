@@ -1,0 +1,17 @@
+.tour .tour-card {
+  box-sizing: border-box;
+  max-height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+}
+.tour .tour-copy { min-height: 0; overflow: auto; }
+.tour .tour-row, .tour .tour-hint { flex-shrink: 0; }
+@media (max-width: 600px) {
+  .tour .tour-card {
+    top: auto !important;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 12px !important;
+    width: calc(100vw - 24px);
+  }
+  .tour .tour-card[data-place]::after { display: none; }
+}

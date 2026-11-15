@@ -1,7 +1,7 @@
 // Site page extras: the antenna/panel mast "what if" and the 2026-2045 mission calendar for this site.
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarRange, RadioTower } from 'lucide-react'
-import type { Lang } from '../i18n'
+import { calendarLegend, fmtHoursShort, fmtPercent, verdictLabel, type Lang } from '../i18n'
 import type { Atlas, Ephem } from '../engine'
 import type { Constraints } from '../model'
 import { mastEffect, missionCalendar, type MastResult } from '../siteExtras'
@@ -42,9 +42,7 @@ function Calendar({ go, startUnix, firstDay, lang }: { go: Uint8Array; startUnix
         <div className="sx-years">{years.map((y) => <span key={y}>{y}</span>)}</div>
         <div className="sx-canvas"><canvas ref={ref} /><div className="sx-months">{months.map((m) => <span key={m}>{m}</span>)}</div></div>
       </div>
-      <p className="sx-note">{lang === 'tr'
-        ? `Bu görev burada iniş günlerinin %${share}’inde işe yarar. Yeşil: GO. Beyaz: şu anki 30 günlük pencere.`
-        : `This mission works on ${share}% of landing days here. Green: GO. White: the current 30-day window.`}</p>
+      <p className="sx-note">{calendarLegend(share, lang)}</p>
     </div>
   )
 }
@@ -72,7 +70,14 @@ export default function SiteExtras({ ctx, s, lang }: { ctx: SiteCtx; s: CardSite
   }, [s.r.index]) // eslint-disable-line react-hooks/exhaustive-deps
   const firstDay = useMemo(() => Math.round(ctx.firstHour / 24), [ctx.firstHour])
   const base = res[0], cur = res[mast]
-  const delta = (a?: number, b?: number, unit = '%') => (a === undefined || b === undefined ? '' : b === a ? '' : ` (${b > a ? '+' : ''}${b - a}${unit})`)
+  const delta = (a: number | undefined, b: number | undefined, kind: 'pct' | 'h') => {
+    if (a === undefined || b === undefined) return ''
+    const n = Math.round(Math.abs(b - a))
+    if (n === 0) return ''
+    const sign = b > a ? '+' : '−'
+    if (kind === 'h') return ` (${sign}${n}${tr ? ' sa' : ' h'})`
+    return tr ? ` (${sign}%${n})` : ` (${sign}${n}%)`
+  }
   return (
     <div className="sx">
       {polar && (
@@ -82,11 +87,11 @@ export default function SiteExtras({ ctx, s, lang }: { ctx: SiteCtx; s: CardSite
           <div className="seg sx-seg">{MASTS.map((m) => <button key={m} className={mast === m ? 'on' : ''} onClick={() => setMast(m)}>{m === 0 ? (tr ? 'Yok' : 'None') : `${m} m`}</button>)}</div>
           {cur ? (
             <div className="sx-grid">
-              <div><span>{tr ? 'Güneş' : 'Sunlight'}</span><b>{cur.sunPct}%<em>{delta(base?.sunPct, cur.sunPct)}</em></b></div>
-              <div><span>{tr ? 'Dünya bağlantısı' : 'Earth contact'}</span><b>{cur.earthPct}%<em>{delta(base?.earthPct, cur.earthPct)}</em></b></div>
-              <div><span>{tr ? 'En uzun karanlık' : 'Longest dark'}</span><b>{cur.darkH} h<em>{delta(base?.darkH, cur.darkH, ' h')}</em></b></div>
+              <div><span>{tr ? 'Güneş' : 'Sunlight'}</span><b>{fmtPercent(cur.sunPct, lang)}<em>{delta(base?.sunPct, cur.sunPct, 'pct')}</em></b></div>
+              <div><span>{tr ? 'Dünya bağlantısı' : 'Earth contact'}</span><b>{fmtPercent(cur.earthPct, lang)}<em>{delta(base?.earthPct, cur.earthPct, 'pct')}</em></b></div>
+              <div><span>{tr ? 'En uzun karanlık' : 'Longest dark'}</span><b>{fmtHoursShort(cur.darkH, lang)}<em>{delta(base?.darkH, cur.darkH, 'h')}</em></b></div>
               <div><span>{tr ? 'Ufuk alçalır' : 'Horizon drops'}</span><b>{cur.lowerDeg.toFixed(2)}°</b></div>
-              <div className={cur.go ? 'ok' : 'bad'}><span>{tr ? 'Karar' : 'Verdict'}</span><b>{cur.go ? 'GO' : 'NO-GO'}</b></div>
+              <div className={cur.go ? 'ok' : 'bad'}><span>{tr ? 'Karar' : 'Verdict'}</span><b>{verdictLabel(cur.go, lang)}</b></div>
             </div>
           ) : <p className="sx-note">{tr ? 'Hesaplanıyor…' : 'Computing…'}</p>}
           <p className="sx-note">{tr ? 'En iyi iniş tarihinde; ufuk 200 m kutup arazisinden 40 km’ye kadar ışın izlenerek yeniden hesaplandı.' : 'On the best landing date; the horizon is re-traced from the 200 m polar terrain out to 40 km.'}</p>
