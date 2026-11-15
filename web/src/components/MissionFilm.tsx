@@ -187,10 +187,25 @@ export default function MissionFilm({ lang, card, chapters, lander, roverName, m
       : '',
     verdict: verdictLine,
   }
-  // read each scene's subtitle aloud when voice is on
+  // What the narrator says: a short line per scene that fits the scene's length (about two words a second), so the
+  // voice never falls behind. The full detail stays in the subtitle on screen.
+  const narration: Record<SceneId, string> = {
+    title: tr ? `Görev: ${lander.name}, Ay’ın güney kutbuna.` : `Mission: ${lander.name}, to the lunar south pole.`,
+    launch: tr ? 'Dünya’dan fırlatma. Ay’a dört buçuk gün.' : 'Launch from Earth. Four and a half days to the Moon.',
+    window: tr ? `${fmtNum(win.total, 0, lang)} iniş gününün ${fmtNum(win.go, 0, lang)} günü uygun.` : `${fmtNum(win.go, 0, lang)} of ${fmtNum(win.total, 0, lang)} landing days work.`,
+    coast: tr ? 'Ay ilerliyor; varacağı yere nişan alıyoruz.' : 'The Moon keeps moving. We aim where it will be.',
+    descent: tr ? 'Saatte altı bin kilometreden sıfıra fren.' : 'Braking from six thousand kilometres an hour to zero.',
+    landing: tr ? `${card.name}. Temas. Motor kapalı.` : `${card.name}. Contact. Engine off.`,
+    site: tr ? `${card.name}: ineceğimiz arazi.` : `${card.name}: the ground we land on.`,
+    ellipse: card.ellipse ? (tr ? 'İniş bölgesindeki her nokta denetlendi.' : 'Every point in the landing zone, checked.') : '',
+    rover: tr ? `${roverName} gerçek araziye çıkıyor.` : `${roverName} rolls out onto the real terrain.`,
+    odds: card.prob ? (tr ? `${fmtNum(card.prob.trials, 0, lang)} simüle görev.` : `${fmtNum(card.prob.trials, 0, lang)} simulated missions.`) : '',
+    verdict: verdictLine,
+  }
+  // read each scene's short narration line aloud when voice is on
   useEffect(() => {
     if (!voice || typeof speechSynthesis === 'undefined') return
-    speech.speak(subtitle[scene], 0.98)
+    speech.speak(narration[scene] || subtitle[scene], 0.98)
   }, [scene, voice])  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel() }, [])
   useEffect(() => {
