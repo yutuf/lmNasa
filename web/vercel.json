@@ -36,5 +36,22 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/v1/index.ts": {
+      "maxDuration": 10
+    },
+    "api/v1/site.ts": {
+      "maxDuration": 10,
+      "includeFiles": "public/data/{manifest.json,atlas.bin,global_atlas.bin,ephem.bin,dsn.bin,hazard.bin}"
+    },
+    "api/v1/search.ts": {
+      "maxDuration": 10,
+      "includeFiles": "public/data/{manifest.json,atlas.bin,ephem.bin,dsn.bin,hazard.bin}"
+    },
+    "api/v1/sky.ts": {
+      "maxDuration": 10,
+      "includeFiles": "public/data/{manifest.json,atlas.bin,global_atlas.bin,ephem.bin,dsn.bin,hazard.bin}"
+    }
+  }
 }
